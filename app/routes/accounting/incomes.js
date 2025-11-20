@@ -83,7 +83,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       description: description || null, attachment_url: attachment_url || null, user_id: req.user.id
     }, { transaction });
 
-    await account.updateBalance(amount, true);
+    await account.updateBalance(amount, true, transaction);
     await transaction.commit();
 
     const createdIncome = await Income.findByPk(income.id, {
@@ -112,12 +112,12 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     if (amount !== undefined || account_id !== undefined) {
       const oldAccount = await Account.findByPk(income.account_id);
       const oldAmount = parseFloat(income.amount);
-      await oldAccount.updateBalance(oldAmount, false);
+      await oldAccount.updateBalance(oldAmount, false, transaction);
 
       const newAccountId = account_id || income.account_id;
       const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
       const newAccount = await Account.findByPk(newAccountId);
-      await newAccount.updateBalance(newAmount, true);
+      await newAccount.updateBalance(newAmount, true, transaction);
     }
 
     if (amount !== undefined) income.amount = amount;
@@ -151,7 +151,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('root'), async (req, res
     }
 
     const account = await Account.findByPk(income.account_id);
-    await account.updateBalance(parseFloat(income.amount), false);
+    await account.updateBalance(parseFloat(income.amount), false, transaction);
     await income.destroy({ transaction });
     await transaction.commit();
 

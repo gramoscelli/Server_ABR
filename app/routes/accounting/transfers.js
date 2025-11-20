@@ -84,8 +84,8 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       date: date || new Date(), description: description || null, user_id: req.user.id
     }, { transaction });
 
-    await fromAccount.updateBalance(amount, false);
-    await toAccount.updateBalance(amount, true);
+    await fromAccount.updateBalance(amount, false, transaction);
+    await toAccount.updateBalance(amount, true, transaction);
     await transaction.commit();
 
     const createdTransfer = await Transfer.findByPk(transfer.id, {
@@ -117,8 +117,8 @@ router.delete('/:id', authenticateToken, authorizeRoles('root'), async (req, res
       Account.findByPk(transfer.to_account_id)
     ]);
 
-    await fromAccount.updateBalance(parseFloat(transfer.amount), true);
-    await toAccount.updateBalance(parseFloat(transfer.amount), false);
+    await fromAccount.updateBalance(parseFloat(transfer.amount), true, transaction);
+    await toAccount.updateBalance(parseFloat(transfer.amount), false, transaction);
     await transfer.destroy({ transaction });
     await transaction.commit();
 

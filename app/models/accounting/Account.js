@@ -69,10 +69,10 @@ const Account = accountingDb.define('accounts', {
 });
 
 // Instance methods
-Account.prototype.updateBalance = async function(amount, isIncome = true) {
+Account.prototype.updateBalance = async function(amount, isIncome = true, transaction = null) {
   const newBalance = parseFloat(this.current_balance) + (isIncome ? amount : -amount);
   this.current_balance = newBalance;
-  await this.save();
+  await this.save({ transaction });
   return this.current_balance;
 };
 
