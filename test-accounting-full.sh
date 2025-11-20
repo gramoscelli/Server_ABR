@@ -59,11 +59,27 @@ else
     exit 1
 fi
 
-# Paso 3: Login y obtener token
-echo -e "${YELLOW}[3/11] Obteniendo token de autenticación...${NC}"
+# Paso 3: Obtener token CSRF
+echo -e "${YELLOW}[3/11] Obteniendo token CSRF...${NC}"
+
+CSRF_RESPONSE=$(curl -s -c /tmp/cookies.txt $API_URL/csrf-token)
+CSRF_TOKEN=$(echo $CSRF_RESPONSE | grep -o '"csrfToken":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$CSRF_TOKEN" ]; then
+    echo -e "${RED}✗ Error al obtener CSRF token${NC}"
+    echo "Response: $CSRF_RESPONSE"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ CSRF Token obtenido${NC}\n"
+
+# Paso 4: Login y obtener token JWT
+echo -e "${YELLOW}[4/11] Obteniendo token de autenticación...${NC}"
 
 LOGIN_RESPONSE=$(curl -s -X POST \
+  -b /tmp/cookies.txt \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d '{"username":"testuser","password":"Test123!"}' \
   $API_URL/auth/login)
 
@@ -114,8 +130,8 @@ make_request() {
     echo ""
 }
 
-# Paso 4: Crear cuenta de efectivo
-echo -e "${YELLOW}[4/11] Creando cuenta de efectivo...${NC}"
+# Paso 5: Crear cuenta de efectivo
+echo -e "${YELLOW}[5/12] Creando cuenta de efectivo...${NC}"
 ACCOUNT_DATA='{
   "name": "Caja Principal",
   "type": "cash",
@@ -146,8 +162,8 @@ else
 fi
 echo ""
 
-# Paso 5: Crear segunda cuenta para transferencias
-echo -e "${YELLOW}[5/11] Creando segunda cuenta (banco)...${NC}"
+# Paso 6: Crear segunda cuenta para transferencias
+echo -e "${YELLOW}[6/12] Creando segunda cuenta (banco)...${NC}"
 BANK_ACCOUNT_DATA='{
   "name": "Banco Nación",
   "type": "bank",
@@ -177,8 +193,8 @@ else
 fi
 echo ""
 
-# Paso 6: Crear categoría de egreso
-echo -e "${YELLOW}[6/11] Creando categoría de egreso...${NC}"
+# Paso 7: Crear categoría de egreso
+echo -e "${YELLOW}[7/12] Creando categoría de egreso...${NC}"
 EXPENSE_CAT_DATA='{
   "name": "Gastos Operativos",
   "description": "Gastos del día a día",
@@ -206,8 +222,8 @@ else
 fi
 echo ""
 
-# Paso 7: Crear categoría de ingreso
-echo -e "${YELLOW}[7/11] Creando categoría de ingreso...${NC}"
+# Paso 8: Crear categoría de ingreso
+echo -e "${YELLOW}[8/12] Creando categoría de ingreso...${NC}"
 INCOME_CAT_DATA='{
   "name": "Ventas",
   "description": "Ingresos por ventas",
@@ -235,8 +251,8 @@ else
 fi
 echo ""
 
-# Paso 8: Crear egreso
-echo -e "${YELLOW}[8/11] Creando egreso...${NC}"
+# Paso 9: Crear egreso
+echo -e "${YELLOW}[9/12] Creando egreso...${NC}"
 EXPENSE_DATA="{
   \"amount\": 1500.50,
   \"account_id\": $ACCOUNT_ID,
@@ -268,8 +284,8 @@ else
 fi
 echo ""
 
-# Paso 9: Crear ingreso
-echo -e "${YELLOW}[9/11] Creando ingreso...${NC}"
+# Paso 10: Crear ingreso
+echo -e "${YELLOW}[10/12] Creando ingreso...${NC}"
 INCOME_DATA="{
   \"amount\": 5000.00,
   \"account_id\": $ACCOUNT_ID,
@@ -301,8 +317,8 @@ else
 fi
 echo ""
 
-# Paso 10: Crear transferencia
-echo -e "${YELLOW}[10/11] Creando transferencia...${NC}"
+# Paso 11: Crear transferencia
+echo -e "${YELLOW}[11/12] Creando transferencia...${NC}"
 TRANSFER_DATA="{
   \"amount\": 2000.00,
   \"from_account_id\": $ACCOUNT_ID,
@@ -334,8 +350,8 @@ else
 fi
 echo ""
 
-# Paso 11: Obtener dashboard
-echo -e "${YELLOW}[11/11] Obteniendo dashboard...${NC}"
+# Paso 12: Obtener dashboard
+echo -e "${YELLOW}[12/12] Obteniendo dashboard...${NC}"
 
 DASHBOARD_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X GET \
