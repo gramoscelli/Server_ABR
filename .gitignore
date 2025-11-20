@@ -8,7 +8,6 @@ app/.whatsapp-auth/
 
 # Claude Code files
 .claude/
-CLAUDE.md
 SETUP_AUTH.md
 SECURITY_AUDIT_REPORT.md
 SECURITY_FIXES_APPLIED.md
