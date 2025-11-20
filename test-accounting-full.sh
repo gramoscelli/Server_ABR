@@ -38,21 +38,18 @@ echo -e "${YELLOW}[2/11] Creando usuario de prueba en MySQL...${NC}"
 
 docker exec -i $MYSQL_CONTAINER mysql -uroot -pabr2005 abr <<EOF
 -- Eliminar usuario si existe
-DELETE FROM users WHERE username = 'testuser';
+DELETE FROM usuarios WHERE username = 'testuser';
 
--- Crear usuario de prueba
-INSERT INTO users (username, password_hash, email, role, is_active, created_at, updated_at)
-VALUES (
-  'testuser',
-  '$PASSWORD_HASH',
-  'test@example.com',
-  'root',
-  1,
-  NOW(),
-  NOW()
-);
+-- Crear usuario de prueba con role_id de 'root'
+INSERT INTO usuarios (username, password_hash, email, role_id, is_active, created_at)
+SELECT 'testuser', '$PASSWORD_HASH', 'test@example.com', r.id, 1, NOW()
+FROM roles r WHERE r.name = 'root';
 
-SELECT id, username, role FROM users WHERE username = 'testuser';
+-- Mostrar usuario creado
+SELECT u.id, u.username, r.name as role
+FROM usuarios u
+JOIN roles r ON u.role_id = r.id
+WHERE u.username = 'testuser';
 EOF
 
 if [ $? -eq 0 ]; then
