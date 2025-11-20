@@ -1,0 +1,163 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nextjs-frontend
+    hostname: frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://app:3000
+      - BACKEND_API_URL=http://app:3000
+      - NEXTAUTH_URL=http://localhost:3001
+      - NEXTAUTH_SECRET=${JWT_SECRET}
+      - SESSION_COOKIE_NAME=biblio_session
+    networks:
+      - app_network
+    ports:
+      - "3001:3001"
+    # Frontend uses static build (nginx serves /dist), no source code mounted
+    # If you need live development mode in the future, uncomment these volumes:
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules  # Exclude node_modules from host mount
+    depends_on:
+      - app
+    restart: always
+  app:
+    image: node
+    container_name: nodejs
+    hostname: nodejs
+    environment:
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - JWT_REFRESH_EXPIRES_IN=${JWT_REFRESH_EXPIRES_IN}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
+      - FACEBOOK_CALLBACK_URL=${FACEBOOK_CALLBACK_URL}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET}
+      - MICROSOFT_CALLBACK_URL=${MICROSOFT_CALLBACK_URL}
+      - OAUTH_SUCCESS_REDIRECT=${OAUTH_SUCCESS_REDIRECT}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - FRONTEND_URL=${FRONTEND_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    build:
+      context: ./app
+    networks:
+      - app_network
+    expose:
+      - "3000"
+    volumes:
+      - ./app:/usr/src/app
+      # Exclude node_modules from host mount - keep it in container only
+      - /usr/src/app/node_modules
+    ports:
+      - 3000:3000
+    depends_on:
+      - db
+    restart: always
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    hostname: phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    networks:
+      - app_network
+    ports:
+      - 9000:80
+    expose:
+      - "9000"
+    depends_on:
+      - db
+  #MySQL Service
+  db:
+    image: mysql:8.0
+    hostname: mysql
+    container_name: mysql
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - SERVICE_TAGS="dev"
+      - SERVICE_NAME="mysql"
+    volumes:
+      - ./data:/var/lib/mysql
+    networks:
+      - app_network
+  web:
+    image: nginx:latest
+    container_name: nginx
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+    networks:
+      - app_network
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./php:/usr/share/nginx/html
+      - ./nginx/data/nginx:/etc/nginx/conf.d
+      - ./nginx/data/certbot/conf:/etc/letsencrypt
+      - ./nginx/data/certbot/www:/var/www/certbot
+    links:
+      - php-fpm
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    #depends_on:
+    #  - php-fpm
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./nginx/data/certbot/conf:/etc/letsencrypt
+      - ./nginx/data/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+  # Configuración de php-fpm
+  php-fpm:
+    image: nanoninja/php-fpm:latest
+    restart: always
+    volumes:
+      - ./php:/usr/share/nginx/html
+      - ./extractor:/home/app
+    networks:
+      - app_network
+  python:
+    image: python
+    build:
+      context: ./python
+    environment:
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_HOST=${MYSQL_HOST}
+      - MYSQL_PORT=${MYSQL_PORT}
+      - MEGA_USER=${MEGA_USER}
+      - MEGA_PASSWORD=${MEGA_PASSWORD}
+    volumes:
+      - ./python:/app
+      - ./db_bakup:/app/backup
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

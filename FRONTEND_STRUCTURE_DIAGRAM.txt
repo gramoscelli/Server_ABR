@@ -1,0 +1,325 @@
+================================================================================
+FRONTEND DIRECTORY STRUCTURE & COMPLETION STATUS
+================================================================================
+
+CURRENT STRUCTURE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+frontend/
+│
+├── app/                                         [PARTIALLY COMPLETE]
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login/
+│   │   │   │   └── route.ts                    ✅ COMPLETE
+│   │   │   └── logout/
+│   │   │       └── route.ts                    ✅ COMPLETE
+│   │   ├── admin/
+│   │   │   └── users/
+│   │   │       └── route.ts                    ✅ COMPLETE (proxy only)
+│   │   └── csrf-token/
+│   │       └── route.ts                        ✅ COMPLETE
+│   │
+│   ├── login/
+│   │   └── page.tsx                            ✅ COMPLETE
+│   │
+│   ├── dashboard/
+│   │   └── page.tsx                            ⚠️  PARTIAL (read-only table)
+│   │
+│   ├── layout.tsx                              ✅ COMPLETE
+│   ├── page.tsx                                ✅ COMPLETE (redirect only)
+│   └── globals.css                             ✅ COMPLETE
+│
+├── components/                                 ❌ EMPTY (NEEDS CREATION)
+│   ├── ui/                                     [TODO]
+│   │   ├── Button.tsx                          [NOT EXISTS]
+│   │   ├── Modal.tsx                           [NOT EXISTS]
+│   │   ├── Alert.tsx                           [NOT EXISTS]
+│   │   ├── Card.tsx                            [NOT EXISTS]
+│   │   ├── Input.tsx                           [NOT EXISTS]
+│   │   └── Table.tsx                           [NOT EXISTS]
+│   │
+│   ├── layout/                                 [TODO]
+│   │   ├── Sidebar.tsx                         [NOT EXISTS]
+│   │   ├── Header.tsx                          [NOT EXISTS]
+│   │   └── MainLayout.tsx                      [NOT EXISTS]
+│   │
+│   └── admin/                                  [TODO]
+│       ├── UserForm.tsx                        [NOT EXISTS]
+│       ├── UserTable.tsx                       [NOT EXISTS]
+│       ├── RoleForm.tsx                        [NOT EXISTS]
+│       └── ApiKeyForm.tsx                      [NOT EXISTS]
+│
+├── lib/                                        ❌ EMPTY (NEEDS CREATION)
+│   ├── api.ts                                  [NOT EXISTS] - API helpers
+│   ├── hooks.ts                                [NOT EXISTS] - Custom hooks
+│   └── utils.ts                                [NOT EXISTS] - Utilities
+│
+├── public/                                     ✅ EXISTS
+│   └── (static files)
+│
+├── styles/                                     ✅ EXISTS
+│   └── (additional CSS if needed)
+│
+├── middleware.ts                               ❌ MISSING - Route protection
+│
+├── package.json                                ✅ COMPLETE
+├── tsconfig.json                               ✅ COMPLETE
+├── tailwind.config.ts                          ✅ COMPLETE
+├── next.config.ts                              ✅ COMPLETE
+└── Dockerfile                                  ✅ EXISTS
+
+PAGES THAT NEED TO BE CREATED:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Priority 1 (Core):
+  ❌ app/admin/users/page.tsx                  - Full user management
+     ├── Display users with all fields
+     ├── Edit user form
+     ├── Delete user action
+     ├── Lock/unlock user
+     └── Change user role
+
+  ❌ app/admin/roles/page.tsx                  - Role management
+     ├── Display available roles
+     ├── Create new role
+     ├── Edit role
+     └── Delete role
+
+  ❌ app/admin/apikeys/page.tsx                - API key management
+     ├── List user API keys
+     ├── Generate new key
+     ├── View key details
+     ├── Rotate key
+     └── Delete key
+
+  ❌ app/admin/dashboard/page.tsx              - Admin statistics
+     ├── User statistics
+     ├── Role distribution chart
+     ├── Recent activity
+     └── System health
+
+Priority 2 (Infrastructure):
+  ❌ middleware.ts                             - Route protection
+     ├── Verify auth_token cookie
+     ├── Redirect to login if not authenticated
+     ├── Allow public routes
+     └── Check role for admin routes
+
+Priority 3 (Enhancements):
+  ❌ app/admin/settings/page.tsx               - System settings
+  ❌ app/admin/logs/page.tsx                   - Activity logs
+  ❌ app/profile/page.tsx                      - User profile
+
+COMPONENTS TO CREATE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+UI Components (components/ui/):
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Button.tsx        - Reusable button with variants               │
+  │ Modal.tsx         - Reusable modal/dialog component             │
+  │ Alert.tsx         - Alert/warning/error messages                │
+  │ Card.tsx          - Card container component                    │
+  │ Badge.tsx         - Status badges                               │
+  │ Spinner.tsx       - Loading spinner                             │
+  │ Pagination.tsx    - Table pagination                            │
+  │ Dropdown.tsx      - Dropdown menu                               │
+  │ Tabs.tsx          - Tabbed interface                            │
+  └─────────────────────────────────────────────────────────────────┘
+
+Layout Components (components/layout/):
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ Sidebar.tsx       - Left sidebar navigation menu                │
+  │ Header.tsx        - Top header with user menu                   │
+  │ MainLayout.tsx    - Main layout wrapper                         │
+  │ Breadcrumb.tsx    - Breadcrumb navigation                       │
+  └─────────────────────────────────────────────────────────────────┘
+
+Admin Components (components/admin/):
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ UserTable.tsx     - Users table with actions                    │
+  │ UserForm.tsx      - User create/edit form                       │
+  │ RoleTable.tsx     - Roles list                                  │
+  │ RoleForm.tsx      - Role create/edit form                       │
+  │ ApiKeyTable.tsx   - API keys list                               │
+  │ ApiKeyForm.tsx    - API key generation form                     │
+  │ SearchBar.tsx     - Search/filter component                     │
+  └─────────────────────────────────────────────────────────────────┘
+
+BACKEND API ROUTES USAGE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Used in Frontend:
+  ✅ GET /api/admin/users                    (dashboard page)
+  ✅ GET /api/csrf-token                     (all forms)
+  ✅ POST /api/auth/login                    (login page)
+  ✅ POST /api/auth/logout                   (dashboard)
+
+Not Yet Used:
+  ❌ GET /api/admin/users/locked             (admin/users page)
+  ❌ POST /api/admin/users/:id/unlock        (admin/users page)
+  ❌ PATCH /api/admin/users/:id/reset-attempts (admin/users page)
+  ❌ GET /api/roles                          (admin/roles page)
+  ❌ GET /api/roles/stats                    (admin/dashboard)
+  ❌ PUT /api/roles/user/:id                 (admin/users page)
+  ❌ DELETE /api/roles/user/:id              (admin/users page)
+  ❌ GET /api/api-keys                       (admin/apikeys page)
+  ❌ POST /api/api-keys                      (admin/apikeys page)
+  ❌ PUT /api/api-keys/:id                   (admin/apikeys page)
+  ❌ DELETE /api/api-keys/:id                (admin/apikeys page)
+  ❌ GET /api/api-keys/:id/stats             (admin/dashboard)
+
+API Routes To Create (Next.js):
+  ❌ POST /api/admin/users/:id               (update user)
+  ❌ DELETE /api/admin/users/:id             (delete user)
+  ❌ POST /api/admin/users/:id/lock          (lock user)
+  ❌ POST /api/admin/users/:id/unlock        (proxy to backend)
+  ❌ POST /api/roles                         (create role)
+  ❌ DELETE /api/roles/:id                   (delete role)
+  ❌ POST /api/api-keys                      (proxy to create)
+  ❌ DELETE /api/api-keys/:id                (proxy to delete)
+
+AUTHENTICATION & AUTHORIZATION FLOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current Implementation:
+  ┌────────────────────────────────────────────────────────────────┐
+  │ 1. User visits /login (public route)                           │
+  │ 2. Enters credentials                                          │
+  │ 3. Fetches CSRF token from backend                             │
+  │ 4. Sends login request (POST /api/auth/login)                  │
+  │ 5. Next.js stores JWT in HTTP-only cookies                     │
+  │ 6. Redirects to /dashboard                                     │
+  │ 7. Dashboard checks for auth_token and fetches users           │
+  │ 8. Logout clears cookies                                       │
+  └────────────────────────────────────────────────────────────────┘
+
+Missing:
+  ⚠️  Route middleware (middleware.ts) for automatic protection
+  ⚠️  Authorization checks on individual pages
+  ⚠️  Role-based access control (RBAC) in frontend
+  ⚠️  Automatic token refresh when expired
+  ⚠️  Session validation on app startup
+
+STYLING & THEMING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current:
+  ✅ Tailwind CSS 4.1.17 configured
+  ✅ @tailwindcss/forms enabled
+  ✅ Basic color scheme (Indigo primary)
+  ❌ No component extraction
+  ❌ No color system/design tokens
+  ❌ No dark mode
+  ❌ Limited responsive design
+
+Colors in Use:
+  Primary:       indigo-600 (#4f46e5)
+  Secondary:     gray-900
+  Background:    gray-50, gray-100
+  Borders:       gray-200, gray-300
+  Text:          gray-900, gray-500
+  Success:       green-600
+  Error:         red-600
+  Warning:       yellow-600
+
+DEPENDENCIES & PACKAGES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Currently Installed:
+  ✅ next (latest)
+  ✅ react (latest)
+  ✅ react-dom (latest)
+  ✅ typescript (latest)
+  ✅ tailwindcss (4.1.17)
+  ✅ @tailwindcss/forms (latest)
+  ✅ postcss
+  ✅ autoprefixer
+
+Recommended to Add:
+  ⚠️  @headlessui/react          - Unstyled, accessible UI components
+  ⚠️  lucide-react               - Icon library
+  ⚠️  react-hook-form            - Form state management
+  ⚠️  zod                        - Schema validation
+  ⚠️  @hookform/resolvers        - Form validation integration
+  ⚠️  react-hot-toast            - Toast notifications
+  ⚠️  @tanstack/react-table      - Advanced table functionality
+  ⚠️  date-fns                   - Date utilities
+  ⚠️  clsx / classnames          - Utility for className management
+
+COMPLETION ESTIMATE BY PHASE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Current Status:              20% Complete
+│
+├─ Phase 1 (Foundation):     5-7 days
+│  ├─ middleware.ts
+│  ├─ Basic UI components
+│  ├─ Sidebar layout
+│  └─ Token refresh logic
+│  Result: ~35% Complete
+│
+├─ Phase 2 (Admin Pages):    10-15 days
+│  ├─ User management page
+│  ├─ Role management page
+│  ├─ API keys page
+│  └─ Admin dashboard
+│  Result: ~70% Complete
+│
+├─ Phase 3 (UX/Polish):      7-10 days
+│  ├─ Data table features
+│  ├─ Form validation
+│  ├─ Toast system
+│  └─ Loading states
+│  Result: ~85% Complete
+│
+└─ Phase 4 (Advanced):       10-15 days
+   ├─ OAuth UI
+   ├─ Activity logs
+   ├─ Audit trail
+   ├─ Dark mode
+   └─ Analytics
+   Result: 100% Complete
+
+Total Effort: 32-47 days (5-7 weeks)
+
+KEY SECURITY CONSIDERATIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Implemented:
+  ✅ CSRF token validation on all mutations
+  ✅ HTTP-only cookies (no XSS exposure)
+  ✅ Secure flag on cookies (HTTPS only in production)
+  ✅ JWT expiration (1 hour access, 7 days refresh)
+  ✅ Backend rate limiting
+  ✅ Input validation on backend
+
+TODO:
+  ❌ Route middleware for automatic protection
+  ❌ Token refresh implementation
+  ❌ Frontend authorization checks
+  ❌ Session validation
+  ❌ Refresh token rotation
+  ❌ CORS validation
+  ❌ Content Security Policy
+
+QUICK REFERENCE - FILE LOCATIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Documentation:
+  /home/gustavo/biblio-server/FRONTEND_SETUP.md
+  /home/gustavo/biblio-server/FRONTEND_COMPLETION_GUIDE.md
+  /home/gustavo/biblio-server/FRONTEND_CODE_REFERENCE.md
+  /home/gustavo/biblio-server/frontend_analysis.md
+  /home/gustavo/biblio-server/frontend_summary.txt
+
+Frontend Source:
+  /home/gustavo/biblio-server/frontend/app/
+  /home/gustavo/biblio-server/frontend/package.json
+
+Backend Reference:
+  /home/gustavo/biblio-server/app/routes/admin.js
+  /home/gustavo/biblio-server/app/routes/roles.js
+  /home/gustavo/biblio-server/app/routes/apiKeys.js
+
+================================================================================

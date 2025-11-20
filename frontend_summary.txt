@@ -1,0 +1,255 @@
+================================================================================
+BIBLIO-SERVER FRONTEND ADMIN INTERFACE - QUICK REFERENCE
+================================================================================
+
+CURRENT STATUS: 20% Complete (Foundation Ready, Features Missing)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TECHNOLOGY STACK:
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Framework:     Next.js 15 (App Router)                                  │
+│ Language:      TypeScript 5+                                            │
+│ Styling:       Tailwind CSS 4.1.17 + @tailwindcss/forms               │
+│ Auth:          JWT + HTTP-only Cookies                                 │
+│ Port:          3001                                                     │
+│ Build Tool:    SWC (compiled with Next.js)                            │
+│ Package Mgr:   npm                                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+PAGES CREATED:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ COMPLETE:
+  /login                  - Login form with CSRF protection
+  /                       - Root (redirects to /login)
+  /api/csrf-token        - CSRF token endpoint
+  /api/auth/login        - Login handler (proxies to backend)
+  /api/auth/logout       - Logout handler
+
+✅ PARTIALLY COMPLETE:
+  /dashboard             - User listing (read-only table)
+  /api/admin/users       - Users API proxy
+
+❌ MISSING:
+  /admin/users           - User management (edit, delete, lock/unlock)
+  /admin/roles           - Role management
+  /admin/apikeys         - API key management
+  /admin/dashboard       - Admin statistics/overview
+  /components/*          - No reusable UI components
+  middleware.ts          - No automatic route protection
+
+AUTHENTICATION FLOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Browser                    Next.js Server              Express Backend
+    │                              │                           │
+    ├─ GET /api/csrf-token ───────>│─ GET /api/csrf-token ───>│
+    │                              │<────── token ────────────┤
+    │<───── token ─────────────────┤                           │
+    │                              │                           │
+    ├─ POST /api/auth/login ───────>│─ POST /api/auth/login ──>│
+    │  (with CSRF token)           │  (proxies request)       │
+    │                              │<──── tokens ─────────────┤
+    │                              │ (stores in HTTP-only)    │
+    │<────── success ───────────────┤                           │
+    │                              │                           │
+    │ (Redirect to /dashboard)     │                           │
+    │                              │                           │
+    ├─ GET /dashboard ─────────────>│ (Check auth_token cookie)
+    │                              │─ GET /api/admin/users ──>│
+    │                              │<────── users ────────────┤
+    │<───── render page ────────────┤                           │
+
+SECURITY FEATURES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ IMPLEMENTED:
+  • CSRF token validation on all state-changing operations
+  • HTTP-only cookies (tokens not accessible to JavaScript)
+  • Secure flag on cookies (production only)
+  • JWT tokens with expiration (1 hour access, 7 days refresh)
+  • Rate limiting (5 auth attempts per 15 minutes)
+  • Input validation on backend
+  • Authorization roles on backend (admin, user, readonly)
+
+❌ MISSING:
+  • Route middleware protection (manual checks only)
+  • Automatic token refresh when expired
+  • Frontend authorization checks (RBAC)
+  • Session validation on initial load
+  • Refresh token rotation
+
+BACKEND API ENDPOINTS AVAILABLE (NOT ALL IN FRONTEND):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User Management:
+  ✅ GET    /api/admin/users                (USED)
+  ❌ GET    /api/admin/users/locked         
+  ❌ POST   /api/admin/users/:id/unlock     
+  ❌ PATCH  /api/admin/users/:id/reset-attempts
+
+Role Management:
+  ❌ GET    /api/roles
+  ❌ GET    /api/roles/stats
+  ❌ PUT    /api/roles/user/:id
+  ❌ DELETE /api/roles/user/:id
+
+API Keys Management:
+  ❌ GET    /api/api-keys
+  ❌ POST   /api/api-keys
+  ❌ PUT    /api/api-keys/:id
+  ❌ DELETE /api/api-keys/:id
+  ❌ GET    /api/api-keys/:id/stats
+
+DATA MODELS (AVAILABLE IN BACKEND):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User:
+  id, username, email, password_hash, role_id, 
+  failed_attempts, locked_until, last_login,
+  oauth_only, email_verified, avatar_url, whatsapp,
+  created_at, updated_at
+
+Role:
+  id, name, description, created_at, updated_at
+
+ApiKey:
+  id, user_id, key_hash, name, permissions, 
+  rate_limit, last_used, created_at, updated_at
+
+RolePermission:
+  role_id, permission_id, created_at
+
+UI COMPONENTS & STYLING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Color Scheme:
+  Primary:     Indigo-600 (#4f46e5)
+  Background:  Gray-50 (#f9fafb)
+  Text:        Gray-900 (#111827)
+  Borders:     Gray-200 (#e5e7eb)
+
+Components Built:
+  ❌ Button (no reusable component)
+  ❌ Modal/Dialog
+  ❌ Alert/Toast
+  ❌ Sidebar Navigation
+  ❌ Data Table (with pagination/sorting/filtering)
+  ❌ Form Input Components
+  ❌ Loading Spinner
+  ❌ Card Container
+
+Styling Approach:
+  • Inline Tailwind classes (no component extraction)
+  • Forms plugin enabled
+  • No theming system
+  • No dark mode
+  • Basic responsive design
+
+CRITICAL MISSING FEATURES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HIGH PRIORITY:
+  1. Route middleware (middleware.ts)
+  2. Reusable UI components (Button, Modal, etc.)
+  3. Sidebar navigation component
+  4. User management page (full CRUD)
+  5. Automatic token refresh
+
+MEDIUM PRIORITY:
+  6. Role management page
+  7. API key management page
+  8. Admin dashboard with charts
+  9. Data table features (pagination, filtering, sorting)
+  10. Form validation
+
+LOW PRIORITY:
+  11. OAuth UI integration
+  12. User activity logs
+  13. Audit trail viewer
+  14. Dark mode
+  15. Advanced search
+
+FILE LOCATIONS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Frontend:
+  📂 /home/gustavo/biblio-server/frontend/
+     ├── app/
+     │   ├── api/auth/login/route.ts
+     │   ├── api/auth/logout/route.ts
+     │   ├── api/csrf-token/route.ts
+     │   ├── api/admin/users/route.ts
+     │   ├── login/page.tsx
+     │   ├── dashboard/page.tsx
+     │   ├── layout.tsx
+     │   ├── page.tsx
+     │   └── globals.css
+     ├── components/ (EMPTY)
+     ├── lib/ (EMPTY)
+     └── package.json
+
+Backend (for reference):
+  📂 /home/gustavo/biblio-server/app/
+     ├── routes/
+     │   ├── admin.js
+     │   ├── roles.js
+     │   ├── apiKeys.js
+     │   ├── auth.js
+     │   └── csrf.js
+     ├── models/
+     │   ├── User.js
+     │   ├── Role.js
+     │   └── ApiKey.js
+     └── middleware/
+         └── auth.js
+
+NEXT STEPS (RECOMMENDED ORDER):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Create middleware.ts for route protection
+2. Build UI component library:
+   - Button, Card, Modal, Alert components
+   - Form components (Input, Select, Checkbox)
+   - Data table wrapper
+3. Create Sidebar layout component
+4. Implement token refresh mechanism
+5. Build user management page (/admin/users)
+6. Build role management page (/admin/roles)
+7. Build API keys page (/admin/apikeys)
+8. Add form validation (Zod/React Hook Form)
+9. Add toast notification system
+10. Build admin dashboard with statistics
+
+SUGGESTED PACKAGES TO ADD:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+npm install:
+  @headlessui/react          # Unstyled components
+  lucide-react               # Icon library
+  react-hook-form            # Form management
+  zod                        # Schema validation
+  @hookform/resolvers        # Form validation integration
+  react-hot-toast            # Toast notifications
+  @tanstack/react-table      # Advanced table features
+
+For development:
+  npm install -D prettier eslint-config-prettier
+
+COMPLETION ESTIMATE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Phase 1 (Foundation):          5-7 days
+Phase 2 (Core admin pages):    10-15 days
+Phase 3 (UX improvements):     7-10 days
+Phase 4 (Advanced features):   10-15 days
+
+Total for full implementation: 32-47 days (5-7 weeks)
+
+Currently Complete: ~20%
+After Phase 1: ~35%
+After Phase 2: ~70%
+After Phase 3: ~85%
+After Phase 4: ~100%
+
+================================================================================

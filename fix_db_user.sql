@@ -1,0 +1,3 @@
+ALTER USER '${MYSQL_USER}'@'localhost' IDENTIFIED WITH mysql_native_password BY  '${MYSQL_PASSWORD}';
+ALTER USER '${MYSQL_USER}'@'%' IDENTIFIED WITH mysql_native_password BY  '${MYSQL_PASSWORD}';
+FLUSH PRIVILEGES;
