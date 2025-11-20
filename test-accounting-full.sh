@@ -1,4 +1,4 @@
-#!/bin/bash
+#/bin/bash
 
 # Colores para output
 RED='\033[0;31m'
@@ -9,8 +9,8 @@ NC='\033[0m' # No Color
 
 # Configuración
 API_URL="http://localhost:3000/api"
-MYSQL_CONTAINER="server_abr-db-1"
-APP_CONTAINER="server_abr-app-1"
+MYSQL_CONTAINER="mysql"
+APP_CONTAINER="nodejs"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Test Script - Accounting System${NC}"
@@ -36,7 +36,7 @@ echo -e "${GREEN}✓ Hash generado${NC}\n"
 # Paso 2: Crear usuario de prueba directamente en MySQL
 echo -e "${YELLOW}[2/11] Creando usuario de prueba en MySQL...${NC}"
 
-docker exec -i $MYSQL_CONTAINER mysql -uroot -proot_password abr <<EOF
+docker exec -i $MYSQL_CONTAINER mysql -uroot -pabr2005 abr <<EOF
 -- Eliminar usuario si existe
 DELETE FROM users WHERE username = 'testuser';
 
