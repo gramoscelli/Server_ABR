@@ -259,7 +259,7 @@ export interface StatsQueryParams {
 // Form data types
 export interface CreateExpenseData {
   amount: number
-  category_id?: number
+  category_id?: number | null
   account_id: number
   date?: string
   description?: string
@@ -268,7 +268,7 @@ export interface CreateExpenseData {
 
 export interface UpdateExpenseData {
   amount?: number
-  category_id?: number
+  category_id?: number | null
   account_id?: number
   date?: string
   description?: string
@@ -277,7 +277,7 @@ export interface UpdateExpenseData {
 
 export interface CreateIncomeData {
   amount: number
-  category_id?: number
+  category_id?: number | null
   account_id: number
   date?: string
   description?: string
@@ -286,7 +286,7 @@ export interface CreateIncomeData {
 
 export interface UpdateIncomeData {
   amount?: number
-  category_id?: number
+  category_id?: number | null
   account_id?: number
   date?: string
   description?: string
@@ -297,7 +297,7 @@ export interface CreateTransferData {
   amount: number
   from_account_id: number
   to_account_id: number
-  transfer_type_id?: number
+  transfer_type_id?: number | null
   date?: string
   description?: string
 }
