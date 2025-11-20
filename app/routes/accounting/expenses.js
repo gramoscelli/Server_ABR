@@ -199,7 +199,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     }, { transaction });
 
     // Update account balance
-    await account.updateBalance(amount, false);
+    await account.updateBalance(amount, false, transaction);
 
     await transaction.commit();
 
@@ -256,11 +256,11 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
 
       // Revert old transaction
-      await oldAccount.updateBalance(oldAmount, true);
+      await oldAccount.updateBalance(oldAmount, true, transaction);
 
       // Apply new transaction
       const newAccount = await Account.findByPk(newAccountId);
-      await newAccount.updateBalance(newAmount, false);
+      await newAccount.updateBalance(newAmount, false, transaction);
     }
 
     // Update expense
@@ -320,7 +320,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('root'), async (req, res
 
     // Revert account balance
     const account = await Account.findByPk(expense.account_id);
-    await account.updateBalance(parseFloat(expense.amount), true);
+    await account.updateBalance(parseFloat(expense.amount), true, transaction);
 
     await expense.destroy({ transaction });
 
