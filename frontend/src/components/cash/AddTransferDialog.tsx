@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Upload } from 'lucide-react'
+import { accountingService } from '@/lib/accountingService'
+import type { Account, TransferType } from '@/types/accounting'
 
 interface AddTransferDialogProps {
   open: boolean
@@ -24,62 +25,90 @@ interface AddTransferDialogProps {
 }
 
 export interface TransferFormData {
-  fromAccount: string
-  toAccount: string
-  fromAmount: string
-  fromCurrency: string
-  toAmount: string
-  toCurrency: string
+  amount: string
+  from_account_id: number
+  to_account_id: number
+  transfer_type_id: number | null
   date: string
   description: string
-  attachments: File[]
 }
 
 export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferDialogProps) {
   const [formData, setFormData] = useState<TransferFormData>({
-    fromAccount: 'Cash',
-    toAccount: 'Cash',
-    fromAmount: '',
-    fromCurrency: 'ARS',
-    toAmount: '0',
-    toCurrency: 'ARS',
+    from_account_id: 0,
+    to_account_id: 0,
+    amount: '',
+    transfer_type_id: null,
     date: new Date().toISOString().split('T')[0],
     description: '',
-    attachments: [],
   })
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [transferTypes, setTransferTypes] = useState<TransferType[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (open) {
+      loadData()
+    }
+  }, [open])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [accountsResponse, typesData] = await Promise.all([
+        accountingService.getAccounts({ is_active: true }),
+        accountingService.getTransferTypes(),
+      ])
+      setAccounts(accountsResponse.data)
+      setTransferTypes(typesData)
+
+      // Set default accounts if available
+      if (accountsResponse.data.length > 0) {
+        if (!formData.from_account_id) {
+          setFormData(prev => ({ ...prev, from_account_id: accountsResponse.data[0].id }))
+        }
+        if (!formData.to_account_id && accountsResponse.data.length > 1) {
+          setFormData(prev => ({ ...prev, to_account_id: accountsResponse.data[1].id }))
+        }
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit?.(formData)
-    // Reset form
-    setFormData({
-      fromAccount: 'Cash',
-      toAccount: 'Cash',
-      fromAmount: '',
-      fromCurrency: 'ARS',
-      toAmount: '0',
-      toCurrency: 'ARS',
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      attachments: [],
-    })
-    onOpenChange(false)
-  }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files) {
-      setFormData({ ...formData, attachments: Array.from(files) })
+    if (!formData.from_account_id || !formData.to_account_id) {
+      alert('Por favor selecciona las cuentas de origen y destino')
+      return
     }
-  }
 
-  // Auto-sync amounts if currencies are the same
-  const handleFromAmountChange = (value: string) => {
-    const newData = { ...formData, fromAmount: value }
-    if (formData.fromCurrency === formData.toCurrency) {
-      newData.toAmount = value
+    if (formData.from_account_id === formData.to_account_id) {
+      alert('Las cuentas de origen y destino deben ser diferentes')
+      return
     }
-    setFormData(newData)
+
+    try {
+      setLoading(true)
+      await onSubmit?.(formData)
+      // Reset form
+      setFormData({
+        from_account_id: accounts.length > 0 ? accounts[0].id : 0,
+        to_account_id: accounts.length > 1 ? accounts[1].id : 0,
+        amount: '',
+        transfer_type_id: null,
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error creating transfer:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -96,51 +125,21 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
               Desde
             </Label>
             <Select
-              value={formData.fromAccount}
-              onValueChange={(value) => setFormData({ ...formData, fromAccount: value })}
+              value={String(formData.from_account_id)}
+              onValueChange={(value) => setFormData({ ...formData, from_account_id: parseInt(value) })}
+              disabled={loading || accounts.length === 0}
             >
               <SelectTrigger id="fromAccount">
-                <SelectValue />
+                <SelectValue placeholder="Seleccionar cuenta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Cash">Efectivo</SelectItem>
-                <SelectItem value="Bank">Banco</SelectItem>
-                <SelectItem value="Savings">Ahorros</SelectItem>
-                <SelectItem value="CreditCard">Tarjeta de Crédito</SelectItem>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={String(account.id)}>
+                    {account.name} ({account.type}) - {account.currency} {account.current_balance.toFixed(2)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* From Amount */}
-          <div className="space-y-2">
-            <Label htmlFor="fromAmount" className="text-sm font-medium text-gray-700">
-              Monto
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="fromAmount"
-                type="number"
-                step="0.01"
-                placeholder="0"
-                value={formData.fromAmount}
-                onChange={(e) => handleFromAmountChange(e.target.value)}
-                className="flex-1"
-                required
-              />
-              <Select
-                value={formData.fromCurrency}
-                onValueChange={(value) => setFormData({ ...formData, fromCurrency: value })}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ARS">ARS</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* To Account */}
@@ -149,51 +148,64 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
               Hacia
             </Label>
             <Select
-              value={formData.toAccount}
-              onValueChange={(value) => setFormData({ ...formData, toAccount: value })}
+              value={String(formData.to_account_id)}
+              onValueChange={(value) => setFormData({ ...formData, to_account_id: parseInt(value) })}
+              disabled={loading || accounts.length === 0}
             >
               <SelectTrigger id="toAccount">
-                <SelectValue />
+                <SelectValue placeholder="Seleccionar cuenta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Cash">Efectivo</SelectItem>
-                <SelectItem value="Bank">Banco</SelectItem>
-                <SelectItem value="Savings">Ahorros</SelectItem>
-                <SelectItem value="CreditCard">Tarjeta de Crédito</SelectItem>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={String(account.id)}>
+                    {account.name} ({account.type}) - {account.currency} {account.current_balance.toFixed(2)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* To Amount */}
+          {/* Amount */}
           <div className="space-y-2">
-            <Label htmlFor="toAmount" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="amount" className="text-sm font-medium text-gray-700">
               Monto
             </Label>
-            <div className="flex gap-2">
-              <Input
-                id="toAmount"
-                type="number"
-                step="0.01"
-                placeholder="0"
-                value={formData.toAmount}
-                onChange={(e) => setFormData({ ...formData, toAmount: e.target.value })}
-                className="flex-1"
-                required
-              />
-              <Select
-                value={formData.toCurrency}
-                onValueChange={(value) => setFormData({ ...formData, toCurrency: value })}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ARS">ARS</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          {/* Transfer Type */}
+          <div className="space-y-2">
+            <Label htmlFor="transferType" className="text-sm font-medium text-gray-700">
+              Tipo de Transferencia (Opcional)
+            </Label>
+            <Select
+              value={formData.transfer_type_id ? String(formData.transfer_type_id) : 'none'}
+              onValueChange={(value) =>
+                setFormData({ ...formData, transfer_type_id: value === 'none' ? null : parseInt(value) })
+              }
+              disabled={loading}
+            >
+              <SelectTrigger id="transferType">
+                <SelectValue placeholder="Sin tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin tipo</SelectItem>
+                {transferTypes.map((type) => (
+                  <SelectItem key={type.id} value={String(type.id)}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Date */}
@@ -207,52 +219,32 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required
+              disabled={loading}
             />
           </div>
 
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-              Descripción
+              Descripción (Opcional)
             </Label>
             <textarea
               id="description"
-              placeholder="Descripción"
+              placeholder="Descripción de la transferencia"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading}
             />
-          </div>
-
-          {/* File Upload */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Adjuntos</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload-transfer"
-              />
-              <label htmlFor="file-upload-transfer" className="cursor-pointer">
-                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Haz clic para subir o arrastra y suelta</p>
-              </label>
-              {formData.attachments.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  {formData.attachments.length} archivo(s) seleccionado(s)
-                </p>
-              )}
-            </div>
           </div>
 
           {/* Submit Button */}
           <Button
             type="submit"
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold h-12 text-base"
+            disabled={loading || accounts.length < 2}
           >
-            Agregar Transferencia
+            {loading ? 'Guardando...' : 'Agregar Transferencia'}
           </Button>
         </form>
       </DialogContent>
