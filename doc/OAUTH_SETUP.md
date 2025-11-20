@@ -161,7 +161,7 @@ OAUTH_SUCCESS_REDIRECT=http://localhost:3000/dashboard
 ### 7. Restart the Application
 
 ```bash
-docker-compose restart app
+docker compose restart app
 ```
 
 ## API Endpoints
@@ -374,7 +374,7 @@ GOOGLE_CALLBACK_URL=https://abc123.ngrok.io/api/auth/oauth/google/callback
 GITHUB_CALLBACK_URL=https://abc123.ngrok.io/api/auth/oauth/github/callback
 
 # Restart application
-docker-compose restart app
+docker compose restart app
 ```
 
 ## Troubleshooting
@@ -431,6 +431,6 @@ if (provider.isTokenExpired()) {
 ## Support
 
 For issues or questions about OAuth setup, check:
-- Application logs: `docker-compose logs app`
+- Application logs: `docker compose logs app`
 - Database: `docker exec -it mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} abr`
 - OAuth provider documentation (Google/GitHub)
