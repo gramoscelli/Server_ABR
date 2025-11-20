@@ -142,8 +142,10 @@ ACCOUNT_DATA='{
 
 ACCOUNT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$ACCOUNT_DATA" \
   "${API_URL}/accounting/accounts")
 
@@ -174,8 +176,10 @@ BANK_ACCOUNT_DATA='{
 
 BANK_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$BANK_ACCOUNT_DATA" \
   "${API_URL}/accounting/accounts")
 
@@ -203,8 +207,10 @@ EXPENSE_CAT_DATA='{
 
 EXP_CAT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$EXPENSE_CAT_DATA" \
   "${API_URL}/accounting/expense-categories")
 
@@ -232,8 +238,10 @@ INCOME_CAT_DATA='{
 
 INC_CAT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$INCOME_CAT_DATA" \
   "${API_URL}/accounting/income-categories")
 
@@ -265,8 +273,10 @@ echo "Datos a enviar: $EXPENSE_DATA"
 
 EXPENSE_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$EXPENSE_DATA" \
   "${API_URL}/accounting/expenses")
 
@@ -298,8 +308,10 @@ echo "Datos a enviar: $INCOME_DATA"
 
 INCOME_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$INCOME_DATA" \
   "${API_URL}/accounting/incomes")
 
@@ -331,8 +343,10 @@ echo "Datos a enviar: $TRANSFER_DATA"
 
 TRANSFER_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
   -X POST \
+  -b /tmp/cookies.txt \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
   -d "$TRANSFER_DATA" \
   "${API_URL}/accounting/transfers")
 
