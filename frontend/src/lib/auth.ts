@@ -46,7 +46,12 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  console.log('[fetchWithAuth] Request:', url, 'Token:', token ? 'Present' : 'Missing')
+  // Add Content-Type for JSON requests if not already set
+  if (options.body && typeof options.body === 'string' && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
+  console.log('[fetchWithAuth] Request:', url, 'Token:', token ? 'Present' : 'Missing', 'Method:', options.method || 'GET')
 
   const response = await fetch(url, {
     ...options,
@@ -65,17 +70,34 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
       // Reintentar la solicitud original con el nuevo token
       const newToken = authService.getAccessToken()
       headers.set('Authorization', `Bearer ${newToken}`)
-      return fetch(url, {
+      const retryResponse = await fetch(url, {
         ...options,
         headers,
         credentials: 'include'
       })
+
+      // Check if retry was successful
+      if (!retryResponse.ok) {
+        const errorData = await retryResponse.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('[fetchWithAuth] Retry failed:', retryResponse.status, errorData)
+        throw new Error(errorData.error || errorData.message || `HTTP ${retryResponse.status}`)
+      }
+
+      return retryResponse
     } else {
       console.log('[fetchWithAuth] Token refresh failed, redirecting to login...')
       // Si no se pudo refrescar, limpiar la autenticación
       authService.clearAuth()
       window.location.href = '/login'
+      throw new Error('Authentication failed')
     }
+  }
+
+  // Check if response is successful
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+    console.error('[fetchWithAuth] Request failed:', response.status, errorData)
+    throw new Error(errorData.error || errorData.message || `HTTP ${response.status}`)
   }
 
   return response
