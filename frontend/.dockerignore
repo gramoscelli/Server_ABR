@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist
+.next
+out
+build
+
+# Cache directories
+.vite
+.cache
+.turbo
+.parcel-cache
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.log
+*.pid
+*.seed
+*.pid.lock
+.npm

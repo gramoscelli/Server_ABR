@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Hide mobile sidebar by default, show on mobile */
+  .sidebar-mobile {
+    @apply lg:hidden;
+  }
+
+  /* Hide desktop sidebar on mobile, show on desktop */
+  .sidebar-desktop {
+    @apply hidden lg:block lg:fixed lg:inset-y-0 lg:left-0 lg:z-30;
+  }
+
+  /* Main content area - padding will be set dynamically via inline styles */
+  .main-content {
+    /* Base styles only, width adjustments handled by component */
+  }
+
+  /* Menu button - only visible on mobile */
+  .menu-button {
+    @apply lg:hidden;
+  }
+
+  /* Header - adjust padding on desktop to account for sidebar */
+  header.sticky {
+    @apply lg:ml-0;
+  }
+}
