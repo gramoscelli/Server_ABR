@@ -1,0 +1,32 @@
+BASH=/bin/bash
+BASHOPTS=checkwinsize:cmdhist:complete_fullquote:extquote:force_fignore:globasciiranges:hostcomplete:interactive_comments:progcomp:promptvars:sourcepath
+BASH_ALIASES=()
+BASH_ARGC=()
+BASH_ARGV=()
+BASH_CMDS=()
+BASH_LINENO=([0]="0")
+BASH_SOURCE=([0]="/app/do_backup.sh")
+BASH_VERSINFO=([0]="5" [1]="1" [2]="4" [3]="1" [4]="release" [5]="x86_64-pc-linux-gnu")
+BASH_VERSION='5.1.4(1)-release'
+DIRSTACK=()
+EUID=0
+GROUPS=()
+HOME=/root
+HOSTNAME=aaeebd705a08
+HOSTTYPE=x86_64
+IFS=$' \t\n'
+LOGNAME=root
+MACHTYPE=x86_64-pc-linux-gnu
+OPTERR=1
+OPTIND=1
+OSTYPE=linux-gnu
+PATH=/usr/bin:/bin
+PPID=12
+PS4='+ '
+PWD=/root
+SHELL=/bin/sh
+SHELLOPTS=braceexpand:hashall:interactive-comments
+SHLVL=1
+TERM=dumb
+UID=0
+_=/bin/bash
