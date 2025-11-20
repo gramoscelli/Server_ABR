@@ -40,9 +40,9 @@ docker exec -i $MYSQL_CONTAINER mysql -uroot -pabr2005 abr <<EOF
 -- Eliminar usuario si existe (por username o email)
 DELETE FROM usuarios WHERE username = 'testuser' OR email = 'test@example.com';
 
--- Crear usuario de prueba con role_id de 'root'
-INSERT INTO usuarios (username, password_hash, email, role_id, is_active, created_at)
-SELECT 'testuser', '$PASSWORD_HASH', 'test@example.com', r.id, 1, NOW()
+-- Crear usuario de prueba con role_id de 'root' y email verificado
+INSERT INTO usuarios (username, password_hash, email, role_id, is_active, email_verified, created_at)
+SELECT 'testuser', '$PASSWORD_HASH', 'test@example.com', r.id, 1, 1, NOW()
 FROM roles r WHERE r.name = 'root';
 
 -- Mostrar usuario creado
