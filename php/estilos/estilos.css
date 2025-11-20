@@ -1,0 +1,75 @@
+.recuadro {
+	BORDER-RIGHT: #7e4a05 1px solid; BORDER-TOP: #7e4a05 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 13px; BORDER-LEFT: #7e4a05 1px solid; COLOR: #000000; BORDER-BOTTOM: #7e4a05 1px solid; FONT-FAMILY: Verdana,Helvetica; BACKGROUND-COLOR: #decbbd
+}
+.boton4 {
+	BORDER-RIGHT: 1px solid; BORDER-TOP: 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BORDER-LEFT: 1px solid; WIDTH: 120px; CURSOR: hand; COLOR: black; BORDER-BOTTOM: 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 20px
+}
+.boton {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #114cb7; BORDER-LEFT: black 1px solid; WIDTH: 65px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.boton1 {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 80px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botong {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 100px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botongg {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 125px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botonc {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 60px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botonm {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 70px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botoncc {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 50px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.botonccc {
+	BORDER-RIGHT: black 1px solid; BORDER-TOP: black 1px solid; FONT-WEIGHT: bold; FONT-SIZE: 10px; BACKGROUND: #49c374; BORDER-LEFT: black 1px solid; WIDTH: 40px; CURSOR: hand; COLOR: white; BORDER-BOTTOM: black 1px solid; FONT-FAMILY: Verdana,Helvetica; HEIGHT: 19px
+}
+.texto {
+	FONT-WEIGHT: normal; FONT-SIZE: 10px; FONT-FAMILY: Verdana
+}
+.textocat {
+	BORDER-RIGHT: 1px; BORDER-TOP: 1px; FONT-WEIGHT: normal; FONT-SIZE: 30px; BORDER-LEFT: 1px; COLOR: #99af5f; BORDER-BOTTOM: 1px; FONT-FAMILY: verdana,Helvetica
+}
+.principalTexto1 {
+	FONT-WEIGHT: normal; FONT-SIZE: 10px; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.principalPanelOpciones {
+	LEFT: 0px; WIDTH: 205px; POSITION: relative; TOP: 0px; HEIGHT: 280px
+}
+.principalLogoImg {
+	LEFT: 0px; WIDTH: 50px; TOP: 0px; HEIGHT: 280px
+}
+.principalTextoNoticias {
+	FONT-WEIGHT: normal; FONT-SIZE: 11px; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.principalLineaNoticias {
+	WIDTH: 100px; COLOR: #b88554; BACKGROUND-COLOR: #b88554
+}
+.fontVer {
+	FONT-WEIGHT: bolder; FONT-SIZE: 11px; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.cuadro {
+	BORDER-RIGHT: #999999 thin solid; BORDER-TOP: #999999 thin solid; FONT-WEIGHT: normal; FONT-SIZE: 12px; BORDER-LEFT: #999999 thin solid; COLOR: #333333; BORDER-BOTTOM: #999999 thin solid; FONT-FAMILY: Verdana; BACKGROUND-COLOR: #eeeeee
+}
+.marcBoton {
+	BORDER-RIGHT: 0px; BORDER-TOP: 0px; BORDER-LEFT: 0px; WIDTH: 75px; CURSOR: hand; BORDER-BOTTOM: 0px; HEIGHT: 25px
+}
+.recursosPanel {
+	LEFT: 0px; WIDTH: 400px; POSITION: relative; TOP: 0px; HEIGHT: 200px
+}
+.textover11 {
+	FONT-SIZE: 11px; FONT-FAMILY: Verdana
+}
+.fontverdana {
+	FONT-FAMILY: Verdana
+}
+.link {
+	COLOR: #ffffce; TEXT-DECORATION: none
+}
+.h1 {
+	FONT-FAMILY: Verdana
+}

@@ -1,0 +1,72 @@
+.texto {
+	FONT-WEIGHT: normal; FONT-SIZE: 9px; FONT-FAMILY: verdana
+}
+.texto8 {
+	FONT-WEIGHT: normal; FONT-SIZE: 8px; FONT-FAMILY: Verdana
+}
+.texto7 {
+	FONT-WEIGHT: normal; FONT-SIZE: 7px; FONT-FAMILY: Verdana
+}
+.texto9 {
+	FONT-WEIGHT: normal; FONT-SIZE: 9px; FONT-FAMILY: Verdana
+}
+.texto10 {
+	FONT-WEIGHT: normal; FONT-SIZE: 10px; FONT-FAMILY: Verdana
+}
+.texto11 {
+	FONT-WEIGHT: normal; FONT-SIZE: 11px; FONT-FAMILY: Verdana
+}
+.texto12 {
+	FONT-WEIGHT: normal; FONT-SIZE: 12px; FONT-FAMILY: Verdana
+}
+.texto13 {
+	FONT-WEIGHT: normal; FONT-SIZE: 13px; FONT-FAMILY: Verdana
+}
+.texto14 {
+	FONT-WEIGHT: normal; FONT-SIZE: 14px; FONT-FAMILY: Verdana
+}
+.texto15 {
+	FONT-WEIGHT: normal; FONT-SIZE: 15px; FONT-FAMILY: Verdana
+}
+.textocat {
+	BORDER-RIGHT: 1px; BORDER-TOP: 1px; FONT-WEIGHT: normal; FONT-SIZE: 30px; BORDER-LEFT: 1px; COLOR: #99af5f; BORDER-BOTTOM: 1px; FONT-FAMILY: verdana,Helvetica
+}
+.textocat15 {
+	BORDER-RIGHT: 1px; BORDER-TOP: 1px; FONT-WEIGHT: normal; FONT-SIZE: 15px; BORDER-LEFT: 1px; COLOR: #99af5f; BORDER-BOTTOM: 1px; FONT-FAMILY: verdana,Helvetica
+}
+.textocat20 {
+	BORDER-RIGHT: 1px; BORDER-TOP: 1px; FONT-WEIGHT: normal; FONT-SIZE: 20px; BORDER-LEFT: 1px; COLOR: #99af5f; BORDER-BOTTOM: 1px; FONT-FAMILY: verdana,Helvetica
+}
+.principalTexto1 {
+	FONT-WEIGHT: normal; FONT-SIZE: 10px; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.principalPanelOpciones {
+	LEFT: 0px; WIDTH: 205px; POSITION: relative; TOP: 0px; HEIGHT: 280px
+}
+.principalLogoImg {
+	LEFT: 0px; WIDTH: 50px; TOP: 0px; HEIGHT: 280px
+}
+.principalTextoNoticias {
+	FONT-WEIGHT: normal; FONT-SIZE: 11px; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.principalLineaNoticias {
+	WIDTH: 100px; COLOR: #b88554; BACKGROUND-COLOR: #b88554
+}
+.fontVer {
+	FONT-WEIGHT: bolder; COLOR: #73481e; FONT-FAMILY: Verdana
+}
+.cuadro {
+	BORDER-RIGHT: #999999 thin solid; BORDER-TOP: #999999 thin solid; FONT-WEIGHT: normal; FONT-SIZE: 12px; BORDER-LEFT: #999999 thin solid; COLOR: #333333; BORDER-BOTTOM: #999999 thin solid; FONT-FAMILY: Verdana; BACKGROUND-COLOR: #eeeeee
+}
+.marcBoton {
+	BORDER-RIGHT: 0px; BORDER-TOP: 0px; BORDER-LEFT: 0px; WIDTH: 75px; CURSOR: hand; BORDER-BOTTOM: 0px; HEIGHT: 25px
+}
+.recursosPanel {
+	LEFT: 0px; WIDTH: 400px; POSITION: relative; TOP: 0px; HEIGHT: 200px
+}
+.textover11 {
+	FONT-SIZE: 11px; FONT-FAMILY: Verdana
+}
+.fontverdana {
+	FONT-FAMILY: Verdana
+}
