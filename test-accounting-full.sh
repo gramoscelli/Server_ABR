@@ -20,7 +20,7 @@ echo -e "${BLUE}========================================${NC}\n"
 echo -e "${YELLOW}[1/11] Generando hash de contraseña...${NC}"
 
 PASSWORD_HASH=$(docker exec -i $APP_CONTAINER node -e "
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const password = 'Test123!';
 const hash = bcrypt.hashSync(password, 10);
 console.log(hash);
