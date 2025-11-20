@@ -1,0 +1,22 @@
+server_cred.txt
+app/node_modules/
+frontend/node_modules/
+node_modules/
+.env
+data/
+app/.whatsapp-auth/
+
+# Claude Code files
+.claude/
+CLAUDE.md
+SETUP_AUTH.md
+SECURITY_AUDIT_REPORT.md
+SECURITY_FIXES_APPLIED.md
+BRUTE_FORCE_PROTECTION.md
+CSRF_PROTECTION.md
+XSS_PROTECTION.md
+SEQUELIZE_MIGRATION.md
+
+# Test coverage
+app/coverage/
+*.log
