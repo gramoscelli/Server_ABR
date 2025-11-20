@@ -71,15 +71,18 @@ export default function TransfersPage() {
         accountingService.getTransfers({ start_date: startDateStr, end_date: endDateStr, limit: 100 }),
       ])
 
-      // Update stats
+      console.log('Dashboard data:', dashboardData)
+      console.log('Transfers response:', transfersResponse)
+
+      // Update stats with safe parsing
       setStats({
-        totalExpenses: parseFloat(dashboardData.period.total_expenses),
-        totalIncomes: parseFloat(dashboardData.period.total_incomes),
-        balance: parseFloat(dashboardData.period.net_result),
-        totalBalance: parseFloat(dashboardData.balances.total),
+        totalExpenses: parseFloat(dashboardData.period.total_expenses || '0'),
+        totalIncomes: parseFloat(dashboardData.period.total_incomes || '0'),
+        balance: parseFloat(dashboardData.period.net_result || '0'),
+        totalBalance: parseFloat(dashboardData.balances.total || '0'),
       })
 
-      setTransfers(transfersResponse.data)
+      setTransfers(transfersResponse.data || [])
     } catch (error) {
       console.error('Error fetching data:', error)
       toast({

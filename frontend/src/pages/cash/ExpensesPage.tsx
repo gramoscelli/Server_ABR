@@ -75,16 +75,20 @@ export default function ExpensesPage() {
         accountingService.getExpenseStatsByCategory({ start_date: startDateStr, end_date: endDateStr }),
       ])
 
-      // Update stats
+      console.log('Dashboard data:', dashboardData)
+      console.log('Expenses response:', expensesResponse)
+      console.log('Category stats:', categoryStatsData)
+
+      // Update stats with safe parsing
       setStats({
-        totalExpenses: parseFloat(dashboardData.period.total_expenses),
-        totalIncomes: parseFloat(dashboardData.period.total_incomes),
-        balance: parseFloat(dashboardData.period.net_result),
-        totalBalance: parseFloat(dashboardData.balances.total),
+        totalExpenses: parseFloat(dashboardData.period.total_expenses || '0'),
+        totalIncomes: parseFloat(dashboardData.period.total_incomes || '0'),
+        balance: parseFloat(dashboardData.period.net_result || '0'),
+        totalBalance: parseFloat(dashboardData.balances.total || '0'),
       })
 
-      setExpenses(expensesResponse.data)
-      setCategoryStats(categoryStatsData.data)
+      setExpenses(expensesResponse.data || [])
+      setCategoryStats(categoryStatsData.data || [])
     } catch (error) {
       console.error('Error fetching data:', error)
       toast({
