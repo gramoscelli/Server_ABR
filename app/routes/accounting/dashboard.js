@@ -153,9 +153,9 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
         period: {
           start_date: start_date || null,
           end_date: end_date || null,
-          total_expenses: parseFloat(totalExpenses).toFixed(2),
-          total_incomes: parseFloat(totalIncomes).toFixed(2),
-          net_result: (parseFloat(totalIncomes) - parseFloat(totalExpenses)).toFixed(2),
+          total_expenses: (parseFloat(totalExpenses) || 0).toFixed(2),
+          total_incomes: (parseFloat(totalIncomes) || 0).toFixed(2),
+          net_result: ((parseFloat(totalIncomes) || 0) - (parseFloat(totalExpenses) || 0)).toFixed(2),
           expenses_by_category: Object.values(expenseCategoryMap).map(cat => ({
             ...cat,
             total: cat.total.toFixed(2)
