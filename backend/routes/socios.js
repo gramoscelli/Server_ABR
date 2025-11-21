@@ -259,4 +259,124 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee', '
   }
 });
 
+/**
+ * GET /api/socios/morosos/:months
+ * Get socios with payment delays of at least X months
+ * Params:
+ *   - months: minimum number of months delayed (required)
+ */
+router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_employee', 'library_employee'), async (req, res) => {
+  try {
+    const { months } = req.params;
+    const monthsDelayed = parseInt(months);
+
+    if (isNaN(monthsDelayed) || monthsDelayed < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'El número de meses debe ser un valor positivo'
+      });
+    }
+
+    console.log(`Finding socios with at least ${monthsDelayed} months delayed`);
+
+    // Get current date
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1; // 0-indexed, so add 1
+
+    // Get all socios with their latest payment
+    const socios = await Socio.findAll({
+      include: [
+        {
+          model: Grupo,
+          as: 'grupo',
+          attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo']
+        },
+        {
+          model: CobroCuota,
+          as: 'cuotas',
+          attributes: ['CC_ID', 'CC_Anio', 'CC_Mes', 'CC_Valor', 'CC_FechaCobrado'],
+          where: {
+            CC_Anulado: 'N',
+            CC_Cobrado: 'Y'
+          },
+          required: false,  // LEFT JOIN - include socios without payments
+          limit: 1,
+          order: [['CC_Anio', 'DESC'], ['CC_Mes', 'DESC']]  // Get the most recent payment
+        }
+      ],
+      order: [['So_Apellido', 'ASC'], ['So_Nombre', 'ASC']]
+    });
+
+    // Filter socios by months delayed and calculate delay
+    const morosos = socios.map(socio => {
+      const fixed = socio.toJSON();
+
+      // Fix text fields encoding
+      const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef'];
+      textFields.forEach(field => {
+        fixed[field] = fixEncoding(fixed[field]);
+      });
+
+      // Add grupo name
+      if (fixed.grupo) {
+        fixed.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
+        fixed.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
+        delete fixed.grupo;
+      }
+
+      // Calculate months delayed
+      let lastPaymentYear = null;
+      let lastPaymentMonth = null;
+      let delayedMonths = null;
+
+      if (fixed.cuotas && fixed.cuotas.length > 0) {
+        const ultimaCuota = fixed.cuotas[0];
+        lastPaymentYear = ultimaCuota.CC_Anio;
+        lastPaymentMonth = ultimaCuota.CC_Mes;
+
+        // Calculate months difference
+        const monthsDiff = (currentYear - lastPaymentYear) * 12 + (currentMonth - lastPaymentMonth);
+        delayedMonths = monthsDiff;
+
+        fixed.UltimaCuota_Anio = lastPaymentYear;
+        fixed.UltimaCuota_Mes = lastPaymentMonth;
+        fixed.UltimaCuota_Valor = ultimaCuota.CC_Valor;
+        fixed.UltimaCuota_FechaCobrado = ultimaCuota.CC_FechaCobrado;
+      } else {
+        // No payments found - calculate from registration date
+        const registrationYear = fixed.So_AnioIngre || currentYear;
+        const registrationMonth = fixed.So_MesIngre || 1;
+        delayedMonths = (currentYear - registrationYear) * 12 + (currentMonth - registrationMonth);
+      }
+
+      delete fixed.cuotas;
+      delete fixed.So_Foto; // Remove photo
+
+      fixed.MesesAtraso = delayedMonths;
+
+      return fixed;
+    }).filter(socio => socio.MesesAtraso >= monthsDelayed);
+
+    console.log(`Found ${morosos.length} socios with ${monthsDelayed}+ months delayed`);
+
+    res.json({
+      success: true,
+      data: morosos,
+      total: morosos.length,
+      criteria: {
+        mesesMinimos: monthsDelayed,
+        fechaConsulta: `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+      }
+    });
+  } catch (error) {
+    console.error('Error getting morosos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener socios morosos',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
