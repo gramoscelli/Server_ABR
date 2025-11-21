@@ -32,7 +32,7 @@ export function AddTransferTypeDialog({ open, onOpenChange, onSubmit, transferTy
       setFormData({
         name: transferType.name,
         description: transferType.description || '',
-        is_active: transferType.is_active,
+        is_active: transferType.is_active ?? true,
       })
     } else {
       setFormData({

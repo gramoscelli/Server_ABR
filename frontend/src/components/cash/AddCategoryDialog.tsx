@@ -53,7 +53,7 @@ export function AddCategoryDialog({ open, onOpenChange, onSubmit, category, type
         name: category.name,
         color: category.color,
         description: category.description || '',
-        is_active: category.is_active,
+        is_active: category.is_active ?? true,
       })
     } else {
       setFormData({
