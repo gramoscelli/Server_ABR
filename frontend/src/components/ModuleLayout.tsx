@@ -94,9 +94,9 @@ export function ModuleLayout({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl">
+        <div className={`flex flex-col h-screen bg-gradient-to-br ${moduleColor} shadow-2xl`}>
           {/* Mobile Header */}
-          <div className="flex h-20 items-center justify-between px-6 border-b border-slate-700/50">
+          <div className="flex h-20 items-center justify-between px-6 border-b border-white/10">
             <div className="flex items-center gap-3">
               <span className="text-xl font-bold text-white">{moduleName}</span>
             </div>
@@ -104,7 +104,7 @@ export function ModuleLayout({
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(false)}
-              className="text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg"
+              className="text-white/90 hover:text-white hover:bg-white/10 rounded-lg"
             >
               <X className="h-6 w-6" />
             </Button>
@@ -121,8 +121,8 @@ export function ModuleLayout({
                   className={cn(
                     "group flex items-center gap-4 rounded-xl px-4 py-3.5 text-sm font-semibold transition-all duration-200",
                     isActive
-                      ? `bg-gradient-to-r ${moduleColor} text-white shadow-lg`
-                      : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                      ? "bg-white/20 text-white shadow-lg ring-2 ring-white/30"
+                      : "text-white/80 hover:bg-white/10 hover:text-white"
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -134,11 +134,11 @@ export function ModuleLayout({
           </nav>
 
           {/* Mobile Bottom Navigation */}
-          <div className="border-t border-slate-700/50 p-4 space-y-2">
+          <div className="border-t border-white/10 p-4 space-y-2">
             <Button
               variant="ghost"
               onClick={handleGoHome}
-              className="w-full justify-start text-slate-300 hover:text-white hover:bg-slate-800/60"
+              className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10"
             >
               <Home className="h-5 w-5 mr-3" />
               Inicio
@@ -147,7 +147,7 @@ export function ModuleLayout({
               <Link
                 key={item.name}
                 to={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all"
                 onClick={() => setSidebarOpen(false)}
               >
                 <item.icon className="h-5 w-5" />
@@ -157,7 +157,7 @@ export function ModuleLayout({
             <Button
               variant="ghost"
               onClick={handleLogout}
-              className="w-full justify-start text-red-400 hover:text-red-300 hover:bg-red-900/20"
+              className="w-full justify-start text-red-200 hover:text-white hover:bg-red-500/30"
             >
               <LogOut className="h-5 w-5 mr-3" />
               Cerrar Sesión
@@ -169,13 +169,13 @@ export function ModuleLayout({
       {/* Desktop sidebar */}
       <div
         className={cn(
-          "hidden lg:flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 shadow-2xl transition-all duration-300",
+          `hidden lg:flex flex-col bg-gradient-to-br ${moduleColor} shadow-2xl transition-all duration-300`,
           desktopSidebarCollapsed ? "w-20" : "w-72"
         )}
       >
         {/* Desktop Header */}
         <div className={cn(
-          "flex h-20 items-center border-b border-slate-700/50 transition-all duration-300",
+          "flex h-20 items-center border-b border-white/10 transition-all duration-300",
           desktopSidebarCollapsed ? "justify-center px-4" : "justify-between px-6"
         )}>
           {!desktopSidebarCollapsed && (
@@ -185,7 +185,7 @@ export function ModuleLayout({
             variant="ghost"
             size="icon"
             onClick={() => setDesktopSidebarCollapsed(!desktopSidebarCollapsed)}
-            className="text-slate-300 hover:text-white hover:bg-slate-800"
+            className="text-white/90 hover:text-white hover:bg-white/10"
           >
             {desktopSidebarCollapsed ? (
               <ChevronRight className="h-5 w-5" />
@@ -208,8 +208,8 @@ export function ModuleLayout({
                   "group flex items-center rounded-xl py-3.5 text-sm font-semibold transition-all duration-200",
                   desktopSidebarCollapsed ? "justify-center px-2" : "gap-4 px-4",
                   isActive
-                    ? `bg-gradient-to-r ${moduleColor} text-white shadow-lg scale-105`
-                    : "text-slate-300 hover:bg-slate-800/60 hover:text-white hover:scale-105"
+                    ? "bg-white/20 text-white shadow-lg ring-2 ring-white/30 scale-105"
+                    : "text-white/80 hover:bg-white/10 hover:text-white hover:scale-105"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -220,13 +220,13 @@ export function ModuleLayout({
         </nav>
 
         {/* Desktop Bottom Navigation */}
-        <div className="border-t border-slate-700/50 p-4 space-y-2">
+        <div className="border-t border-white/10 p-4 space-y-2">
           <Button
             variant="ghost"
             onClick={handleGoHome}
             title={desktopSidebarCollapsed ? 'Inicio' : ''}
             className={cn(
-              "w-full text-slate-300 hover:text-white hover:bg-slate-800/60",
+              "w-full text-white/80 hover:text-white hover:bg-white/10",
               desktopSidebarCollapsed ? "justify-center px-2" : "justify-start"
             )}
           >
@@ -239,7 +239,7 @@ export function ModuleLayout({
               to={item.href}
               title={desktopSidebarCollapsed ? item.name : ''}
               className={cn(
-                "flex items-center rounded-xl py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800/60 hover:text-white transition-all",
+                "flex items-center rounded-xl py-3 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all",
                 desktopSidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"
               )}
             >
@@ -252,7 +252,7 @@ export function ModuleLayout({
             onClick={handleLogout}
             title={desktopSidebarCollapsed ? 'Cerrar Sesión' : ''}
             className={cn(
-              "w-full text-red-400 hover:text-red-300 hover:bg-red-900/20",
+              "w-full text-red-200 hover:text-white hover:bg-red-500/30",
               desktopSidebarCollapsed ? "justify-center px-2" : "justify-start"
             )}
           >
