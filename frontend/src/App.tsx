@@ -30,6 +30,7 @@ const ReconciliationsPage = lazy(() => import('@/pages/accounting/Reconciliation
 
 // Socios module pages
 const SociosPage = lazy(() => import('@/pages/SociosPage'))
+const SociosReportsPage = lazy(() => import('@/pages/socios/ReportsPage'))
 
 // Admin module pages
 const AdminDashboardPage = lazy(() => import('@/pages/admin/DashboardPage'))
@@ -125,6 +126,17 @@ function App() {
               <ProtectedRoute requireLibraryAccess>
                 <SociosLayout>
                   <SociosPage />
+                </SociosLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/socios/reports"
+            element={
+              <ProtectedRoute requireLibraryAccess>
+                <SociosLayout>
+                  <SociosReportsPage />
                 </SociosLayout>
               </ProtectedRoute>
             }
