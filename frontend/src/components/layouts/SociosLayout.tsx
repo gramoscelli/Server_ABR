@@ -1,5 +1,5 @@
 import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
-import { BookUser, BarChart3 } from 'lucide-react'
+import { BookUser, BarChart3, Users } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
   {
@@ -18,6 +18,7 @@ export function SociosLayout({ children }: { children: React.ReactNode }) {
   return (
     <ModuleLayout
       moduleName="Socios"
+      moduleIcon={Users}
       moduleColor="from-blue-500 to-blue-600"
       navigation={navigation}
     >

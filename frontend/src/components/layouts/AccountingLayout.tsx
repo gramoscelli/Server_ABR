@@ -56,6 +56,7 @@ export function AccountingLayout({ children }: { children: React.ReactNode }) {
   return (
     <ModuleLayout
       moduleName="Contabilidad"
+      moduleIcon={DollarSign}
       moduleColor="from-purple-500 to-purple-600"
       navigation={navigation}
     >
