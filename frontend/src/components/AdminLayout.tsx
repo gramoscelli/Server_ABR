@@ -17,7 +17,10 @@ import {
   Wallet,
   ArrowLeftRight,
   BookUser,
-  ChevronDown
+  ChevronDown,
+  Building2,
+  Tag,
+  Calculator
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -46,6 +49,30 @@ const navigation = [
     name: 'Transferencias',
     href: '/cash/transfers',
     icon: ArrowLeftRight,
+    adminOnly: true  // root y admin_employee
+  },
+  {
+    name: 'Cuentas',
+    href: '/cash/accounts',
+    icon: Building2,
+    adminOnly: true  // root y admin_employee
+  },
+  {
+    name: 'Categorías',
+    href: '/cash/categories',
+    icon: Tag,
+    adminOnly: true  // root y admin_employee
+  },
+  {
+    name: 'Tipos de Transferencias',
+    href: '/cash/transfer-types',
+    icon: ArrowLeftRight,
+    adminOnly: true  // root y admin_employee
+  },
+  {
+    name: 'Arqueos de Caja',
+    href: '/cash/reconciliations',
+    icon: Calculator,
     adminOnly: true  // root y admin_employee
   },
   { name: 'Usuarios', href: '/admin/users', icon: Users, adminOnly: true },
