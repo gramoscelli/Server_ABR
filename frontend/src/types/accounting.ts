@@ -34,8 +34,8 @@ export interface Account {
   account_number: string | null
   bank_name: string | null
   currency: string
-  initial_balance: number
-  current_balance: number
+  initial_balance: string | number  // Backend may return as string
+  current_balance: string | number  // Backend may return as string
   is_active: boolean
   notes: string | null
   created_at: string
@@ -44,7 +44,7 @@ export interface Account {
 
 export interface Expense {
   id: number
-  amount: number
+  amount: string | number  // Backend may return as string
   category_id: number | null
   account_id: number
   date: string
@@ -59,7 +59,7 @@ export interface Expense {
 
 export interface Income {
   id: number
-  amount: number
+  amount: string | number  // Backend may return as string
   category_id: number | null
   account_id: number
   date: string
@@ -74,7 +74,7 @@ export interface Income {
 
 export interface Transfer {
   id: number
-  amount: number
+  amount: string | number  // Backend may return as string
   from_account_id: number
   to_account_id: number
   transfer_type_id: number | null
