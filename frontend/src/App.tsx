@@ -32,7 +32,10 @@ const ReconciliationsPage = lazy(() => import('@/pages/accounting/Reconciliation
 const SociosPage = lazy(() => import('@/pages/SociosPage'))
 
 // Admin module pages
+const AdminDashboardPage = lazy(() => import('@/pages/admin/DashboardPage'))
 const UsersPage = lazy(() => import('@/pages/admin/UsersPage'))
+const SecurityPage = lazy(() => import('@/pages/admin/SecurityPage'))
+const SystemPage = lazy(() => import('@/pages/admin/SystemPage'))
 const RolesPage = lazy(() => import('@/pages/admin/RolesPage'))
 const ApiKeysPage = lazy(() => import('@/pages/admin/ApiKeysPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
@@ -258,7 +261,18 @@ function App() {
             element={
               <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
-                  <Navigate to="/admin/users" replace />
+                  <Navigate to="/admin/dashboard" replace />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <AdminDashboardPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }
@@ -267,9 +281,31 @@ function App() {
           <Route
             path="/admin/users"
             element={
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
                   <UsersPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/security"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <SecurityPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/system"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <SystemPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }

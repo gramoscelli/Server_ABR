@@ -1,25 +1,25 @@
 import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
-import { Users, Shield, Key, Settings } from 'lucide-react'
+import { LayoutDashboard, Users, Shield, Settings } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
+  {
+    name: 'Panel Principal',
+    href: '/admin/dashboard',
+    icon: LayoutDashboard,
+  },
   {
     name: 'Usuarios',
     href: '/admin/users',
     icon: Users,
   },
   {
-    name: 'Roles',
-    href: '/admin/roles',
+    name: 'Seguridad',
+    href: '/admin/security',
     icon: Shield,
   },
   {
-    name: 'Claves API',
-    href: '/admin/api-keys',
-    icon: Key,
-  },
-  {
-    name: 'Configuración',
-    href: '/admin/settings',
+    name: 'Sistema',
+    href: '/admin/system',
     icon: Settings,
   },
 ]
