@@ -135,7 +135,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
               <SelectContent>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={String(account.id)}>
-                    {account.name} ({account.type}) - {account.currency} {account.current_balance.toFixed(2)}
+                    {account.name} ({account.type}) - {account.currency} {(parseFloat(account.current_balance) || 0).toFixed(2)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -158,7 +158,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
               <SelectContent>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={String(account.id)}>
-                    {account.name} ({account.type}) - {account.currency} {account.current_balance.toFixed(2)}
+                    {account.name} ({account.type}) - {account.currency} {(parseFloat(account.current_balance) || 0).toFixed(2)}
                   </SelectItem>
                 ))}
               </SelectContent>

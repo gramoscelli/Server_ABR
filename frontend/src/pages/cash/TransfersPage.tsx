@@ -302,7 +302,7 @@ export default function TransfersPage() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <p className="font-semibold text-gray-900">
-                              ${transfer.amount.toFixed(2)}
+                              ${(parseFloat(transfer.amount) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
                               {transfer.date ? new Date(transfer.date).toLocaleString('es-ES', {
