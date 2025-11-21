@@ -81,10 +81,10 @@ export default function ExpensesPage() {
 
       // Update stats with safe parsing
       setStats({
-        totalExpenses: parseFloat(dashboardData.period.total_expenses || '0'),
-        totalIncomes: parseFloat(dashboardData.period.total_incomes || '0'),
-        balance: parseFloat(dashboardData.period.net_result || '0'),
-        totalBalance: parseFloat(dashboardData.balances.total || '0'),
+        totalExpenses: Number(dashboardData.period.total_expenses || '0'),
+        totalIncomes: Number(dashboardData.period.total_incomes || '0'),
+        balance: Number(dashboardData.period.net_result || '0'),
+        totalBalance: Number(dashboardData.balances.total || '0'),
       })
 
       setExpenses(expensesResponse.data || [])
@@ -106,7 +106,7 @@ export default function ExpensesPage() {
   const handleAddExpense = async (data: ExpenseFormData) => {
     try {
       await accountingService.createExpense({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         account_id: data.account_id,
         category_id: data.category_id,
         date: data.date,
@@ -132,7 +132,7 @@ export default function ExpensesPage() {
   const handleAddIncome = async (data: IncomeFormData) => {
     try {
       await accountingService.createIncome({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         account_id: data.account_id,
         category_id: data.category_id,
         date: data.date,
@@ -158,7 +158,7 @@ export default function ExpensesPage() {
   const handleAddTransfer = async (data: TransferFormData) => {
     try {
       await accountingService.createTransfer({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         from_account_id: data.from_account_id,
         to_account_id: data.to_account_id,
         transfer_type_id: data.transfer_type_id,
@@ -275,7 +275,7 @@ export default function ExpensesPage() {
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-sm font-medium text-gray-900">{cat.name}</span>
                             <span className="text-sm text-gray-600">
-                              ${(parseFloat(cat.total) || 0).toFixed(2)} ({cat.count})
+                              ${(Number(cat.total) || 0).toFixed(2)} ({cat.count})
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -283,7 +283,7 @@ export default function ExpensesPage() {
                               className="h-2 rounded-full"
                               style={{
                                 backgroundColor: cat.color,
-                                width: `${Math.min(((parseFloat(cat.total) || 0) / (stats.totalExpenses || 1)) * 100, 100)}%`,
+                                width: `${Math.min(((Number(cat.total) || 0) / (stats.totalExpenses || 1)) * 100, 100)}%`,
                               }}
                             />
                           </div>
@@ -365,7 +365,7 @@ export default function ExpensesPage() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <p className="font-semibold text-red-600">
-                              -${(parseFloat(expense.amount) || 0).toFixed(2)}
+                              -${(Number(expense.amount) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
                               {expense.date ? new Date(expense.date).toLocaleString('es-ES', {

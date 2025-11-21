@@ -76,10 +76,10 @@ export default function IncomesPage() {
 
       // Update stats with safe parsing
       setStats({
-        totalExpenses: parseFloat(dashboardData.period.total_expenses || '0'),
-        totalIncomes: parseFloat(dashboardData.period.total_incomes || '0'),
-        balance: parseFloat(dashboardData.period.net_result || '0'),
-        totalBalance: parseFloat(dashboardData.balances.total || '0'),
+        totalExpenses: Number(dashboardData.period.total_expenses || '0'),
+        totalIncomes: Number(dashboardData.period.total_incomes || '0'),
+        balance: Number(dashboardData.period.net_result || '0'),
+        totalBalance: Number(dashboardData.balances.total || '0'),
       })
 
       setIncomes(incomesResponse.data || [])
@@ -100,7 +100,7 @@ export default function IncomesPage() {
   const handleAddIncome = async (data: IncomeFormData) => {
     try {
       await accountingService.createIncome({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         account_id: data.account_id,
         category_id: data.category_id,
         date: data.date,
@@ -126,7 +126,7 @@ export default function IncomesPage() {
   const handleAddExpense = async (data: ExpenseFormData) => {
     try {
       await accountingService.createExpense({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         account_id: data.account_id,
         category_id: data.category_id,
         date: data.date,
@@ -152,7 +152,7 @@ export default function IncomesPage() {
   const handleAddTransfer = async (data: TransferFormData) => {
     try {
       await accountingService.createTransfer({
-        amount: parseFloat(data.amount),
+        amount: Number(data.amount),
         from_account_id: data.from_account_id,
         to_account_id: data.to_account_id,
         transfer_type_id: data.transfer_type_id,
@@ -310,7 +310,7 @@ export default function IncomesPage() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <p className="font-semibold text-green-600">
-                              +${(parseFloat(income.amount) || 0).toFixed(2)}
+                              +${(Number(income.amount) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
                               {income.date ? new Date(income.date).toLocaleString('es-ES', {
