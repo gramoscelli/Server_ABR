@@ -309,54 +309,49 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
     });
 
     // Filter socios by months delayed and calculate delay
-    const morosos = socios.map(socio => {
-      const fixed = socio.toJSON();
+    // Only include socios with at least one payment
+    const morosos = socios
+      .map(socio => {
+        const fixed = socio.toJSON();
 
-      // Fix text fields encoding
-      const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef'];
-      textFields.forEach(field => {
-        fixed[field] = fixEncoding(fixed[field]);
-      });
+        // Skip socios without any payments
+        if (!fixed.cuotas || fixed.cuotas.length === 0) {
+          return null;
+        }
 
-      // Add grupo name
-      if (fixed.grupo) {
-        fixed.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
-        fixed.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
-        delete fixed.grupo;
-      }
+        // Fix text fields encoding
+        const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef'];
+        textFields.forEach(field => {
+          fixed[field] = fixEncoding(fixed[field]);
+        });
 
-      // Calculate months delayed
-      let lastPaymentYear = null;
-      let lastPaymentMonth = null;
-      let delayedMonths = null;
+        // Add grupo name
+        if (fixed.grupo) {
+          fixed.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
+          fixed.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
+          delete fixed.grupo;
+        }
 
-      if (fixed.cuotas && fixed.cuotas.length > 0) {
+        // Calculate months delayed based on last payment
         const ultimaCuota = fixed.cuotas[0];
-        lastPaymentYear = ultimaCuota.CC_Anio;
-        lastPaymentMonth = ultimaCuota.CC_Mes;
+        const lastPaymentYear = ultimaCuota.CC_Anio;
+        const lastPaymentMonth = ultimaCuota.CC_Mes;
 
         // Calculate months difference
         const monthsDiff = (currentYear - lastPaymentYear) * 12 + (currentMonth - lastPaymentMonth);
-        delayedMonths = monthsDiff;
 
         fixed.UltimaCuota_Anio = lastPaymentYear;
         fixed.UltimaCuota_Mes = lastPaymentMonth;
         fixed.UltimaCuota_Valor = ultimaCuota.CC_Valor;
         fixed.UltimaCuota_FechaCobrado = ultimaCuota.CC_FechaCobrado;
-      } else {
-        // No payments found - calculate from registration date
-        const registrationYear = fixed.So_AnioIngre || currentYear;
-        const registrationMonth = fixed.So_MesIngre || 1;
-        delayedMonths = (currentYear - registrationYear) * 12 + (currentMonth - registrationMonth);
-      }
+        fixed.MesesAtraso = monthsDiff;
 
-      delete fixed.cuotas;
-      delete fixed.So_Foto; // Remove photo
+        delete fixed.cuotas;
+        delete fixed.So_Foto; // Remove photo
 
-      fixed.MesesAtraso = delayedMonths;
-
-      return fixed;
-    }).filter(socio => socio.MesesAtraso >= monthsDelayed);
+        return fixed;
+      })
+      .filter(socio => socio !== null && socio.MesesAtraso >= monthsDelayed);
 
     console.log(`Found ${morosos.length} socios with ${monthsDelayed}+ months delayed`);
 
