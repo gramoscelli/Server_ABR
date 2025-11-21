@@ -1,4 +1,3 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CompactDatePicker } from '@/components/ui/compact-date-picker'
@@ -175,7 +174,6 @@ export default function DashboardPage() {
   }
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -370,6 +368,5 @@ export default function DashboardPage() {
           onSubmit={handleAddTransfer}
         />
       </div>
-    </AdminLayout>
   )
 }

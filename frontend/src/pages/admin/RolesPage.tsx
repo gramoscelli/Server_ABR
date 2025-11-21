@@ -1,4 +1,3 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -88,7 +87,6 @@ export default function RolesPage() {
   }
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -216,6 +214,5 @@ export default function RolesPage() {
           </>
         )}
       </div>
-    </AdminLayout>
   )
 }

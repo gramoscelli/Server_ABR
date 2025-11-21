@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { AdminLayout } from '@/components/AdminLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -121,27 +120,22 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Cargando perfil...</div>
-        </div>
-      </AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Cargando perfil...</div>
+      </div>
     )
   }
 
   if (!profile) {
     return (
-      <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-red-500">Error al cargar el perfil</div>
-        </div>
-      </AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Error al cargar el perfil</div>
+      </div>
     )
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mi Perfil</h1>
           <p className="mt-2 text-gray-600">
@@ -325,7 +319,6 @@ export default function ProfilePage() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </AdminLayout>
+    </div>
   )
 }
