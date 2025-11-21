@@ -6,9 +6,11 @@ import {
   TrendingUp,
   TrendingDown,
   Wallet,
-  Receipt,
   Plus,
-  Info
+  ArrowRight,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Repeat,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { authService } from '@/lib/auth'
@@ -74,8 +76,6 @@ export default function DashboardPage() {
         end_date: endDateStr
       })
 
-      console.log('Dashboard data:', dashboardData)
-
       // Update stats with safe parsing
       setStats({
         income: Number(dashboardData.period.total_incomes || '0'),
@@ -87,6 +87,11 @@ export default function DashboardPage() {
       })
     } catch (error) {
       console.error('Error fetching stats:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar las estadísticas',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
     }
@@ -106,7 +111,7 @@ export default function DashboardPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Ingreso creado correctamente',
+        description: 'Ingreso registrado correctamente',
       })
 
       fetchStats()
@@ -114,7 +119,7 @@ export default function DashboardPage() {
       console.error('Error creating income:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear el ingreso',
+        description: 'No se pudo registrar el ingreso',
         variant: 'destructive',
       })
     }
@@ -132,7 +137,7 @@ export default function DashboardPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Egreso creado correctamente',
+        description: 'Egreso registrado correctamente',
       })
 
       fetchStats()
@@ -140,7 +145,7 @@ export default function DashboardPage() {
       console.error('Error creating expense:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear el egreso',
+        description: 'No se pudo registrar el egreso',
         variant: 'destructive',
       })
     }
@@ -159,7 +164,7 @@ export default function DashboardPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Transferencia creada correctamente',
+        description: 'Transferencia registrada correctamente',
       })
 
       fetchStats()
@@ -167,7 +172,7 @@ export default function DashboardPage() {
       console.error('Error creating transfer:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear la transferencia',
+        description: 'No se pudo registrar la transferencia',
         variant: 'destructive',
       })
     }
@@ -177,178 +182,177 @@ export default function DashboardPage() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Panel de Control</h1>
-              <p className="mt-1 text-sm text-gray-500 capitalize">{currentMonthName}</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Panel Principal</h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 capitalize">
+              Período: {currentMonthName}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             <CompactDatePicker
               value={selectedDate}
               onChange={setSelectedDate}
             />
           </div>
-          <div className="flex gap-2">
-            <Button
-              className="bg-red-500 hover:bg-red-600 text-white"
-              onClick={() => setIsAddExpenseOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Egreso
-            </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setIsAddIncomeOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ingreso
-            </Button>
-            <Button
-              className="bg-gray-900 hover:bg-gray-800 text-white"
-              onClick={() => setIsAddTransferOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Transferencia
-            </Button>
-          </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Transactions */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Expenses */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Egresos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                    <DollarSign className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 mb-4">No hay egresos disponibles</p>
-                  <Button
-                    className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                    onClick={() => setIsAddExpenseOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Egreso
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Button
+            className="bg-green-600 hover:bg-green-700 text-white h-auto py-4"
+            onClick={() => setIsAddIncomeOpen(true)}
+          >
+            <div className="flex items-center gap-3">
+              <ArrowUpCircle className="h-6 w-6" />
+              <div className="text-left">
+                <div className="font-semibold">Registrar Ingreso</div>
+                <div className="text-xs opacity-90">Cobros, ventas, etc.</div>
+              </div>
+            </div>
+          </Button>
+          <Button
+            className="bg-red-600 hover:bg-red-700 text-white h-auto py-4"
+            onClick={() => setIsAddExpenseOpen(true)}
+          >
+            <div className="flex items-center gap-3">
+              <ArrowDownCircle className="h-6 w-6" />
+              <div className="text-left">
+                <div className="font-semibold">Registrar Egreso</div>
+                <div className="text-xs opacity-90">Pagos, compras, etc.</div>
+              </div>
+            </div>
+          </Button>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white h-auto py-4"
+            onClick={() => setIsAddTransferOpen(true)}
+          >
+            <div className="flex items-center gap-3">
+              <Repeat className="h-6 w-6" />
+              <div className="text-left">
+                <div className="font-semibold">Transferencia</div>
+                <div className="text-xs opacity-90">Entre cuentas</div>
+              </div>
+            </div>
+          </Button>
+        </div>
 
-            {/* Incomes */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Ingresos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                    <Wallet className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 mb-4">No hay ingresos disponibles</p>
-                  <Button
-                    className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                    onClick={() => setIsAddIncomeOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Agregar Ingreso
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Balance */}
+          <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-100">
+                Total Disponible
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                $ {stats.totalAvailable.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-blue-100 mt-1">
+                Suma de todas las cuentas
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Bills */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Facturas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                    <Receipt className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-500 mb-4">No hay facturas recientes disponibles</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Period Income */}
+          <Card className="border-green-200 dark:border-green-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Ingresos del Período
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                $ {stats.income.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Right Column - Summary */}
-          <div className="space-y-6">
-            {/* Balance Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Balance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Ingresos</span>
-                  <span className="font-semibold">ARS {stats.income.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Egresos</span>
-                  <span className="font-semibold">ARS {stats.expense.toFixed(2)}</span>
-                </div>
-                <div className="pt-4 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-900">Balance</span>
-                    <span className="font-bold text-lg">ARS {stats.balance.toFixed(2)}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Period Expenses */}
+          <Card className="border-red-200 dark:border-red-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Egresos del Período
+                </CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                $ {stats.expense.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Accounts Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Cuentas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Efectivo</span>
-                  <span className="font-semibold">ARS {stats.cashAccount.toFixed(2)}</span>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Period Balance */}
+          <Card className={`border-2 ${stats.balance >= 0 ? 'border-green-300 dark:border-green-700' : 'border-red-300 dark:border-red-700'}`}>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                  Resultado del Período
+                </CardTitle>
+                <DollarSign className={`h-4 w-4 ${stats.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                $ {stats.balance.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Total Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Total</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Total Disponible</span>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <span className="font-semibold">ARS {stats.totalAvailable.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-600">Total Real</span>
-                    <Info className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <span className="font-semibold">ARS {stats.totalReal.toFixed(2)}</span>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Quick Access Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Operations */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/operations')}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                <span>Operaciones Recientes</span>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Ver el libro diario completo con todas las transacciones registradas
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Budgets Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Presupuestos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-500 text-center py-4">
-                  No hay presupuestos configurados
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Accounts */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/accounts')}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                <span>Gestión de Cuentas</span>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Administrar cuentas bancarias, efectivo y ver saldos actualizados
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Reports */}
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/reports')}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                <span>Reportes Financieros</span>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Generar informes, balances y análisis financieros detallados
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Dialogs */}

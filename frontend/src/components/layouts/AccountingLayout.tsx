@@ -1,34 +1,23 @@
 import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
 import {
   LayoutDashboard,
-  DollarSign,
-  Wallet,
-  ArrowLeftRight,
+  BookOpenText,
   Building2,
-  Tag,
-  Calculator,
+  FileText,
+  Settings,
+  DollarSign,
 } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
   {
-    name: 'Panel de Control',
+    name: 'Panel Principal',
     href: '/accounting/dashboard',
     icon: LayoutDashboard,
   },
   {
-    name: 'Egresos',
-    href: '/accounting/expenses',
-    icon: DollarSign,
-  },
-  {
-    name: 'Ingresos',
-    href: '/accounting/incomes',
-    icon: Wallet,
-  },
-  {
-    name: 'Transferencias',
-    href: '/accounting/transfers',
-    icon: ArrowLeftRight,
+    name: 'Operaciones',
+    href: '/accounting/operations',
+    icon: BookOpenText,
   },
   {
     name: 'Cuentas',
@@ -36,19 +25,14 @@ const navigation: NavigationItem[] = [
     icon: Building2,
   },
   {
-    name: 'Categorías',
-    href: '/accounting/categories',
-    icon: Tag,
+    name: 'Reportes',
+    href: '/accounting/reports',
+    icon: FileText,
   },
   {
-    name: 'Tipos de Transferencias',
-    href: '/accounting/transfer-types',
-    icon: ArrowLeftRight,
-  },
-  {
-    name: 'Arqueos de Caja',
-    href: '/accounting/reconciliations',
-    icon: Calculator,
+    name: 'Configuración',
+    href: '/accounting/settings',
+    icon: Settings,
   },
 ]
 
