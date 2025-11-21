@@ -31,7 +31,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
+    // Always log to console, even in production
+    console.error('==================================================')
+    console.error('ERROR BOUNDARY CAUGHT AN ERROR:')
+    console.error('Error:', error)
+    console.error('Error Message:', error.message)
+    console.error('Error Stack:', error.stack)
+    console.error('Component Stack:', errorInfo.componentStack)
+    console.error('==================================================')
 
     this.setState({
       error,
@@ -81,15 +88,20 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {this.state.error && (
               <div className="mt-6 p-4 bg-gray-100 rounded-lg">
                 <h2 className="text-sm font-semibold text-gray-700 mb-2">
-                  Error Details (Development Mode)
+                  Error Details
                 </h2>
                 <div className="text-xs text-gray-600 font-mono overflow-auto">
                   <p className="font-semibold text-red-600 mb-2">
                     {this.state.error.toString()}
                   </p>
+                  {this.state.error.stack && (
+                    <pre className="whitespace-pre-wrap mb-4 text-red-700">
+                      {this.state.error.stack}
+                    </pre>
+                  )}
                   {this.state.errorInfo && (
                     <pre className="whitespace-pre-wrap">
                       {this.state.errorInfo.componentStack}
