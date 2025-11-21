@@ -47,8 +47,8 @@ export default function CategoriesPage() {
         accountingService.getExpenseCategories(),
         accountingService.getIncomeCategories(),
       ])
-      setExpenseCategories(expenseResponse.data || [])
-      setIncomeCategories(incomeResponse.data || [])
+      setExpenseCategories(expenseResponse || [])
+      setIncomeCategories(incomeResponse || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
       toast({

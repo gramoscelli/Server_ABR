@@ -54,7 +54,7 @@ export default function ReconciliationsPage() {
         start_date: startDateStr,
         end_date: endDateStr,
       })
-      setReconciliations(response.data || [])
+      setReconciliations(response || [])
     } catch (error) {
       console.error('Error fetching reconciliations:', error)
       toast({
@@ -74,7 +74,7 @@ export default function ReconciliationsPage() {
         date: data.date,
         expected_balance: Number(data.expected_balance),
         actual_balance: Number(data.actual_balance),
-        notes: data.notes || null,
+        notes: data.notes || undefined,
       })
 
       toast({
@@ -102,7 +102,7 @@ export default function ReconciliationsPage() {
         date: data.date,
         expected_balance: Number(data.expected_balance),
         actual_balance: Number(data.actual_balance),
-        notes: data.notes || null,
+        notes: data.notes || undefined,
       })
 
       toast({

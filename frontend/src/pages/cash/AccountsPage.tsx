@@ -60,12 +60,12 @@ export default function AccountsPage() {
       await accountingService.createAccount({
         name: data.name,
         type: data.type,
-        account_number: data.account_number || null,
-        bank_name: data.bank_name || null,
+        account_number: data.account_number || undefined,
+        bank_name: data.bank_name || undefined,
         currency: data.currency,
         initial_balance: Number(data.initial_balance),
         is_active: data.is_active,
-        notes: data.notes || null,
+        notes: data.notes || undefined,
       })
 
       toast({
@@ -92,11 +92,11 @@ export default function AccountsPage() {
       await accountingService.updateAccount(editingAccount.id, {
         name: data.name,
         type: data.type,
-        account_number: data.account_number || null,
-        bank_name: data.bank_name || null,
+        account_number: data.account_number || undefined,
+        bank_name: data.bank_name || undefined,
         currency: data.currency,
         is_active: data.is_active,
-        notes: data.notes || null,
+        notes: data.notes || undefined,
       })
 
       toast({
