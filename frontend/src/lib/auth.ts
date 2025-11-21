@@ -21,7 +21,15 @@ async function getCsrfToken(): Promise<string> {
   console.log('[getCsrfToken] Fetching new CSRF token...')
 
   try {
+    const token = authService.getAccessToken()
+    const headers = new Headers()
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+
     const response = await fetch('/api/csrf-token', {
+      headers,
       credentials: 'include'
     })
 
