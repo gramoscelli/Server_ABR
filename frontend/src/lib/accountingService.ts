@@ -452,6 +452,12 @@ class AccountingService {
     return data.data
   }
 
+  async deleteCashReconciliation(id: number): Promise<void> {
+    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
+      method: 'DELETE',
+    })
+  }
+
   async calculateExpectedBalance(accountId: number, date: string): Promise<CalculatedBalance> {
     const response = await fetchWithAuth(
       API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_CALCULATE(accountId, date)

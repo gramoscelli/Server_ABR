@@ -39,7 +39,7 @@ export default function TransferTypesPage() {
     try {
       setLoading(true)
       const response = await accountingService.getTransferTypes()
-      setTransferTypes(response.data || [])
+      setTransferTypes(response || [])
     } catch (error) {
       console.error('Error fetching transfer types:', error)
       toast({
@@ -56,7 +56,7 @@ export default function TransferTypesPage() {
     try {
       await accountingService.createTransferType({
         name: data.name,
-        description: data.description || null,
+        description: data.description || undefined,
         is_active: data.is_active,
       })
 
@@ -83,7 +83,7 @@ export default function TransferTypesPage() {
     try {
       await accountingService.updateTransferType(editingTransferType.id, {
         name: data.name,
-        description: data.description || null,
+        description: data.description || undefined,
         is_active: data.is_active,
       })
 

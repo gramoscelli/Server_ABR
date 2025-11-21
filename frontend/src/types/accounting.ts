@@ -14,8 +14,17 @@ export interface Category {
   updated_at: string
 }
 
-export interface ExpenseCategory extends Category {}
-export interface IncomeCategory extends Category {}
+export interface ExpenseCategory extends Category {
+  description?: string | null
+  is_active?: boolean
+  display_order?: number
+}
+
+export interface IncomeCategory extends Category {
+  description?: string | null
+  is_active?: boolean
+  display_order?: number
+}
 
 export interface TransferType {
   id: number
@@ -23,6 +32,7 @@ export interface TransferType {
   color: string
   description: string | null
   order_index: number
+  is_active?: boolean
   created_at: string
   updated_at: string
 }
@@ -95,12 +105,17 @@ export interface CashReconciliation {
   opening_balance: number
   closing_balance: number
   expected_balance: number
+  actual_balance: number
   difference: number
   notes: string | null
   user_id: number
   created_at: string
   updated_at: string
   account?: Account
+  user?: {
+    id: number
+    name: string
+  }
 }
 
 // API Response types
@@ -334,6 +349,8 @@ export interface CreateCategoryData {
   budget?: number
   is_featured?: boolean
   order_index?: number
+  description?: string | null
+  is_active?: boolean
 }
 
 export interface UpdateCategoryData {
@@ -343,6 +360,8 @@ export interface UpdateCategoryData {
   budget?: number
   is_featured?: boolean
   order_index?: number
+  description?: string | null
+  is_active?: boolean
 }
 
 export interface ReorderCategoriesData {
@@ -352,27 +371,30 @@ export interface ReorderCategoriesData {
 export interface CreateTransferTypeData {
   name: string
   color?: string
-  description?: string
+  description?: string | null
   order_index?: number
+  is_active?: boolean
 }
 
 export interface UpdateTransferTypeData {
   name?: string
   color?: string
-  description?: string
+  description?: string | null
   order_index?: number
+  is_active?: boolean
 }
 
 export interface CreateCashReconciliationData {
   account_id: number
   date: string
-  opening_balance: number
-  closing_balance: number
   expected_balance: number
-  notes?: string
+  actual_balance: number
+  notes?: string | null
 }
 
 export interface UpdateCashReconciliationData {
-  closing_balance?: number
-  notes?: string
+  date?: string
+  expected_balance?: number
+  actual_balance?: number
+  notes?: string | null
 }
