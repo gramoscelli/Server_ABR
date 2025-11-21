@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   UserCircle,
   ChevronDown,
@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button'
 import { cn, getRoleDisplayName } from '@/lib/utils'
 import { authService } from '@/lib/auth'
 import { useTheme } from '@/contexts/ThemeContext'
+import { ProfileDialog } from './ProfileDialog'
+import { ChangePasswordDialog } from './ChangePasswordDialog'
 
 interface HeaderProps {
   onMenuClick?: () => void
@@ -24,6 +26,8 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, showMenuButton = false, leftContent }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
@@ -95,14 +99,16 @@ export function Header({ onMenuClick, showMenuButton = false, leftContent }: Hea
                 <Home className="h-4 w-4" />
                 Ir al Inicio
               </button>
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setUserMenuOpen(false)}
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false)
+                  setProfileDialogOpen(true)
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <UserCircle className="h-4 w-4" />
                 Mi Perfil
-              </Link>
+              </button>
 
               <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
 
@@ -151,14 +157,16 @@ export function Header({ onMenuClick, showMenuButton = false, leftContent }: Hea
 
               <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
 
-              <Link
-                to="/change-password"
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                onClick={() => setUserMenuOpen(false)}
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false)
+                  setPasswordDialogOpen(true)
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <Lock className="h-4 w-4" />
                 Cambiar Contraseña
-              </Link>
+              </button>
 
               <button
                 onClick={() => {
@@ -174,6 +182,10 @@ export function Header({ onMenuClick, showMenuButton = false, leftContent }: Hea
           )}
         </div>
       </div>
+
+      {/* Dialogs */}
+      <ProfileDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} />
+      <ChangePasswordDialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen} />
     </header>
   )
 }
