@@ -31,7 +31,7 @@ async function getCsrfToken(): Promise<string> {
 
     const data = await response.json()
 
-    if (!data.token) {
+    if (!data.token || typeof data.token !== 'string') {
       throw new Error('CSRF token not found in response')
     }
 
@@ -41,7 +41,7 @@ async function getCsrfToken(): Promise<string> {
     csrfTokenExpiry = Date.now() + (data.expiresIn || 7200) * 1000
 
     console.log('[getCsrfToken] New CSRF token obtained, expires in', data.expiresIn, 'seconds')
-    return csrfToken
+    return data.token
   } catch (error) {
     console.error('[getCsrfToken] Failed to get CSRF token:', error)
     throw error
