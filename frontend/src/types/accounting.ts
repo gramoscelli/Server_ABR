@@ -324,6 +324,7 @@ export interface CreateAccountData {
   bank_name?: string
   currency?: string
   initial_balance?: number
+  is_active?: boolean
   notes?: string
 }
 
