@@ -16,12 +16,16 @@ const ComingSoonPage = lazy(() => import('@/pages/ComingSoonPage'))
 
 // Accounting module pages
 const DashboardPage = lazy(() => import('@/pages/accounting/DashboardPage'))
-const ExpensesPage = lazy(() => import('@/pages/accounting/ExpensesPage'))
-const IncomesPage = lazy(() => import('@/pages/accounting/IncomesPage'))
-const TransfersPage = lazy(() => import('@/pages/accounting/TransfersPage'))
+const OperationsPage = lazy(() => import('@/pages/accounting/OperationsPage'))
+const ReportsPage = lazy(() => import('@/pages/accounting/ReportsPage'))
 const AccountsPage = lazy(() => import('@/pages/accounting/AccountsPage'))
 const CategoriesPage = lazy(() => import('@/pages/accounting/CategoriesPage'))
 const TransferTypesPage = lazy(() => import('@/pages/accounting/TransferTypesPage'))
+const AccountingSettingsPage = lazy(() => import('@/pages/accounting/SettingsPage'))
+// Legacy pages (for backward compatibility)
+const ExpensesPage = lazy(() => import('@/pages/accounting/ExpensesPage'))
+const IncomesPage = lazy(() => import('@/pages/accounting/IncomesPage'))
+const TransfersPage = lazy(() => import('@/pages/accounting/TransfersPage'))
 const ReconciliationsPage = lazy(() => import('@/pages/accounting/ReconciliationsPage'))
 
 // Socios module pages
@@ -165,33 +169,11 @@ function App() {
             errorElement={<RouteErrorBoundary />}
           />
           <Route
-            path="/accounting/expenses"
+            path="/accounting/operations"
             element={
               <ProtectedRoute requireAdmin>
                 <AccountingLayout>
-                  <ExpensesPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
-          />
-          <Route
-            path="/accounting/incomes"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <IncomesPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
-          />
-          <Route
-            path="/accounting/transfers"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <TransfersPage />
+                  <OperationsPage />
                 </AccountingLayout>
               </ProtectedRoute>
             }
@@ -203,6 +185,28 @@ function App() {
               <ProtectedRoute requireAdmin>
                 <AccountingLayout>
                   <AccountsPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/accounting/reports"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <ReportsPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/accounting/settings"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <AccountingSettingsPage />
                 </AccountingLayout>
               </ProtectedRoute>
             }
@@ -230,16 +234,22 @@ function App() {
             }
             errorElement={<RouteErrorBoundary />}
           />
+          {/* Legacy routes - redirect to new structure */}
+          <Route
+            path="/accounting/expenses"
+            element={<Navigate to="/accounting/operations" replace />}
+          />
+          <Route
+            path="/accounting/incomes"
+            element={<Navigate to="/accounting/operations" replace />}
+          />
+          <Route
+            path="/accounting/transfers"
+            element={<Navigate to="/accounting/operations" replace />}
+          />
           <Route
             path="/accounting/reconciliations"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <ReconciliationsPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
+            element={<Navigate to="/accounting/operations" replace />}
           />
 
           {/* Admin Module */}
