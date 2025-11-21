@@ -136,7 +136,7 @@ export default function HomePage() {
               <Button
                 variant="ghost"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex flex-col items-start gap-0 px-3 py-2 h-auto"
+                className="flex flex-col items-start gap-0 px-3 py-2 h-auto text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <div className="flex items-center gap-2">
                   <UserCircle className="h-5 w-5" />

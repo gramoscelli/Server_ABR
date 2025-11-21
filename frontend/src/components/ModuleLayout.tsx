@@ -46,9 +46,34 @@ export function ModuleLayout({
   const userMenuRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, effectiveTheme } = useTheme()
 
   const user = authService.getUser()
+
+  // Get theme-appropriate sidebar colors
+  const getSidebarColor = () => {
+    if (effectiveTheme === 'dark') {
+      // Dark theme: use darker, more muted colors
+      const darkColors: { [key: string]: string } = {
+        'from-blue-500 to-blue-600': 'from-blue-900 to-blue-950',
+        'from-green-500 to-emerald-600': 'from-green-900 to-emerald-950',
+        'from-purple-500 to-purple-600': 'from-purple-900 to-purple-950',
+        'from-gray-700 to-gray-800': 'from-gray-800 to-gray-900',
+      }
+      return darkColors[moduleColor] || moduleColor
+    } else {
+      // Light theme: use lighter, softer colors
+      const lightColors: { [key: string]: string } = {
+        'from-blue-500 to-blue-600': 'from-blue-400 to-blue-500',
+        'from-green-500 to-emerald-600': 'from-green-400 to-emerald-500',
+        'from-purple-500 to-purple-600': 'from-purple-400 to-purple-500',
+        'from-gray-700 to-gray-800': 'from-gray-600 to-gray-700',
+      }
+      return lightColors[moduleColor] || moduleColor
+    }
+  }
+
+  const sidebarColor = getSidebarColor()
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -90,7 +115,7 @@ export function ModuleLayout({
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className={`flex flex-col h-screen bg-gradient-to-br ${moduleColor} shadow-2xl`}>
+        <div className={`flex flex-col h-screen bg-gradient-to-br ${sidebarColor} shadow-2xl`}>
           {/* Mobile Header */}
           <div className="flex h-20 items-center justify-between px-6 border-b border-white/10">
             <div className="flex items-center gap-3">
@@ -135,7 +160,7 @@ export function ModuleLayout({
       {/* Desktop sidebar */}
       <div
         className={cn(
-          `hidden lg:flex flex-col bg-gradient-to-br ${moduleColor} shadow-2xl transition-all duration-300`,
+          `hidden lg:flex flex-col bg-gradient-to-br ${sidebarColor} shadow-2xl transition-all duration-300`,
           desktopSidebarCollapsed ? "w-20" : "w-72"
         )}
       >
@@ -201,17 +226,20 @@ export function ModuleLayout({
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden"
+              className="lg:hidden text-gray-700 dark:text-gray-200"
             >
               <Menu className="h-6 w-6" />
             </Button>
 
+            {/* Empty spacer for desktop to keep user menu on the right */}
+            <div className="hidden lg:block"></div>
+
             {/* User menu */}
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative ml-auto" ref={userMenuRef}>
               <Button
                 variant="ghost"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex flex-col items-start gap-0 px-3 py-2 h-auto"
+                className="flex flex-col items-start gap-0 px-3 py-2 h-auto text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <div className="flex items-center gap-2">
                   <UserCircle className="h-5 w-5" />
