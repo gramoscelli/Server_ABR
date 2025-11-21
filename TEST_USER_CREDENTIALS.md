@@ -31,7 +31,7 @@ curl -X POST http://localhost:3000/api/auth/login \
 Si necesitas crear otro usuario de prueba, usa el script:
 
 ```bash
-docker compose exec app node scripts/create_test_user.js
+docker compose exec backend node scripts/create_test_user.js
 ```
 
 Si el usuario ya existe, el script mostrará sus credenciales actuales.
@@ -53,7 +53,7 @@ Crea un usuario de prueba con credenciales conocidas para testing.
 
 **Uso:**
 ```bash
-docker compose exec app node scripts/create_test_user.js
+docker compose exec backend node scripts/create_test_user.js
 ```
 
 ### create_admin_user.js
@@ -63,7 +63,7 @@ Crea un usuario administrador con credenciales personalizadas.
 
 **Uso:**
 ```bash
-docker compose exec app node scripts/create_admin_user.js <username> <password> [email]
+docker compose exec backend node scripts/create_admin_user.js <username> <password> [email]
 ```
 
 **Nota:** Este script actualmente tiene un bug - usa `role` en lugar de `role_id`. Usa `create_test_user.js` para crear usuarios de prueba.

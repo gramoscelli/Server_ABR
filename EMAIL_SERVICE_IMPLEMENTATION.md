@@ -94,7 +94,7 @@ FRONTEND_URL=http://localhost:3001
 
 5. **Reiniciar backend**
    ```bash
-   docker compose restart app
+   docker compose restart backend
    ```
 
 6. **Probar**

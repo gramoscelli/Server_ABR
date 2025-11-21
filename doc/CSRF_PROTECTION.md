@@ -466,7 +466,7 @@ docker exec -it mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < 
 ### 2. Restart Application
 
 ```bash
-docker-compose restart app
+docker-compose restart backend
 ```
 
 ### 3. Verify CSRF Protection

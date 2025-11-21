@@ -531,7 +531,7 @@ npm install validator
 
 ### **2. Restart Application**
 ```bash
-docker-compose restart app
+docker-compose restart backend
 ```
 
 ### **3. Test Protection**

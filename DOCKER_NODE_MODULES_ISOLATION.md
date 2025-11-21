@@ -72,7 +72,7 @@ Both Dockerfiles already follow multi-stage build patterns:
 ```bash
 # 1. No need to run npm install on host
 # 2. Build containers (dependencies install inside container)
-docker compose build --no-cache app
+docker compose build --no-cache backend
 docker compose build --no-cache frontend
 
 # 3. Run containers
@@ -120,7 +120,7 @@ sudo rm -rf /home/gustavo/biblio-server/frontend/node_modules
 ### Check node_modules is in container only:
 ```bash
 # Should show node_modules in container
-docker compose exec app ls -la /usr/src/app/ | grep node_modules
+docker compose exec backend ls -la /usr/src/app/ | grep node_modules
 
 # Should NOT create new node_modules on host
 ls -la app/ | grep node_modules  # (old one from before still there)
@@ -131,7 +131,7 @@ ls -la frontend/ | grep node_modules  # (old one from before still there)
 ```bash
 # Both should be running without errors
 docker compose ps
-docker compose logs app
+docker compose logs backend
 docker compose logs frontend
 ```
 
