@@ -313,7 +313,13 @@ export default function IncomesPage() {
                               +${income.amount.toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
-                              {new Date(income.date).toLocaleDateString('es-ES')}
+                              {new Date(income.date).toLocaleString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
                             </p>
                           </div>
                           <Button

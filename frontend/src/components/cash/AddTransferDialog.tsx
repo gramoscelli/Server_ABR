@@ -39,7 +39,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
     to_account_id: 0,
     amount: '',
     transfer_type_id: null,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().slice(0, 16),
     description: '',
   })
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -100,7 +100,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
         to_account_id: accounts.length > 1 ? accounts[1].id : 0,
         amount: '',
         transfer_type_id: null,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().slice(0, 16),
         description: '',
       })
       onOpenChange(false)
@@ -211,11 +211,11 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
           {/* Date */}
           <div className="space-y-2">
             <Label htmlFor="date" className="text-sm font-medium text-gray-700">
-              Fecha
+              Fecha y Hora
             </Label>
             <Input
               id="date"
-              type="date"
+              type="datetime-local"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               required

@@ -37,7 +37,7 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
   const [formData, setFormData] = useState<IncomeFormData>({
     amount: '',
     account_id: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().slice(0, 16),
     category_id: null,
     description: '',
   })
@@ -99,7 +99,7 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
       setFormData({
         amount: '',
         account_id: accounts.length > 0 ? accounts[0].id : 0,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().slice(0, 16),
         category_id: null,
         description: '',
       })
@@ -162,11 +162,11 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
 
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-medium text-gray-700">
-                Fecha
+                Fecha y Hora
               </Label>
               <Input
                 id="date"
-                type="date"
+                type="datetime-local"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
