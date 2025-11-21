@@ -199,7 +199,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     }, { transaction });
 
     // Update account balance
-    await account.updateBalance(amount, false, transaction);
+    await account.updateBalance(parseFloat(amount), false, transaction);
 
     await transaction.commit();
 
