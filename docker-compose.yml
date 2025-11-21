@@ -6,8 +6,8 @@ services:
     container_name: nextjs-frontend
     hostname: frontend
     environment:
-      - NEXT_PUBLIC_API_URL=http://app:3000
-      - BACKEND_API_URL=http://app:3000
+      - NEXT_PUBLIC_API_URL=http://backend:3000
+      - BACKEND_API_URL=http://backend:3000
       - NEXTAUTH_URL=http://localhost:3001
       - NEXTAUTH_SECRET=${JWT_SECRET}
       - SESSION_COOKIE_NAME=biblio_session
@@ -21,12 +21,12 @@ services:
     #   - ./frontend:/app
     #   - /app/node_modules  # Exclude node_modules from host mount
     depends_on:
-      - app
+      - backend
     restart: always
-  app:
+  backend:
     image: node
-    container_name: nodejs
-    hostname: nodejs
+    container_name: backend
+    hostname: backend
     environment:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
@@ -56,13 +56,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     build:
-      context: ./app
+      context: ./backend
     networks:
       - app_network
     expose:
       - "3000"
     volumes:
-      - ./app:/usr/src/app
+      - ./backend:/usr/src/app
       # Exclude node_modules from host mount - keep it in container only
       - /usr/src/app/node_modules
     ports:

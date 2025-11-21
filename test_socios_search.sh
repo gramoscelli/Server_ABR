@@ -30,7 +30,7 @@ if [ -z "$ACCESS_TOKEN" ]; then
   echo "   Response: $LOGIN_RESPONSE"
   echo ""
   echo "   Nota: Asegúrate de que el usuario test_user existe."
-  echo "   Ejecuta: docker compose exec app node scripts/create_test_user.js"
+  echo "   Ejecuta: docker compose exec backend node scripts/create_test_user.js"
   rm -f cookies.txt
   exit 1
 fi

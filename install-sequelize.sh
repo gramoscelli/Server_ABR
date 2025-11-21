@@ -14,13 +14,13 @@ else
     # Try to install inside Docker container
     if command -v docker &> /dev/null; then
         echo "🐳 Installing inside Docker container..."
-        docker compose exec app npm install sequelize
+        docker compose exec backend npm install sequelize
 
         if [ $? -eq 0 ]; then
             echo "✅ Sequelize installed successfully in container"
             echo ""
             echo "🔄 Restarting application..."
-            docker compose restart app
+            docker compose restart backend
 
             echo ""
             echo "⏳ Waiting for application to start..."
@@ -28,7 +28,7 @@ else
 
             echo ""
             echo "📋 Checking logs..."
-            docker compose logs app --tail 20
+            docker compose logs backend --tail 20
 
             echo ""
             echo "✅ Installation complete!"
@@ -44,21 +44,21 @@ else
 
     # Fallback to host installation
     echo "📦 Installing on host..."
-    cd /home/gustavo/biblio-server/app
+    cd /home/gustavo/biblio-server/backend
     npm install sequelize
 
     if [ $? -eq 0 ]; then
         echo "✅ Sequelize installed successfully on host"
         echo ""
         echo "⚠️  Please restart the Docker container manually:"
-        echo "   docker compose restart app"
+        echo "   docker compose restart backend"
     else
         echo "❌ Installation failed"
         echo ""
         echo "Please install manually:"
-        echo "   cd /home/gustavo/biblio-server/app"
+        echo "   cd /home/gustavo/biblio-server/backend"
         echo "   npm install sequelize"
-        echo "   docker compose restart app"
+        echo "   docker compose restart backend"
         exit 1
     fi
 fi

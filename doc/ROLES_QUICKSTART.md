@@ -4,7 +4,7 @@
 
 ### Create Admin User
 ```bash
-docker compose exec app node scripts/create_admin_user.js admin YourPassword123! admin@example.com
+docker compose exec backend node scripts/create_admin_user.js admin YourPassword123! admin@example.com
 ```
 
 ### Promote Existing User to Admin

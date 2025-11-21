@@ -275,10 +275,10 @@ npm install
 
 # Step 3: Restart application
 cd ..
-docker-compose restart app
+docker-compose restart backend
 
 # Step 4: Verify application started
-docker-compose logs -f app
+docker-compose logs -f backend
 # Should see no FATAL ERROR messages
 
 # Step 5: Create admin user (first time only)
@@ -399,7 +399,7 @@ Before deploying to production:
 
 If you encounter issues after applying these fixes:
 
-1. Check application logs: `docker-compose logs -f app`
+1. Check application logs: `docker-compose logs -f backend`
 2. Verify .env file has all required variables
 3. Ensure JWT_SECRET and ALLOWED_ORIGINS are properly set
 4. Review `SECURITY_AUDIT_REPORT.md` for detailed explanations

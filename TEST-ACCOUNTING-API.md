@@ -15,7 +15,7 @@ node test-accounting-endpoints.js
 
 ```bash
 # Si el backend está corriendo en Docker
-docker compose exec app node /usr/src/app/../test-accounting-endpoints.js
+docker compose exec backend node /usr/src/app/../test-accounting-endpoints.js
 ```
 
 ## ¿Qué hace el script?
@@ -121,7 +121,7 @@ El endpoint no existe. Verifica:
 ### Error: 500 Internal Server Error
 Error en el servidor. Revisa los logs del backend:
 ```bash
-docker compose logs app
+docker compose logs backend
 ```
 
 ## Verificar datos en la base de datos
