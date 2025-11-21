@@ -83,7 +83,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       description: description || null, attachment_url: attachment_url || null, user_id: req.user.id
     }, { transaction });
 
-    await account.updateBalance(amount, true, transaction);
+    await account.updateBalance(parseFloat(amount), true, transaction);
     await transaction.commit();
 
     const createdIncome = await Income.findByPk(income.id, {
