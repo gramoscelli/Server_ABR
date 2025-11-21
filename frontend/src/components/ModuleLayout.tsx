@@ -220,21 +220,18 @@ export function ModuleLayout({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
         <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 z-10">
-          <div className="flex items-center justify-between h-16 px-4">
+          <div className="flex items-center h-16 px-4">
             {/* Mobile menu button */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-700 dark:text-gray-200"
+              className="lg:hidden text-gray-700 dark:text-gray-200 mr-2"
             >
               <Menu className="h-6 w-6" />
             </Button>
 
-            {/* Empty spacer for desktop to keep user menu on the right */}
-            <div className="hidden lg:block"></div>
-
-            {/* User menu */}
+            {/* User menu - always pushed to the right */}
             <div className="relative ml-auto" ref={userMenuRef}>
               <Button
                 variant="ghost"
