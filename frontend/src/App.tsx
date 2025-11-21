@@ -12,6 +12,7 @@ const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'))
 const ResendVerificationPage = lazy(() => import('@/pages/ResendVerificationPage'))
 const OAuthCallbackPage = lazy(() => import('@/pages/OAuthCallbackPage'))
 const HomePage = lazy(() => import('@/pages/HomePage'))
+const ComingSoonPage = lazy(() => import('@/pages/ComingSoonPage'))
 
 // Accounting module pages
 const DashboardPage = lazy(() => import('@/pages/accounting/DashboardPage'))
@@ -125,14 +126,15 @@ function App() {
 
           {/* Library Module - Placeholder pages */}
           <Route
-            path="/library"
+            path="/library/*"
             element={
               <ProtectedRoute requireLibraryAccess>
                 <LibraryLayout>
-                  <div className="p-8">
-                    <h1 className="text-3xl font-bold mb-4">Catálogo de Libros</h1>
-                    <p className="text-gray-600">Próximamente...</p>
-                  </div>
+                  <ComingSoonPage
+                    title="Módulo de Biblioteca"
+                    description="El módulo de biblioteca está en desarrollo. Pronto podrás gestionar el catálogo de libros y préstamos."
+                    showHomeButton={false}
+                  />
                 </LibraryLayout>
               </ProtectedRoute>
             }
@@ -298,7 +300,15 @@ function App() {
           />
 
           {/* 404 and fallback */}
-          <Route path="*" element={<RouteErrorBoundary />} />
+          <Route
+            path="*"
+            element={
+              <ComingSoonPage
+                title="Página no encontrada"
+                description="La página que buscas no existe o aún no está disponible."
+              />
+            }
+          />
         </Routes>
         <Toaster />
       </Suspense>
