@@ -143,15 +143,15 @@ app.use('/api/socios', apiLimiter, sociosRouter); // Socios search routes (read-
 // app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // Temporarily disabled - WhatsApp integration routes
 
 // Accounting module routes (protected, state-changing routes need CSRF)
-app.use('/api/accounting/expense-categories', apiLimiter, validateCsrfToken, accountingExpenseCategoriesRouter);
-app.use('/api/accounting/income-categories', apiLimiter, validateCsrfToken, accountingIncomeCategoriesRouter);
-app.use('/api/accounting/transfer-types', apiLimiter, validateCsrfToken, accountingTransferTypesRouter);
-app.use('/api/accounting/accounts', apiLimiter, validateCsrfToken, accountingAccountsRouter);
-app.use('/api/accounting/expenses', apiLimiter, validateCsrfToken, accountingExpensesRouter);
-app.use('/api/accounting/incomes', apiLimiter, validateCsrfToken, accountingIncomesRouter);
-app.use('/api/accounting/transfers', apiLimiter, validateCsrfToken, accountingTransfersRouter);
-app.use('/api/accounting/cash-reconciliations', apiLimiter, validateCsrfToken, accountingCashReconciliationsRouter);
-app.use('/api/accounting/dashboard', apiLimiter, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
+app.use('/api/accounting/expense-categories', apiLimiter, authenticateToken, validateCsrfToken, accountingExpenseCategoriesRouter);
+app.use('/api/accounting/income-categories', apiLimiter, authenticateToken, validateCsrfToken, accountingIncomeCategoriesRouter);
+app.use('/api/accounting/transfer-types', apiLimiter, authenticateToken, validateCsrfToken, accountingTransferTypesRouter);
+app.use('/api/accounting/accounts', apiLimiter, authenticateToken, validateCsrfToken, accountingAccountsRouter);
+app.use('/api/accounting/expenses', apiLimiter, authenticateToken, validateCsrfToken, accountingExpensesRouter);
+app.use('/api/accounting/incomes', apiLimiter, authenticateToken, validateCsrfToken, accountingIncomesRouter);
+app.use('/api/accounting/transfers', apiLimiter, authenticateToken, validateCsrfToken, accountingTransfersRouter);
+app.use('/api/accounting/cash-reconciliations', apiLimiter, authenticateToken, validateCsrfToken, accountingCashReconciliationsRouter);
+app.use('/api/accounting/dashboard', apiLimiter, authenticateToken, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
 
 
 // catch 404 and forward to error handler
