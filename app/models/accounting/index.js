@@ -3,6 +3,7 @@
  * Exports all accounting models and sets up associations
  */
 
+const { accountingDb } = require('../../config/database');
 const ExpenseCategory = require('./ExpenseCategory');
 const IncomeCategory = require('./IncomeCategory');
 const TransferType = require('./TransferType');
@@ -24,6 +25,7 @@ Account.hasMany(Transfer, { as: 'incomingTransfers', foreignKey: 'to_account_id'
 Account.hasMany(CashReconciliation, { as: 'reconciliations', foreignKey: 'account_id' });
 
 module.exports = {
+  accountingDb,
   ExpenseCategory,
   IncomeCategory,
   TransferType,
