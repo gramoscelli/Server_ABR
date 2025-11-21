@@ -15,7 +15,7 @@ import {
   Monitor
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, getRoleDisplayName } from '@/lib/utils'
 import { authService } from '@/lib/auth'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -246,7 +246,7 @@ export function ModuleLayout({
                   <span className="font-semibold">{user?.username}</span>
                   <ChevronDown className="h-4 w-4" />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{user?.role}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{user?.role ? getRoleDisplayName(user.role) : ''}</span>
               </Button>
 
               {userMenuOpen && (

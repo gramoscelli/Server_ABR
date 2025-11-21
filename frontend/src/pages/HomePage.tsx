@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/ThemeContext'
-import { cn } from '@/lib/utils'
+import { cn, getRoleDisplayName } from '@/lib/utils'
 
 interface Module {
   id: string
@@ -143,7 +143,7 @@ export default function HomePage() {
                   <span className="font-semibold">{user.username}</span>
                   <ChevronDown className="h-4 w-4" />
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{user.role}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{getRoleDisplayName(user.role)}</span>
               </Button>
 
               {userMenuOpen && (
@@ -300,8 +300,8 @@ export default function HomePage() {
         )}
 
         {/* Footer Info */}
-        <div className="mt-16 text-center text-sm text-gray-500">
-          <p>Rol actual: <span className="font-semibold text-gray-700">{user.role}</span></p>
+        <div className="mt-16 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>Rol actual: <span className="font-semibold text-gray-700 dark:text-gray-300">{getRoleDisplayName(user.role)}</span></p>
         </div>
       </div>
     </div>
