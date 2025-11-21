@@ -28,6 +28,7 @@ export function LibraryLayout({ children }: { children: React.ReactNode }) {
   return (
     <ModuleLayout
       moduleName="Biblioteca"
+      moduleIcon={BookOpen}
       moduleColor="from-green-500 to-emerald-600"
       navigation={navigation}
     >

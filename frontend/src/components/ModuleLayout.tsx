@@ -25,6 +25,7 @@ export interface NavigationItem {
 interface ModuleLayoutProps {
   children: React.ReactNode
   moduleName: string
+  moduleIcon: React.ComponentType<{ className?: string }>
   moduleColor: string
   navigation: NavigationItem[]
   bottomNavigation?: NavigationItem[]
@@ -33,6 +34,7 @@ interface ModuleLayoutProps {
 export function ModuleLayout({
   children,
   moduleName,
+  moduleIcon: ModuleIcon,
   moduleColor,
   navigation,
   bottomNavigation = [
@@ -98,6 +100,7 @@ export function ModuleLayout({
           {/* Mobile Header */}
           <div className="flex h-20 items-center justify-between px-6 border-b border-white/10">
             <div className="flex items-center gap-3">
+              <ModuleIcon className="h-6 w-6 text-white" />
               <span className="text-xl font-bold text-white">{moduleName}</span>
             </div>
             <Button
@@ -176,10 +179,15 @@ export function ModuleLayout({
         {/* Desktop Header */}
         <div className={cn(
           "flex h-20 items-center border-b border-white/10 transition-all duration-300",
-          desktopSidebarCollapsed ? "justify-center px-4" : "justify-between px-6"
+          desktopSidebarCollapsed ? "flex-col justify-center gap-2 px-4" : "justify-between px-6"
         )}>
-          {!desktopSidebarCollapsed && (
-            <span className="text-xl font-bold text-white">{moduleName}</span>
+          {desktopSidebarCollapsed ? (
+            <ModuleIcon className="h-8 w-8 text-white" />
+          ) : (
+            <div className="flex items-center gap-3">
+              <ModuleIcon className="h-6 w-6 text-white" />
+              <span className="text-xl font-bold text-white">{moduleName}</span>
+            </div>
           )}
           <Button
             variant="ghost"

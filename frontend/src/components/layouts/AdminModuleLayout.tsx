@@ -28,6 +28,7 @@ export function AdminModuleLayout({ children }: { children: React.ReactNode }) {
   return (
     <ModuleLayout
       moduleName="Administración"
+      moduleIcon={Settings}
       moduleColor="from-gray-700 to-gray-800"
       navigation={navigation}
     >
