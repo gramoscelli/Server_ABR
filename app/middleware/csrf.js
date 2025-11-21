@@ -40,16 +40,20 @@ async function generateToken(req, res) {
     // Optional: Associate with IP address for extra security
     const ipAddress = req.ip || req.connection.remoteAddress;
 
+    console.log('[CSRF] Generating token for user:', userId || 'anonymous', 'IP:', ipAddress);
+
     // Store token in database using Sequelize model
     const csrfToken = await CsrfToken.createToken(token, CSRF_TOKEN_EXPIRY_HOURS, {
       userId,
       ipAddress
     });
 
+    console.log('[CSRF] Token generated:', token.substring(0, 16) + '...', 'expires:', csrfToken.expires_at);
+
     // Return token to client
     // Client should include this in X-CSRF-Token header for protected requests
     res.json({
-      csrfToken: token,
+      token,
       expiresAt: csrfToken.expires_at.toISOString(),
       expiresIn: CSRF_TOKEN_EXPIRY_HOURS * 3600 // seconds
     });
@@ -74,10 +78,16 @@ async function validateToken(req, res, next) {
     return next();
   }
 
+  console.log('[CSRF] Validating token for', req.method, req.url);
+  console.log('[CSRF] User:', req.user ? `ID ${req.user.id} (${req.user.username})` : 'Not authenticated');
+
   // Get token from header
   const token = req.headers['x-csrf-token'] || req.headers['X-CSRF-Token'];
 
+  console.log('[CSRF] Token from header:', token ? `${token.substring(0, 16)}...` : 'MISSING');
+
   if (!token) {
+    console.log('[CSRF] ❌ Token missing');
     return res.status(403).json({
       error: 'Token CSRF faltante',
       message: 'El token CSRF es requerido. Incluye el encabezado X-CSRF-Token con tu solicitud.',
@@ -88,6 +98,7 @@ async function validateToken(req, res, next) {
   try {
     // Validate token format (should be 64 hex characters)
     if (!/^[a-f0-9]{64}$/i.test(token)) {
+      console.log('[CSRF] ❌ Invalid format');
       return res.status(403).json({
         error: 'Formato de token CSRF inválido',
         message: 'El token CSRF debe ser una cadena hexadecimal válida'
@@ -97,6 +108,8 @@ async function validateToken(req, res, next) {
     // Get current IP
     const currentIp = req.ip || req.connection.remoteAddress;
 
+    console.log('[CSRF] Looking for token in DB with userId:', req.user?.id);
+
     // Find and validate token
     const csrfToken = await CsrfToken.findValidToken(token, {
       userId: req.user?.id,
@@ -104,7 +117,13 @@ async function validateToken(req, res, next) {
       singleUse: SINGLE_USE_TOKENS
     });
 
+    console.log('[CSRF] Token found in DB:', csrfToken ? 'YES' : 'NO');
+    if (csrfToken) {
+      console.log('[CSRF] Token details - user_id:', csrfToken.user_id, 'used:', csrfToken.used, 'expires:', csrfToken.expires_at);
+    }
+
     if (!csrfToken) {
+      console.log('[CSRF] ❌ Token not found or invalid');
       return res.status(403).json({
         error: 'Token CSRF inválido',
         message: 'El token CSRF es inválido o ha expirado',
@@ -117,6 +136,7 @@ async function validateToken(req, res, next) {
       // Clean up expired token
       await csrfToken.destroy();
 
+      console.log('[CSRF] ❌ Token expired');
       return res.status(403).json({
         error: 'Token CSRF expirado',
         message: 'El token CSRF ha expirado. Por favor solicita un nuevo token.',
@@ -126,6 +146,7 @@ async function validateToken(req, res, next) {
 
     // Check if token has already been used (if single-use mode)
     if (SINGLE_USE_TOKENS && csrfToken.used) {
+      console.log('[CSRF] ❌ Token already used');
       return res.status(403).json({
         error: 'Token CSRF ya utilizado',
         message: 'Este token CSRF ya ha sido utilizado. Por favor solicita un nuevo token.',
@@ -134,7 +155,9 @@ async function validateToken(req, res, next) {
     }
 
     // Optional: Validate token is associated with same user
+    console.log('[CSRF] Checking user match - token.user_id:', csrfToken.user_id, 'req.user.id:', req.user?.id);
     if (csrfToken.user_id && req.user?.id && csrfToken.user_id !== req.user.id) {
+      console.log('[CSRF] ❌ User ID mismatch');
       return res.status(403).json({
         error: 'Token CSRF no coincide',
         message: 'El token CSRF no es válido para este usuario'
@@ -149,10 +172,12 @@ async function validateToken(req, res, next) {
     // Mark token as used if single-use mode
     if (SINGLE_USE_TOKENS) {
       await csrfToken.markAsUsed();
+      console.log('[CSRF] Token marked as used');
     }
 
     // Token is valid - proceed with request
     req.csrfToken = csrfToken;
+    console.log('[CSRF] ✅ Token validated successfully');
     next();
 
   } catch (error) {
