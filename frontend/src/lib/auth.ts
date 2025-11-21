@@ -30,6 +30,11 @@ async function getCsrfToken(): Promise<string> {
     }
 
     const data = await response.json()
+
+    if (!data.token) {
+      throw new Error('CSRF token not found in response')
+    }
+
     csrfToken = data.token
 
     // Token expires in 2 hours (7200 seconds) according to backend
