@@ -275,7 +275,7 @@ export default function ExpensesPage() {
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-sm font-medium text-gray-900">{cat.name}</span>
                             <span className="text-sm text-gray-600">
-                              ${parseFloat(cat.total).toFixed(2)} ({cat.count})
+                              ${(parseFloat(cat.total) || 0).toFixed(2)} ({cat.count})
                             </span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
@@ -283,7 +283,7 @@ export default function ExpensesPage() {
                               className="h-2 rounded-full"
                               style={{
                                 backgroundColor: cat.color,
-                                width: `${Math.min((parseFloat(cat.total) / stats.totalExpenses) * 100, 100)}%`,
+                                width: `${Math.min(((parseFloat(cat.total) || 0) / (stats.totalExpenses || 1)) * 100, 100)}%`,
                               }}
                             />
                           </div>
@@ -365,7 +365,7 @@ export default function ExpensesPage() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <p className="font-semibold text-red-600">
-                              -${expense.amount.toFixed(2)}
+                              -${(parseFloat(expense.amount) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
                               {expense.date ? new Date(expense.date).toLocaleString('es-ES', {

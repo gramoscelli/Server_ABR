@@ -310,7 +310,7 @@ export default function IncomesPage() {
                         <div className="text-right flex items-center gap-2">
                           <div>
                             <p className="font-semibold text-green-600">
-                              +${income.amount.toFixed(2)}
+                              +${(parseFloat(income.amount) || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-400">
                               {income.date ? new Date(income.date).toLocaleString('es-ES', {
