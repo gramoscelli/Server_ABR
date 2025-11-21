@@ -107,6 +107,9 @@ function App() {
             errorElement={<RouteErrorBoundary />}
           />
 
+          {/* Legacy dashboard redirect */}
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+
           {/* Socios Module */}
           <Route
             path="/socios"

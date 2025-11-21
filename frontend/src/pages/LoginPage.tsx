@@ -22,7 +22,7 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [navigate]);
 
@@ -113,10 +113,8 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on role - only root goes to dashboard
-      const isRoot = data.user?.role === 'root';
-      const defaultRoute = isRoot ? '/dashboard' : '/profile';
-      const from = (location.state as any)?.from || defaultRoute;
+      // Redirect to home page
+      const from = (location.state as any)?.from || '/';
       navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
