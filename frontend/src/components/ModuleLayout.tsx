@@ -9,7 +9,6 @@ import {
   UserCircle,
   Lock,
   Home,
-  Grid3x3,
   ChevronDown,
   Sun,
   Moon,
@@ -32,7 +31,6 @@ interface ModuleLayoutProps {
   moduleIcon: React.ComponentType<{ className?: string }>
   moduleColor: string
   navigation: NavigationItem[]
-  bottomNavigation?: NavigationItem[]
 }
 
 export function ModuleLayout({
@@ -41,31 +39,22 @@ export function ModuleLayout({
   moduleIcon: ModuleIcon,
   moduleColor,
   navigation,
-  bottomNavigation = [
-    { name: 'Mi Perfil', href: '/profile', icon: UserCircle },
-    { name: 'Cambiar Contraseña', href: '/change-password', icon: Lock },
-  ]
 }: ModuleLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [moduleMenuOpen, setModuleMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
-  const moduleMenuRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
 
   const user = authService.getUser()
 
-  // Close menus when clicking outside
+  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false)
-      }
-      if (moduleMenuRef.current && !moduleMenuRef.current.contains(event.target as Node)) {
-        setModuleMenuOpen(false)
       }
     }
 
@@ -140,37 +129,6 @@ export function ModuleLayout({
               )
             })}
           </nav>
-
-          {/* Mobile Bottom Navigation */}
-          <div className="border-t border-white/10 p-4 space-y-2">
-            <Button
-              variant="ghost"
-              onClick={handleGoHome}
-              className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10"
-            >
-              <Home className="h-5 w-5 mr-3" />
-              Inicio
-            </Button>
-            {bottomNavigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
-              </Link>
-            ))}
-            <Button
-              variant="ghost"
-              onClick={handleLogout}
-              className="w-full justify-start text-red-200 hover:text-white hover:bg-red-500/30"
-            >
-              <LogOut className="h-5 w-5 mr-3" />
-              Cerrar Sesión
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -231,48 +189,6 @@ export function ModuleLayout({
             )
           })}
         </nav>
-
-        {/* Desktop Bottom Navigation */}
-        <div className="border-t border-white/10 p-4 space-y-2">
-          <Button
-            variant="ghost"
-            onClick={handleGoHome}
-            title={desktopSidebarCollapsed ? 'Inicio' : ''}
-            className={cn(
-              "w-full text-white/80 hover:text-white hover:bg-white/10",
-              desktopSidebarCollapsed ? "justify-center px-2" : "justify-start"
-            )}
-          >
-            <Home className="h-5 w-5" />
-            {!desktopSidebarCollapsed && <span className="ml-3">Inicio</span>}
-          </Button>
-          {bottomNavigation.map((item) => (
-            <Link
-              key={item.name}
-              to={item.href}
-              title={desktopSidebarCollapsed ? item.name : ''}
-              className={cn(
-                "flex items-center rounded-xl py-3 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white transition-all",
-                desktopSidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {!desktopSidebarCollapsed && <span>{item.name}</span>}
-            </Link>
-          ))}
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            title={desktopSidebarCollapsed ? 'Cerrar Sesión' : ''}
-            className={cn(
-              "w-full text-red-200 hover:text-white hover:bg-red-500/30",
-              desktopSidebarCollapsed ? "justify-center px-2" : "justify-start"
-            )}
-          >
-            <LogOut className="h-5 w-5" />
-            {!desktopSidebarCollapsed && <span className="ml-3">Cerrar Sesión</span>}
-          </Button>
-        </div>
       </div>
 
       {/* Main content area */}
@@ -280,60 +196,43 @@ export function ModuleLayout({
         {/* Top bar */}
         <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 z-10">
           <div className="flex items-center justify-between h-16 px-4">
-            <div className="flex items-center gap-4">
-              {/* Mobile menu button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden"
-              >
-                <Menu className="h-6 w-6" />
-              </Button>
-
-              {/* Module Switcher */}
-              <div className="relative" ref={moduleMenuRef}>
-                <Button
-                  variant="outline"
-                  onClick={() => setModuleMenuOpen(!moduleMenuOpen)}
-                  className="flex items-center gap-2"
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Cambiar módulo</span>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-
-                {moduleMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
-                    <button
-                      onClick={() => {
-                        navigate('/')
-                        setModuleMenuOpen(false)
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                    >
-                      <Home className="h-4 w-4" />
-                      Inicio
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden"
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
 
             {/* User menu */}
             <div className="relative" ref={userMenuRef}>
               <Button
                 variant="ghost"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2"
+                className="flex flex-col items-start gap-0 px-3 py-2 h-auto"
               >
-                <UserCircle className="h-5 w-5" />
-                <span className="hidden sm:inline">{user?.username}</span>
-                <ChevronDown className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <UserCircle className="h-5 w-5" />
+                  <span className="font-semibold">{user?.username}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{user?.role}</span>
               </Button>
 
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                  <button
+                    onClick={() => {
+                      navigate('/')
+                      setUserMenuOpen(false)
+                    }}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Home className="h-4 w-4" />
+                    Ir al Inicio
+                  </button>
                   <Link
                     to="/profile"
                     className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -341,14 +240,6 @@ export function ModuleLayout({
                   >
                     <UserCircle className="h-4 w-4" />
                     Mi Perfil
-                  </Link>
-                  <Link
-                    to="/change-password"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Lock className="h-4 w-4" />
-                    Cambiar Contraseña
                   </Link>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
@@ -398,6 +289,15 @@ export function ModuleLayout({
 
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
 
+                  <Link
+                    to="/change-password"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Lock className="h-4 w-4" />
+                    Cambiar Contraseña
+                  </Link>
+
                   <button
                     onClick={() => {
                       setUserMenuOpen(false)
@@ -406,7 +306,7 @@ export function ModuleLayout({
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="h-4 w-4" />
-                    Cerrar Sesión
+                    Salir
                   </button>
                 </div>
               )}

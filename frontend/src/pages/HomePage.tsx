@@ -136,11 +136,14 @@ export default function HomePage() {
               <Button
                 variant="ghost"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2"
+                className="flex flex-col items-start gap-0 px-3 py-2 h-auto"
               >
-                <UserCircle className="h-5 w-5" />
-                <span className="hidden sm:inline">{user.username}</span>
-                <ChevronDown className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <UserCircle className="h-5 w-5" />
+                  <span className="font-semibold">{user.username}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 ml-7">{user.role}</span>
               </Button>
 
               {userMenuOpen && (
@@ -152,14 +155,6 @@ export default function HomePage() {
                   >
                     <UserCircle className="h-4 w-4" />
                     Mi Perfil
-                  </Link>
-                  <Link
-                    to="/change-password"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setUserMenuOpen(false)}
-                  >
-                    <Lock className="h-4 w-4" />
-                    Cambiar Contraseña
                   </Link>
 
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
@@ -209,6 +204,15 @@ export default function HomePage() {
 
                   <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
 
+                  <Link
+                    to="/change-password"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    <Lock className="h-4 w-4" />
+                    Cambiar Contraseña
+                  </Link>
+
                   <button
                     onClick={() => {
                       setUserMenuOpen(false)
@@ -217,7 +221,7 @@ export default function HomePage() {
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="h-4 w-4" />
-                    Cerrar Sesión
+                    Salir
                   </button>
                 </div>
               )}
