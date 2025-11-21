@@ -10,11 +10,15 @@ import {
   Lock,
   Home,
   Grid3x3,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { authService } from '@/lib/auth'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export interface NavigationItem {
   name: string
@@ -50,6 +54,7 @@ export function ModuleLayout({
   const moduleMenuRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
 
   const user = authService.getUser()
 
@@ -273,7 +278,7 @@ export function ModuleLayout({
       {/* Main content area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200 z-10">
+        <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 z-10">
           <div className="flex items-center justify-between h-16 px-4">
             <div className="flex items-center gap-4">
               {/* Mobile menu button */}
@@ -299,13 +304,13 @@ export function ModuleLayout({
                 </Button>
 
                 {moduleMenuOpen && (
-                  <div className="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <div className="absolute left-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
                     <button
                       onClick={() => {
                         navigate('/')
                         setModuleMenuOpen(false)
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                     >
                       <Home className="h-4 w-4" />
                       Inicio
@@ -328,10 +333,10 @@ export function ModuleLayout({
               </Button>
 
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
                   <Link
                     to="/profile"
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setUserMenuOpen(false)}
                   >
                     <UserCircle className="h-4 w-4" />
@@ -339,19 +344,66 @@ export function ModuleLayout({
                   </Link>
                   <Link
                     to="/change-password"
-                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-100"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setUserMenuOpen(false)}
                   >
                     <Lock className="h-4 w-4" />
                     Cambiar Contraseña
                   </Link>
-                  <div className="border-t border-gray-200 my-2" />
+
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+
+                  {/* Theme selector */}
+                  <div className="px-4 py-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Tema</p>
+                    <div className="grid grid-cols-3 gap-1">
+                      <button
+                        onClick={() => setTheme('light')}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-colors",
+                          theme === 'light'
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        )}
+                      >
+                        <Sun className="h-4 w-4" />
+                        <span>Claro</span>
+                      </button>
+                      <button
+                        onClick={() => setTheme('dark')}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-colors",
+                          theme === 'dark'
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        )}
+                      >
+                        <Moon className="h-4 w-4" />
+                        <span>Oscuro</span>
+                      </button>
+                      <button
+                        onClick={() => setTheme('system')}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-colors",
+                          theme === 'system'
+                            ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300"
+                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        )}
+                      >
+                        <Monitor className="h-4 w-4" />
+                        <span>Auto</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+
                   <button
                     onClick={() => {
                       setUserMenuOpen(false)
                       handleLogout()
                     }}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="h-4 w-4" />
                     Cerrar Sesión
@@ -363,7 +415,7 @@ export function ModuleLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
           <div className="p-6">
             {children}
           </div>
