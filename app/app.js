@@ -116,9 +116,9 @@ app.use('/js', express.static(__dirname + '/node_modules/jquery/dist'));
 app.use('/js', express.static(__dirname + '/node_modules/popper.js/dist'));
 app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js'));
 
-// CSRF token endpoint (public, with rate limiting)
+// CSRF token endpoint (requires authentication)
 // More permissive rate limit as it's needed for every protected request
-app.get('/api/csrf-token', csrfLimiter, generateCsrfToken);
+app.get('/api/csrf-token', csrfLimiter, authenticateToken, generateCsrfToken);
 
 // CAPTCHA routes (public, no CSRF needed)
 app.use('/api/captcha', captchaRouter);
