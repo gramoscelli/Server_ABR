@@ -17,6 +17,8 @@ import { useNavigate } from 'react-router-dom'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
 import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { accountingService } from '@/lib/accountingService'
+import { toast } from '@/components/ui/use-toast'
 
 interface CashStats {
   income: number
@@ -54,19 +56,35 @@ export default function DashboardPage() {
     }
 
     fetchStats()
-  }, [navigate])
+  }, [navigate, selectedDate])
 
   const fetchStats = async () => {
     try {
-      // TODO: Implement API call to fetch cash statistics
-      // For now, using mock data
+      setLoading(true)
+
+      // Get the start and end of the selected month
+      const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+
+      const startDateStr = startDate.toISOString().split('T')[0]
+      const endDateStr = endDate.toISOString().split('T')[0]
+
+      // Fetch dashboard data
+      const dashboardData = await accountingService.getDashboard({
+        start_date: startDateStr,
+        end_date: endDateStr
+      })
+
+      console.log('Dashboard data:', dashboardData)
+
+      // Update stats with safe parsing
       setStats({
-        income: 0,
-        expense: 0,
-        balance: 0,
-        cashAccount: 0,
-        totalAvailable: 0,
-        totalReal: 0
+        income: Number(dashboardData.period.total_incomes || '0'),
+        expense: Number(dashboardData.period.total_expenses || '0'),
+        balance: Number(dashboardData.period.net_result || '0'),
+        cashAccount: Number(dashboardData.balances.by_type.cash || '0'),
+        totalAvailable: Number(dashboardData.balances.total || '0'),
+        totalReal: Number(dashboardData.balances.total || '0'),
       })
     } catch (error) {
       console.error('Error fetching stats:', error)
@@ -77,22 +95,83 @@ export default function DashboardPage() {
 
   const currentMonthName = selectedDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
 
-  const handleAddIncome = (data: IncomeFormData) => {
-    console.log('New income:', data)
-    // TODO: Implement API call to save income
-    fetchStats()
+  const handleAddIncome = async (data: IncomeFormData) => {
+    try {
+      await accountingService.createIncome({
+        amount: Number(data.amount),
+        account_id: data.account_id,
+        category_id: data.category_id,
+        date: data.date,
+        description: data.description || undefined,
+      })
+
+      toast({
+        title: 'Éxito',
+        description: 'Ingreso creado correctamente',
+      })
+
+      fetchStats()
+    } catch (error) {
+      console.error('Error creating income:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el ingreso',
+        variant: 'destructive',
+      })
+    }
   }
 
-  const handleAddExpense = (data: ExpenseFormData) => {
-    console.log('New expense:', data)
-    // TODO: Implement API call to save expense
-    fetchStats()
+  const handleAddExpense = async (data: ExpenseFormData) => {
+    try {
+      await accountingService.createExpense({
+        amount: Number(data.amount),
+        account_id: data.account_id,
+        category_id: data.category_id,
+        date: data.date,
+        description: data.description || undefined,
+      })
+
+      toast({
+        title: 'Éxito',
+        description: 'Egreso creado correctamente',
+      })
+
+      fetchStats()
+    } catch (error) {
+      console.error('Error creating expense:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el egreso',
+        variant: 'destructive',
+      })
+    }
   }
 
-  const handleAddTransfer = (data: TransferFormData) => {
-    console.log('New transfer:', data)
-    // TODO: Implement API call to save transfer
-    fetchStats()
+  const handleAddTransfer = async (data: TransferFormData) => {
+    try {
+      await accountingService.createTransfer({
+        amount: Number(data.amount),
+        from_account_id: data.from_account_id,
+        to_account_id: data.to_account_id,
+        transfer_type_id: data.transfer_type_id,
+        date: data.date,
+        description: data.description || undefined,
+      })
+
+      toast({
+        title: 'Éxito',
+        description: 'Transferencia creada correctamente',
+      })
+
+      fetchStats()
+    } catch (error) {
+      console.error('Error creating transfer:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear la transferencia',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (

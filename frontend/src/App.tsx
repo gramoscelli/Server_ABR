@@ -15,6 +15,10 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
 const ExpensesPage = lazy(() => import('@/pages/cash/ExpensesPage'))
 const IncomesPage = lazy(() => import('@/pages/cash/IncomesPage'))
 const TransfersPage = lazy(() => import('@/pages/cash/TransfersPage'))
+const AccountsPage = lazy(() => import('@/pages/cash/AccountsPage'))
+const CategoriesPage = lazy(() => import('@/pages/cash/CategoriesPage'))
+const TransferTypesPage = lazy(() => import('@/pages/cash/TransferTypesPage'))
+const ReconciliationsPage = lazy(() => import('@/pages/cash/ReconciliationsPage'))
 const UsersPage = lazy(() => import('@/pages/admin/UsersPage'))
 const SociosPage = lazy(() => import('@/pages/SociosPage'))
 const RolesPage = lazy(() => import('@/pages/admin/RolesPage'))
@@ -88,6 +92,42 @@ function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <TransfersPage />
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/cash/accounts"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountsPage />
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/cash/categories"
+            element={
+              <ProtectedRoute requireAdmin>
+                <CategoriesPage />
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/cash/transfer-types"
+            element={
+              <ProtectedRoute requireAdmin>
+                <TransferTypesPage />
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/cash/reconciliations"
+            element={
+              <ProtectedRoute requireAdmin>
+                <ReconciliationsPage />
               </ProtectedRoute>
             }
             errorElement={<RouteErrorBoundary />}
