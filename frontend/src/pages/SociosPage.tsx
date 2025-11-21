@@ -1,7 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, User, MapPin, Users as UsersIcon, X, Loader2 } from 'lucide-react'
+import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Search, User, MapPin, Users as UsersIcon, X, Loader2, AlertTriangle, Download } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
@@ -27,6 +36,10 @@ interface Socio {
   UltimaCuota_FechaCobrado?: string
 }
 
+interface Moroso extends Socio {
+  MesesAtraso: number
+}
+
 export default function SociosPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -36,6 +49,12 @@ export default function SociosPage() {
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Morosos report state
+  const [monthsDelayed, setMonthsDelayed] = useState('3')
+  const [morosos, setMorosos] = useState<Moroso[]>([])
+  const [loadingMorosos, setLoadingMorosos] = useState(false)
+  const [morosusError, setMorosusError] = useState<string | null>(null)
 
   useEffect(() => {
     // Check if user has access (root, admin_employee, or library_employee)
@@ -134,6 +153,37 @@ export default function SociosPage() {
 
   const handleSelectSocio = (socio: Socio) => {
     setSelectedSocio(socio)
+  }
+
+  const handleSearchMorosos = async () => {
+    const months = parseInt(monthsDelayed)
+    if (isNaN(months) || months < 1) {
+      setMorosusError('Ingrese un número válido de meses')
+      return
+    }
+
+    setLoadingMorosos(true)
+    setMorosusError(null)
+    try {
+      const response = await fetchWithAuth(`/api/socios/morosos/${months}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setMorosos(data.data)
+      } else {
+        setMorosusError(data.message || 'Error al obtener datos')
+      }
+    } catch (err) {
+      setMorosusError('Error al conectar con el servidor')
+      console.error('Error fetching morosos:', err)
+    } finally {
+      setLoadingMorosos(false)
+    }
+  }
+
+  const getMonthName = (month: number) => {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+    return months[month - 1] || '-'
   }
 
   return (
@@ -408,6 +458,137 @@ export default function SociosPage() {
             </Card>
           </div>
         </div>
+
+        {/* Morosos Report Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-red-500">
+                <AlertTriangle className="h-6 w-6 text-white" />
+              </div>
+              <span>Socios con Atraso en Pagos</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Consulte los socios con una determinada cantidad de meses de atraso en el pago de cuotas
+            </p>
+
+            {/* Search Form */}
+            <div className="flex gap-4 items-end">
+              <div className="flex-1 max-w-xs">
+                <Label htmlFor="monthsDelayed" className="text-gray-700">
+                  Meses de atraso (mínimo)
+                </Label>
+                <Input
+                  id="monthsDelayed"
+                  type="number"
+                  min="1"
+                  value={monthsDelayed}
+                  onChange={(e) => setMonthsDelayed(e.target.value)}
+                  placeholder="Ej: 3"
+                  className="mt-1"
+                />
+              </div>
+              <Button
+                onClick={handleSearchMorosos}
+                disabled={loadingMorosos}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                {loadingMorosos ? 'Buscando...' : 'Consultar'}
+              </Button>
+            </div>
+
+            {/* Error Message */}
+            {morosusError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">{morosusError}</p>
+              </div>
+            )}
+
+            {/* Results Table */}
+            {morosos.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Resultados: {morosos.length} socio{morosos.length !== 1 ? 's' : ''} encontrado{morosos.length !== 1 ? 's' : ''}
+                  </p>
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-semibold">ID</TableHead>
+                          <TableHead className="font-semibold">Apellido y Nombre</TableHead>
+                          <TableHead className="font-semibold">Grupo</TableHead>
+                          <TableHead className="font-semibold">Domicilio</TableHead>
+                          <TableHead className="font-semibold">Teléfono</TableHead>
+                          <TableHead className="font-semibold">Último Pago</TableHead>
+                          <TableHead className="font-semibold text-right">Meses Atraso</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {morosos.map((socio) => (
+                          <TableRow key={socio.So_ID} className="hover:bg-gray-50">
+                            <TableCell className="font-medium">{socio.So_ID}</TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {socio.So_Apellido}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {socio.So_Nombre}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">{socio.Gr_Nombre || '-'}</TableCell>
+                            <TableCell className="text-sm">{socio.So_DomCob || '-'}</TableCell>
+                            <TableCell className="text-sm">{socio.So_Telef || '-'}</TableCell>
+                            <TableCell className="text-sm">
+                              {socio.UltimaCuota_Anio && socio.UltimaCuota_Mes ? (
+                                <span>
+                                  {getMonthName(socio.UltimaCuota_Mes)} {socio.UltimaCuota_Anio}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">Sin pagos</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                socio.MesesAtraso >= 12
+                                  ? 'bg-red-100 text-red-800'
+                                  : socio.MesesAtraso >= 6
+                                  ? 'bg-orange-100 text-orange-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {socio.MesesAtraso} {socio.MesesAtraso === 1 ? 'mes' : 'meses'}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* No Results Message */}
+            {!loadingMorosos && morosos.length === 0 && !morosusError && monthsDelayed && (
+              <div className="text-center py-8 text-gray-500">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No se encontraron socios con {monthsDelayed} o más meses de atraso</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
   )
 }
