@@ -373,33 +373,49 @@ async function generateData() {
     }
     console.log(`    ✓ ${transferCount} transferencias creadas`);
 
-    // Generate cash reconciliations (2-4 per month for cash accounts)
+    // Generate cash reconciliations (weekly for cash accounts)
     console.log('  Creando arqueos de caja...');
     const cashAccounts = accounts.filter(a => a.type === 'cash');
     let reconciliationCount = 0;
 
+    // Generate reconciliations on specific days (7, 14, 21, 28) to avoid duplicates
+    const reconciliationDays = [7, 14, 21, 28];
+
     for (let m = 0; m < MONTHS_TO_GENERATE; m++) {
-      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, 1);
-      const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
+      const year = startDate.getFullYear();
+      const month = startDate.getMonth() + m;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
 
       for (const cashAccount of cashAccounts) {
-        const numReconciliations = randomBetween(2, 4);
-        for (let i = 0; i < numReconciliations; i++) {
+        // Use 2-3 reconciliation days per month
+        const daysToUse = reconciliationDays.slice(0, randomBetween(2, 3)).filter(d => d <= daysInMonth);
+
+        for (const day of daysToUse) {
+          const reconciliationDate = new Date(year, month, day);
+
+          // Skip future dates
+          if (reconciliationDate > today) continue;
+
           const openingBalance = randomBetween(10000, 80000);
           const closingBalance = openingBalance + randomBetween(-5000, 15000);
           const expectedBalance = closingBalance + randomBetween(-500, 500);
           const difference = closingBalance - expectedBalance;
 
-          await CashReconciliation.create({
-            account_id: cashAccount.id,
-            date: formatDate(randomDate(monthStart, monthEnd)),
-            opening_balance: openingBalance,
-            closing_balance: closingBalance,
-            expected_balance: expectedBalance,
-            notes: difference !== 0 ? 'Diferencia detectada en arqueo' : 'Arqueo correcto',
-            user_id: userId
-          });
-          reconciliationCount++;
+          try {
+            await CashReconciliation.create({
+              account_id: cashAccount.id,
+              date: formatDate(reconciliationDate),
+              opening_balance: openingBalance,
+              closing_balance: closingBalance,
+              expected_balance: expectedBalance,
+              notes: difference !== 0 ? 'Diferencia detectada en arqueo' : 'Arqueo correcto',
+              user_id: userId
+            });
+            reconciliationCount++;
+          } catch (err) {
+            // Skip if duplicate (shouldn't happen with fixed days)
+            if (!err.message.includes('Validation error')) throw err;
+          }
         }
       }
     }
