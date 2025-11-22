@@ -6,6 +6,7 @@ import {
   FileText,
   Settings,
   DollarSign,
+  Calculator,
 } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
@@ -18,6 +19,11 @@ const navigation: NavigationItem[] = [
     name: 'Operaciones',
     href: '/accounting/operations',
     icon: BookOpenText,
+  },
+  {
+    name: 'Arqueos de Caja',
+    href: '/accounting/reconciliations',
+    icon: Calculator,
   },
   {
     name: 'Cuentas',
