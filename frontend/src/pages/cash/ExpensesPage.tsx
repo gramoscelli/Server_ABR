@@ -77,10 +77,11 @@ export default function ExpensesPage() {
 
       if (expensesResponse.ok) {
         const expensesData = await expensesResponse.json()
-        const formattedExpenses = expensesData.expenses?.map((exp: { id: number; date: string; ExpenseCategory?: { name: string }; description: string; amount: number }) => ({
+        // Backend returns 'data' array with 'category' alias (not 'expenses' or 'ExpenseCategory')
+        const formattedExpenses = expensesData.data?.map((exp: { id: number; date: string; category?: { name: string }; description: string; amount: number }) => ({
           id: exp.id,
           date: exp.date,
-          category: exp.ExpenseCategory?.name || 'Sin categoría',
+          category: exp.category?.name || 'Sin categoría',
           description: exp.description || 'Sin descripción',
           amount: parseFloat(String(exp.amount))
         })) || []

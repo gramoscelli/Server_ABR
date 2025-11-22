@@ -77,10 +77,11 @@ export default function IncomesPage() {
 
       if (incomesResponse.ok) {
         const incomesData = await incomesResponse.json()
-        const formattedIncomes = incomesData.incomes?.map((inc: { id: number; date: string; IncomeCategory?: { name: string }; description: string; amount: number }) => ({
+        // Backend returns 'data' array with 'category' alias (not 'incomes' or 'IncomeCategory')
+        const formattedIncomes = incomesData.data?.map((inc: { id: number; date: string; category?: { name: string }; description: string; amount: number }) => ({
           id: inc.id,
           date: inc.date,
-          category: inc.IncomeCategory?.name || 'Sin categoría',
+          category: inc.category?.name || 'Sin categoría',
           description: inc.description || 'Sin descripción',
           amount: parseFloat(String(inc.amount))
         })) || []
