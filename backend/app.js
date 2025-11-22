@@ -87,7 +87,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Import specific rate limiters for different endpoints
-const { csrfLimiter } = require('./middleware/rateLimiters');
+const { csrfLimiter, authenticatedAwareApiLimiter } = require('./middleware/rateLimiters');
 
 // Rate limiting for general API routes (non-auth)
 const apiLimiter = rateLimit({
@@ -144,15 +144,16 @@ app.use('/api/socios', apiLimiter, sociosRouter); // Socios search routes (read-
 // app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // Temporarily disabled - WhatsApp integration routes
 
 // Accounting module routes (protected, state-changing routes need CSRF)
-app.use('/api/accounting/expense-categories', apiLimiter, authenticateToken, validateCsrfToken, accountingExpenseCategoriesRouter);
-app.use('/api/accounting/income-categories', apiLimiter, authenticateToken, validateCsrfToken, accountingIncomeCategoriesRouter);
-app.use('/api/accounting/transfer-types', apiLimiter, authenticateToken, validateCsrfToken, accountingTransferTypesRouter);
-app.use('/api/accounting/accounts', apiLimiter, authenticateToken, validateCsrfToken, accountingAccountsRouter);
-app.use('/api/accounting/expenses', apiLimiter, authenticateToken, validateCsrfToken, accountingExpensesRouter);
-app.use('/api/accounting/incomes', apiLimiter, authenticateToken, validateCsrfToken, accountingIncomesRouter);
-app.use('/api/accounting/transfers', apiLimiter, authenticateToken, validateCsrfToken, accountingTransfersRouter);
-app.use('/api/accounting/cash-reconciliations', apiLimiter, authenticateToken, validateCsrfToken, accountingCashReconciliationsRouter);
-app.use('/api/accounting/dashboard', apiLimiter, authenticateToken, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
+// Note: authenticateToken runs BEFORE rate limiter so authenticated users skip rate limiting
+app.use('/api/accounting/expense-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingExpenseCategoriesRouter);
+app.use('/api/accounting/income-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingIncomeCategoriesRouter);
+app.use('/api/accounting/transfer-types', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransferTypesRouter);
+app.use('/api/accounting/accounts', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingAccountsRouter);
+app.use('/api/accounting/expenses', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingExpensesRouter);
+app.use('/api/accounting/incomes', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingIncomesRouter);
+app.use('/api/accounting/transfers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransfersRouter);
+app.use('/api/accounting/cash-reconciliations', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingCashReconciliationsRouter);
+app.use('/api/accounting/dashboard', authenticateToken, authenticatedAwareApiLimiter, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
 
 
 // catch 404 and forward to error handler
