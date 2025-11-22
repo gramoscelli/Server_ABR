@@ -8,6 +8,10 @@ const router = express.Router();
 const { Account, Expense, Income, Transfer } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { fixModelEncoding, fixArrayEncoding } = require('../../utils/encoding');
+
+// Fields that may have encoding issues
+const ACCOUNT_TEXT_FIELDS = ['name', 'bank_name', 'notes'];
 
 /**
  * @route   GET /api/accounting/accounts
@@ -35,9 +39,12 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       sum + parseFloat(acc.current_balance), 0
     );
 
+    // Fix encoding issues (Latin1 to UTF-8 conversion)
+    const fixedAccounts = fixArrayEncoding(accounts, ACCOUNT_TEXT_FIELDS);
+
     res.json({
       success: true,
-      data: accounts,
+      data: fixedAccounts,
       summary: {
         total: accounts.length,
         totalBalance: totalBalance.toFixed(2),
@@ -98,10 +105,13 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       })
     ]);
 
+    // Fix encoding issues
+    const fixedAccount = fixModelEncoding(account, ACCOUNT_TEXT_FIELDS);
+
     res.json({
       success: true,
       data: {
-        account,
+        account: fixedAccount,
         recentTransactions: {
           expenses,
           incomes,
@@ -158,7 +168,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     res.status(201).json({
       success: true,
       message: 'Cuenta creada exitosamente',
-      data: account
+      data: fixModelEncoding(account, ACCOUNT_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error creating account:', error);
@@ -208,7 +218,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     res.json({
       success: true,
       message: 'Cuenta actualizada exitosamente',
-      data: account
+      data: fixModelEncoding(account, ACCOUNT_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error updating account:', error);
@@ -255,7 +265,7 @@ router.put('/:id/balance', authenticateToken, authorizeRoles('root'), async (req
       success: true,
       message: 'Balance ajustado exitosamente',
       data: {
-        account,
+        account: fixModelEncoding(account, ACCOUNT_TEXT_FIELDS),
         old_balance: oldBalance,
         new_balance: new_balance,
         difference: parseFloat(new_balance) - parseFloat(oldBalance)
@@ -387,14 +397,17 @@ router.get('/:id/balance-history', authenticateToken, authorizeRoles('root', 'ad
       };
     });
 
+    // Fix encoding on account name
+    const fixedAccount = fixModelEncoding(account, ACCOUNT_TEXT_FIELDS);
+
     res.json({
       success: true,
       data: {
         account: {
-          id: account.id,
-          name: account.name,
-          initial_balance: account.initial_balance,
-          current_balance: account.current_balance
+          id: fixedAccount.id,
+          name: fixedAccount.name,
+          initial_balance: fixedAccount.initial_balance,
+          current_balance: fixedAccount.current_balance
         },
         history
       }

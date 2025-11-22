@@ -8,6 +8,18 @@ const router = express.Router();
 const { Expense, ExpenseCategory, Account, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { fixEncoding } = require('../../utils/encoding');
+
+// Fix encoding for expense data (description, notes, and related category/account names)
+function fixExpenseEncoding(expense) {
+  if (!expense) return expense;
+  const fixed = expense.toJSON ? expense.toJSON() : { ...expense };
+  if (fixed.description) fixed.description = fixEncoding(fixed.description);
+  if (fixed.notes) fixed.notes = fixEncoding(fixed.notes);
+  if (fixed.category?.name) fixed.category.name = fixEncoding(fixed.category.name);
+  if (fixed.account?.name) fixed.account.name = fixEncoding(fixed.account.name);
+  return fixed;
+}
 
 /**
  * @route   GET /api/accounting/expenses
@@ -68,9 +80,12 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     // Calculate totals
     const totalAmount = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
+    // Fix encoding issues
+    const fixedExpenses = expenses.map(fixExpenseEncoding);
+
     res.json({
       success: true,
-      data: expenses,
+      data: fixedExpenses,
       pagination: {
         total: count,
         page: parseInt(page),
@@ -125,7 +140,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 
     res.json({
       success: true,
-      data: expense
+      data: fixExpenseEncoding(expense)
     });
   } catch (error) {
     console.error('Error fetching expense:', error);

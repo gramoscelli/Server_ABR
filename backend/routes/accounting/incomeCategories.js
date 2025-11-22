@@ -7,6 +7,20 @@ const express = require('express');
 const router = express.Router();
 const { IncomeCategory } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
+const { fixEncoding } = require('../../utils/encoding');
+
+// Fix encoding for category data
+function fixCategoryEncoding(category) {
+  if (!category) return category;
+  const fixed = category.toJSON ? category.toJSON() : { ...category };
+  if (fixed.name) fixed.name = fixEncoding(fixed.name);
+  if (fixed.description) fixed.description = fixEncoding(fixed.description);
+  if (fixed.subcategories) {
+    fixed.subcategories = fixed.subcategories.map(sub => fixCategoryEncoding(sub));
+  }
+  if (fixed.parent?.name) fixed.parent.name = fixEncoding(fixed.parent.name);
+  return fixed;
+}
 
 /**
  * @route   GET /api/accounting/income-categories
@@ -28,12 +42,15 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       order: [['order_index', 'ASC'], ['name', 'ASC']]
     });
 
-    // Organize into hierarchy
+    // Organize into hierarchy and fix encoding
     const rootCategories = categories.filter(cat => !cat.parent_id);
-    const result = rootCategories.map(parent => ({
-      ...parent.toJSON(),
-      subcategories: categories.filter(cat => cat.parent_id === parent.id)
-    }));
+    const result = rootCategories.map(parent => {
+      const fixed = fixCategoryEncoding(parent);
+      fixed.subcategories = categories
+        .filter(cat => cat.parent_id === parent.id)
+        .map(fixCategoryEncoding);
+      return fixed;
+    });
 
     res.json({
       success: true,
