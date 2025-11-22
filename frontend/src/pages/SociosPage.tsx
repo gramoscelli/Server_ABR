@@ -26,6 +26,12 @@ interface Socio {
   UltimaCuota_Mes?: number
   UltimaCuota_Valor?: number
   UltimaCuota_FechaCobrado?: string
+  // Persona autorizada
+  So_Aut_Apellido?: string | null
+  So_Aut_Nombre?: string | null
+  So_Aut_Domi?: string | null
+  So_Aut_Telef?: string | null
+  So_Aut_NroDoc?: string | null
 }
 
 export default function SociosPage() {
@@ -319,6 +325,11 @@ export default function SociosPage() {
                               <h2 className="text-2xl font-bold text-gray-900">
                                 {selectedSocio.So_Apellido}, {selectedSocio.So_Nombre}
                               </h2>
+                              {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre) && (
+                                <p className="text-sm text-blue-700 mt-1">
+                                  Autorizado: {selectedSocio.So_Aut_Apellido}{selectedSocio.So_Aut_Apellido && selectedSocio.So_Aut_Nombre ? ', ' : ''}{selectedSocio.So_Aut_Nombre}
+                                </p>
+                              )}
                               <p className="text-sm text-gray-600 mt-1">
                                 Número de Socio: <span className="font-semibold">#{selectedSocio.So_ID}</span>
                               </p>
@@ -426,38 +437,63 @@ export default function SociosPage() {
                             {selectedSocio.So_Email || 'No especificado'}
                           </p>
                         </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Fecha de Nacimiento
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_FecNac || 'No especificado'}
-                          </p>
-                        </div>
                       </div>
                     </div>
 
-                    {/* Domicilios */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          Domicilio de Residencia
-                        </label>
-                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                          {selectedSocio.So_DomRes || 'No especificado'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          Domicilio de Cobro
-                        </label>
-                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                          {selectedSocio.So_DomCob || 'No especificado'}
-                        </p>
-                      </div>
+                    {/* Domicilio */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Domicilio
+                      </label>
+                      <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                        {selectedSocio.So_DomRes || 'No especificado'}
+                      </p>
                     </div>
+
+                    {/* Persona Autorizada */}
+                    {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre || selectedSocio.So_Aut_NroDoc || selectedSocio.So_Aut_Telef || selectedSocio.So_Aut_Domi) && (
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                        <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Persona Autorizada
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre) && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Nombre</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Apellido}{selectedSocio.So_Aut_Apellido && selectedSocio.So_Aut_Nombre ? ', ' : ''}{selectedSocio.So_Aut_Nombre}
+                              </p>
+                            </div>
+                          )}
+                          {selectedSocio.So_Aut_NroDoc && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">DNI</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded font-mono">
+                                {selectedSocio.So_Aut_NroDoc}
+                              </p>
+                            </div>
+                          )}
+                          {selectedSocio.So_Aut_Telef && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Teléfono</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Telef}
+                              </p>
+                            </div>
+                          )}
+                          {selectedSocio.So_Aut_Domi && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Domicilio</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Domi}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
