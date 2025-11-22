@@ -15,7 +15,8 @@ SELECT r.id, res.id, '["*"]'
 FROM roles r, resources res
 WHERE r.name = 'root' AND res.name = '*';
 
--- Create initial admin user with root role if no users exist
+-- Create initial admin user with root role if NO users exist in the system
+-- This ensures a fresh installation has a default admin to login with
 -- Password: admin123 (CHANGE IMMEDIATELY after first login!)
 -- Hash generated with: bcrypt.hashSync('admin123', 10)
 INSERT INTO usuarios (username, password_hash, email, role_id, is_active, must_change_password, failed_attempts, created_at)
@@ -30,7 +31,7 @@ SELECT
     NOW()
 FROM roles r
 WHERE r.name = 'root'
-AND NOT EXISTS (SELECT 1 FROM usuarios WHERE role_id = r.id)
+AND NOT EXISTS (SELECT 1 FROM usuarios LIMIT 1)  -- Only if NO users exist at all
 ON DUPLICATE KEY UPDATE username = username;  -- No-op if exists
 
 SELECT 'Migration 015: Root role and initial admin user created' as status;
