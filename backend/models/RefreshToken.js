@@ -24,7 +24,7 @@ const RefreshToken = sequelize.define('refresh_tokens', {
   token: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    field: 'token',  // Explicit column mapping
+    field: 'token_hash',  // Maps to token_hash column in DB
     validate: {
       notEmpty: true
     }
