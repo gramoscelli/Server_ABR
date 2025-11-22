@@ -24,8 +24,7 @@ const sequelize = new Sequelize(
 
     // Character set configuration for UTF-8 support
     dialectOptions: {
-      charset: 'utf8mb4',
-      collate: 'utf8mb4_unicode_ci'
+      charset: 'utf8mb4'
     },
 
     // Connection pool configuration
@@ -105,8 +104,7 @@ const accountingDb = new Sequelize(
     port: process.env.MYSQL_PORT || 3306,
     dialect: 'mysql',
     dialectOptions: {
-      charset: 'utf8mb4',
-      collate: 'utf8mb4_unicode_ci'
+      charset: 'utf8mb4'
     },
     pool: {
       max: 10,
