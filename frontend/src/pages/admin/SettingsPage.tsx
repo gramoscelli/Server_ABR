@@ -1,10 +1,8 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Settings } from 'lucide-react'
 
 export default function SettingsPage() {
   return (
-    <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -28,6 +26,5 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </AdminLayout>
   )
 }

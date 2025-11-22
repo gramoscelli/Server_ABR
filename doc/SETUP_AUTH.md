@@ -46,7 +46,7 @@ This creates:
 After migration, restart the Node.js container to load new code:
 
 ```bash
-docker-compose restart app
+docker-compose restart backend
 ```
 
 Or rebuild:
@@ -190,11 +190,11 @@ docker exec -i mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} ${MYSQL_DATABASE} < m
 
 Check the logs:
 ```bash
-docker-compose logs -f app
+docker-compose logs -f backend
 ```
 
 Common issues:
-- Missing npm packages: `docker exec -it nodejs bash -c "cd /usr/src/app && npm install"`
+- Missing npm packages: `docker exec -it backend bash -c "cd /usr/src/app && npm install"`
 - Syntax errors: Check the file mentioned in the error
 
 ### Rate limiting is too strict

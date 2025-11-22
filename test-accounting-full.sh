@@ -1,0 +1,401 @@
+#/bin/bash
+
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuración
+API_URL="http://localhost:3000/api"
+MYSQL_CONTAINER="mysql"
+APP_CONTAINER="nodejs"
+
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Test Script - Accounting System${NC}"
+echo -e "${BLUE}========================================${NC}\n"
+
+# Paso 1: Generar hash de contraseña
+echo -e "${YELLOW}[1/11] Generando hash de contraseña...${NC}"
+
+PASSWORD_HASH=$(docker exec -i $APP_CONTAINER node -e "
+const bcrypt = require('bcryptjs');
+const password = 'Test123!';
+const hash = bcrypt.hashSync(password, 10);
+console.log(hash);
+")
+
+if [ -z "$PASSWORD_HASH" ]; then
+    echo -e "${RED}✗ Error al generar hash${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Hash generado${NC}\n"
+
+# Paso 2: Crear usuario de prueba directamente en MySQL
+echo -e "${YELLOW}[2/11] Creando usuario de prueba en MySQL...${NC}"
+
+docker exec -i $MYSQL_CONTAINER mysql -uroot -pabr2005 abr <<EOF
+-- Eliminar usuario si existe (por username o email)
+DELETE FROM usuarios WHERE username = 'testuser' OR email = 'test@example.com';
+
+-- Crear usuario de prueba con role_id de 'root' y email verificado
+INSERT INTO usuarios (username, password_hash, email, role_id, is_active, email_verified, created_at)
+SELECT 'testuser', '$PASSWORD_HASH', 'test@example.com', r.id, 1, 1, NOW()
+FROM roles r WHERE r.name = 'root';
+
+-- Mostrar usuario creado
+SELECT u.id, u.username, r.name as role
+FROM usuarios u
+JOIN roles r ON u.role_id = r.id
+WHERE u.username = 'testuser';
+EOF
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ Usuario creado exitosamente${NC}\n"
+else
+    echo -e "${RED}✗ Error al crear usuario${NC}\n"
+    exit 1
+fi
+
+# Paso 3: Obtener token CSRF
+echo -e "${YELLOW}[3/11] Obteniendo token CSRF...${NC}"
+
+CSRF_RESPONSE=$(curl -s -c /tmp/cookies.txt $API_URL/csrf-token)
+CSRF_TOKEN=$(echo $CSRF_RESPONSE | grep -o '"csrfToken":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$CSRF_TOKEN" ]; then
+    echo -e "${RED}✗ Error al obtener CSRF token${NC}"
+    echo "Response: $CSRF_RESPONSE"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ CSRF Token obtenido${NC}\n"
+
+# Paso 4: Login y obtener token JWT
+echo -e "${YELLOW}[4/11] Obteniendo token de autenticación...${NC}"
+
+LOGIN_RESPONSE=$(curl -s -X POST \
+  -b /tmp/cookies.txt \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d '{"username":"testuser","password":"Test123!"}' \
+  $API_URL/auth/login)
+
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+if [ -z "$TOKEN" ]; then
+    echo -e "${RED}✗ Error al obtener token${NC}"
+    echo "Response: $LOGIN_RESPONSE"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Token obtenido: ${TOKEN:0:20}...${NC}\n"
+
+# Función helper para hacer peticiones
+make_request() {
+    local method=$1
+    local endpoint=$2
+    local data=$3
+    local description=$4
+
+    echo -e "${YELLOW}${description}${NC}"
+
+    if [ "$method" = "GET" ]; then
+        RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+          -X GET \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          "${API_URL}${endpoint}")
+    else
+        RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+          -X $method \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$data" \
+          "${API_URL}${endpoint}")
+    fi
+
+    HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+    BODY=$(echo "$RESPONSE" | sed '/HTTP_STATUS:/d')
+
+    if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+        echo -e "${GREEN}✓ Success (HTTP $HTTP_STATUS)${NC}"
+        echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
+    else
+        echo -e "${RED}✗ Failed (HTTP $HTTP_STATUS)${NC}"
+        echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
+    fi
+    echo ""
+}
+
+# Paso 5: Crear cuenta de efectivo
+echo -e "${YELLOW}[5/12] Creando cuenta de efectivo...${NC}"
+ACCOUNT_DATA='{
+  "name": "Caja Principal",
+  "type": "cash",
+  "currency": "ARS",
+  "initial_balance": 10000,
+  "description": "Cuenta de efectivo principal"
+}'
+
+ACCOUNT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$ACCOUNT_DATA" \
+  "${API_URL}/accounting/accounts")
+
+HTTP_STATUS=$(echo "$ACCOUNT_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$ACCOUNT_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Cuenta creada (HTTP $HTTP_STATUS)${NC}"
+    ACCOUNT_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Account ID: $ACCOUNT_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear cuenta (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+    exit 1
+fi
+echo ""
+
+# Paso 6: Crear segunda cuenta para transferencias
+echo -e "${YELLOW}[6/12] Creando segunda cuenta (banco)...${NC}"
+BANK_ACCOUNT_DATA='{
+  "name": "Banco Nación",
+  "type": "bank",
+  "currency": "ARS",
+  "initial_balance": 50000,
+  "description": "Cuenta bancaria"
+}'
+
+BANK_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$BANK_ACCOUNT_DATA" \
+  "${API_URL}/accounting/accounts")
+
+HTTP_STATUS=$(echo "$BANK_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$BANK_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Cuenta bancaria creada (HTTP $HTTP_STATUS)${NC}"
+    BANK_ACCOUNT_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Bank Account ID: $BANK_ACCOUNT_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear cuenta bancaria (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 7: Crear categoría de egreso
+echo -e "${YELLOW}[7/12] Creando categoría de egreso...${NC}"
+EXPENSE_CAT_DATA='{
+  "name": "Gastos Operativos",
+  "description": "Gastos del día a día",
+  "color": "#FF5733"
+}'
+
+EXP_CAT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$EXPENSE_CAT_DATA" \
+  "${API_URL}/accounting/expense-categories")
+
+HTTP_STATUS=$(echo "$EXP_CAT_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$EXP_CAT_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Categoría de egreso creada (HTTP $HTTP_STATUS)${NC}"
+    EXPENSE_CAT_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Category ID: $EXPENSE_CAT_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear categoría (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 8: Crear categoría de ingreso
+echo -e "${YELLOW}[8/12] Creando categoría de ingreso...${NC}"
+INCOME_CAT_DATA='{
+  "name": "Ventas",
+  "description": "Ingresos por ventas",
+  "color": "#28A745"
+}'
+
+INC_CAT_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$INCOME_CAT_DATA" \
+  "${API_URL}/accounting/income-categories")
+
+HTTP_STATUS=$(echo "$INC_CAT_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$INC_CAT_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Categoría de ingreso creada (HTTP $HTTP_STATUS)${NC}"
+    INCOME_CAT_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Category ID: $INCOME_CAT_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear categoría (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 9: Crear egreso
+echo -e "${YELLOW}[9/12] Creando egreso...${NC}"
+EXPENSE_DATA="{
+  \"amount\": 1500.50,
+  \"account_id\": $ACCOUNT_ID,
+  \"category_id\": $EXPENSE_CAT_ID,
+  \"date\": \"$(date +%Y-%m-%d)\",
+  \"description\": \"Compra de materiales\"
+}"
+
+echo "Datos a enviar: $EXPENSE_DATA"
+
+EXPENSE_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$EXPENSE_DATA" \
+  "${API_URL}/accounting/expenses")
+
+HTTP_STATUS=$(echo "$EXPENSE_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$EXPENSE_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Egreso creado (HTTP $HTTP_STATUS)${NC}"
+    EXPENSE_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Expense ID: $EXPENSE_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear egreso (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 10: Crear ingreso
+echo -e "${YELLOW}[10/12] Creando ingreso...${NC}"
+INCOME_DATA="{
+  \"amount\": 5000.00,
+  \"account_id\": $ACCOUNT_ID,
+  \"category_id\": $INCOME_CAT_ID,
+  \"date\": \"$(date +%Y-%m-%d)\",
+  \"description\": \"Venta de productos\"
+}"
+
+echo "Datos a enviar: $INCOME_DATA"
+
+INCOME_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$INCOME_DATA" \
+  "${API_URL}/accounting/incomes")
+
+HTTP_STATUS=$(echo "$INCOME_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$INCOME_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Ingreso creado (HTTP $HTTP_STATUS)${NC}"
+    INCOME_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Income ID: $INCOME_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear ingreso (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 11: Crear transferencia
+echo -e "${YELLOW}[11/12] Creando transferencia...${NC}"
+TRANSFER_DATA="{
+  \"amount\": 2000.00,
+  \"from_account_id\": $ACCOUNT_ID,
+  \"to_account_id\": $BANK_ACCOUNT_ID,
+  \"date\": \"$(date +%Y-%m-%d)\",
+  \"description\": \"Depósito en banco\"
+}"
+
+echo "Datos a enviar: $TRANSFER_DATA"
+
+TRANSFER_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X POST \
+  -b /tmp/cookies.txt \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: $CSRF_TOKEN" \
+  -d "$TRANSFER_DATA" \
+  "${API_URL}/accounting/transfers")
+
+HTTP_STATUS=$(echo "$TRANSFER_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$TRANSFER_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Transferencia creada (HTTP $HTTP_STATUS)${NC}"
+    TRANSFER_ID=$(echo "$BODY" | jq -r '.data.id' 2>/dev/null)
+    echo "Transfer ID: $TRANSFER_ID"
+    echo "$BODY" | jq '.' 2>/dev/null
+else
+    echo -e "${RED}✗ Error al crear transferencia (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Paso 12: Obtener dashboard
+echo -e "${YELLOW}[12/12] Obteniendo dashboard...${NC}"
+
+DASHBOARD_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+  -X GET \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  "${API_URL}/accounting/dashboard")
+
+HTTP_STATUS=$(echo "$DASHBOARD_RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+BODY=$(echo "$DASHBOARD_RESPONSE" | sed '/HTTP_STATUS:/d')
+
+if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+    echo -e "${GREEN}✓ Dashboard obtenido (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY" | jq '.' 2>/dev/null || echo "$BODY"
+else
+    echo -e "${RED}✗ Error al obtener dashboard (HTTP $HTTP_STATUS)${NC}"
+    echo "$BODY"
+fi
+echo ""
+
+# Resumen final
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Resumen de resultados${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo -e "Usuario:        testuser"
+echo -e "Cuenta Caja:    ID $ACCOUNT_ID"
+echo -e "Cuenta Banco:   ID $BANK_ACCOUNT_ID"
+echo -e "Cat. Egreso:    ID $EXPENSE_CAT_ID"
+echo -e "Cat. Ingreso:   ID $INCOME_CAT_ID"
+echo -e "Egreso creado:  ID ${EXPENSE_ID:-'FAILED'}"
+echo -e "Ingreso creado: ID ${INCOME_ID:-'FAILED'}"
+echo -e "Transfer creada: ID ${TRANSFER_ID:-'FAILED'}"
+echo ""
+echo -e "${GREEN}Test completado!${NC}"

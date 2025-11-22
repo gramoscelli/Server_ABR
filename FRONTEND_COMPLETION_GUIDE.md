@@ -773,7 +773,7 @@ docker compose up -d --build
 docker compose logs -f frontend
 
 # Ver logs del backend
-docker compose logs -f app
+docker compose logs -f backend
 
 # Ver estado de todos los servicios
 docker compose ps
@@ -835,7 +835,7 @@ Verificar que `BACKEND_API_URL=http://app:3000` esté usando el nombre del servi
 ### Logs útiles
 ```bash
 # Ver logs en tiempo real
-docker compose logs -f frontend app
+docker compose logs -f frontend backend
 
 # Ver logs solo de errores
 docker compose logs frontend | grep -i error

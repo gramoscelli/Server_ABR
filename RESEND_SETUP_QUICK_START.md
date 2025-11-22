@@ -66,7 +66,7 @@ FRONTEND_URL=http://localhost:3001
 
 ```bash
 # Desde /home/gustavo/biblio-server
-docker compose restart app
+docker compose restart backend
 ```
 
 **Total: 10 segundos**
@@ -164,7 +164,7 @@ EMAIL_FROM=noreply@tudominio.com
 ### 6. Reiniciar
 
 ```bash
-docker compose restart app
+docker compose restart backend
 ```
 
 ---

@@ -387,13 +387,13 @@ cd /home/gustavo/biblio-server/app
 npm install
 
 # OR inside Docker container
-docker compose exec app npm install
+docker compose exec backend npm install
 ```
 
 ### **Step 2: Restart Application**
 
 ```bash
-docker compose restart app
+docker compose restart backend
 ```
 
 ### **Step 3: Verify Connection**

@@ -1,4 +1,3 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -560,7 +559,6 @@ export default function UsersPage() {
   )
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -919,6 +917,5 @@ export default function UsersPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </AdminLayout>
   )
 }
