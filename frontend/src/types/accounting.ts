@@ -102,11 +102,10 @@ export interface CashReconciliation {
   id: number
   account_id: number
   date: string
-  opening_balance: number
-  closing_balance: number
-  expected_balance: number
-  actual_balance: number
-  difference: number
+  opening_balance: string | number  // Balance al inicio del día
+  closing_balance: string | number  // Balance real contado (arqueo físico)
+  expected_balance: string | number // Balance esperado según sistema
+  difference?: number               // Campo virtual: closing_balance - expected_balance
   notes: string | null
   user_id: number
   created_at: string
@@ -388,14 +387,13 @@ export interface UpdateTransferTypeData {
 export interface CreateCashReconciliationData {
   account_id: number
   date: string
-  expected_balance: number
-  actual_balance: number
+  opening_balance: number
+  closing_balance: number   // Balance real contado físicamente
+  expected_balance: number  // Balance esperado según cálculo del sistema
   notes?: string | null
 }
 
 export interface UpdateCashReconciliationData {
-  date?: string
-  expected_balance?: number
-  actual_balance?: number
+  closing_balance?: number  // Solo se puede actualizar el balance real
   notes?: string | null
 }

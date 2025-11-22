@@ -113,6 +113,21 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
   }
 });
 
+// DELETE reconciliation
+router.delete('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const reconciliation = await CashReconciliation.findByPk(req.params.id);
+    if (!reconciliation) {
+      return res.status(404).json({ success: false, error: 'Arqueo no encontrado' });
+    }
+
+    await reconciliation.destroy();
+    res.json({ success: true, message: 'Arqueo eliminado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Error al eliminar arqueo', message: error.message });
+  }
+});
+
 // GET calculate expected balance for date
 router.get('/calculate/:account_id/:date', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
