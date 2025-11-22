@@ -154,6 +154,25 @@ function randomChoice(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
+// Weighted account selection - favors cash accounts for daily operations
+function weightedAccountChoice(accounts, preferCash = true) {
+  if (!preferCash) {
+    return randomChoice(accounts);
+  }
+
+  // 70% chance for Caja Principal, 15% Caja Chica, 15% other accounts
+  const roll = Math.random();
+  const cajaPrincipal = accounts.find(a => a.name === 'Caja Principal');
+  const cajaChica = accounts.find(a => a.name === 'Caja Chica');
+
+  if (roll < 0.70 && cajaPrincipal) {
+    return cajaPrincipal;
+  } else if (roll < 0.85 && cajaChica) {
+    return cajaChica;
+  }
+  return randomChoice(accounts);
+}
+
 function formatDate(date) {
   return date.toISOString().split('T')[0];
 }
@@ -279,7 +298,9 @@ async function generateData() {
 
       for (let i = 0; i < numExpenses; i++) {
         const category = randomChoice(leafExpenseCategories);
-        const account = randomChoice(accounts);
+        // Bank-related expenses go to bank accounts, rest to cash
+        const preferCash = !['Gastos bancarios', 'Sueldos', 'Cargas sociales'].includes(category.name);
+        const account = weightedAccountChoice(accounts, preferCash);
         const descriptions = EXPENSE_DESCRIPTIONS[category.name] || ['Gasto ' + category.name];
 
         await Expense.create({
@@ -308,7 +329,9 @@ async function generateData() {
 
       for (let i = 0; i < numIncomes; i++) {
         const category = randomChoice(leafIncomeCategories);
-        const account = randomChoice(accounts);
+        // Bank-related incomes (subsidies, large donations) go to bank, rest to cash
+        const preferCash = !['Municipal', 'Provincial', 'Nacional', 'Intereses bancarios', 'Donaciones empresas'].includes(category.name);
+        const account = weightedAccountChoice(accounts, preferCash);
         const descriptions = INCOME_DESCRIPTIONS[category.name] || ['Ingreso ' + category.name];
 
         await Income.create({
