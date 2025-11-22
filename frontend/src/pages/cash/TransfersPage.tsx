@@ -78,11 +78,12 @@ export default function TransfersPage() {
 
       if (transfersResponse.ok) {
         const transfersData = await transfersResponse.json()
-        const formattedTransfers = transfersData.transfers?.map((tr: { id: number; date: string; FromAccount?: { name: string }; ToAccount?: { name: string }; description: string; amount: number }) => ({
+        // Backend returns 'data' array with 'fromAccount'/'toAccount' aliases (camelCase)
+        const formattedTransfers = transfersData.data?.map((tr: { id: number; date: string; fromAccount?: { name: string }; toAccount?: { name: string }; description: string; amount: number }) => ({
           id: tr.id,
           date: tr.date,
-          fromAccount: tr.FromAccount?.name || 'Cuenta origen',
-          toAccount: tr.ToAccount?.name || 'Cuenta destino',
+          fromAccount: tr.fromAccount?.name || 'Cuenta origen',
+          toAccount: tr.toAccount?.name || 'Cuenta destino',
           description: tr.description || 'Sin descripción',
           amount: parseFloat(String(tr.amount))
         })) || []
