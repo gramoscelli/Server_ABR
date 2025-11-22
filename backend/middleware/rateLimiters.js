@@ -106,11 +106,34 @@ const skipAdminRegistration = (req, res, next) => {
   return registerLimiter(req, res, next);
 };
 
+/**
+ * Rate limiter for API endpoints that skips authenticated users
+ * Authenticated users (with valid JWT) have no rate limits per documented philosophy
+ * Only unauthenticated requests are limited to 100 per 15 minutes
+ */
+const authenticatedAwareApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: 'Too many requests',
+    message: 'Demasiadas solicitudes desde esta IP. Por favor, intenta nuevamente más tarde.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Skip rate limiting for authenticated users
+  skip: (req) => {
+    // If user is authenticated (req.user populated by authenticateToken middleware), skip rate limiting
+    return req.user !== undefined && req.user !== null;
+  }
+});
+
 module.exports = {
   loginLimiter,
   registerLimiter,
   generalAuthLimiter,
   csrfLimiter,
   validationLimiter,
-  skipAdminRegistration
+  skipAdminRegistration,
+  authenticatedAwareApiLimiter
 };
