@@ -19,13 +19,14 @@ WHERE r.name = 'root' AND res.name = '*';
 -- This ensures a fresh installation has a default admin to login with
 -- Password: admin123 (CHANGE IMMEDIATELY after first login!)
 -- Hash generated with: bcrypt.hashSync('admin123', 10)
-INSERT INTO usuarios (username, password_hash, email, role_id, is_active, must_change_password, failed_attempts, created_at)
+INSERT INTO usuarios (username, password_hash, email, role_id, is_active, email_verified, must_change_password, failed_attempts, created_at)
 SELECT
     'admin',
     '$2b$10$8K1p/a0dL1LXMIgoEDFrwOfMQHZJKCVo3deMK7KYS7jXhGiLz5K8a',
     'admin@localhost',
     r.id,
     TRUE,
+    TRUE,  -- Email pre-verified for initial admin
     TRUE,  -- Force password change on first login
     0,
     NOW()
