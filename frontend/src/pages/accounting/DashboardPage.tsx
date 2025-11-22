@@ -5,8 +5,6 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Wallet,
-  Plus,
   ArrowRight,
   ArrowDownCircle,
   ArrowUpCircle,
@@ -18,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
 import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { MovementsCalendar } from '@/components/cash/MovementsCalendar'
 import { accountingService } from '@/lib/accountingService'
 import { toast } from '@/components/ui/use-toast'
 
@@ -307,52 +306,80 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Quick Access Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Operations */}
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/operations')}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
-                <span>Operaciones Recientes</span>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Ver el libro diario completo con todas las transacciones registradas
-              </p>
-            </CardContent>
-          </Card>
+        {/* Calendar and Quick Access */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Movements Calendar */}
+          <div className="lg:col-span-1">
+            <MovementsCalendar
+              selectedDate={selectedDate}
+              onDateSelect={(date) => {
+                setSelectedDate(date)
+              }}
+            />
+          </div>
 
-          {/* Accounts */}
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/accounts')}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
-                <span>Gestión de Cuentas</span>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Administrar cuentas bancarias, efectivo y ver saldos actualizados
-              </p>
-            </CardContent>
-          </Card>
+          {/* Quick Access Cards */}
+          <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Operations */}
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/operations')}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                  <span>Operaciones Recientes</span>
+                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Ver el libro diario completo con todas las transacciones registradas
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Reports */}
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/reports')}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
-                <span>Reportes Financieros</span>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Generar informes, balances y análisis financieros detallados
-              </p>
-            </CardContent>
-          </Card>
+            {/* Accounts */}
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/accounts')}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                  <span>Gestión de Cuentas</span>
+                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Administrar cuentas bancarias, efectivo y ver saldos actualizados
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Reports */}
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/reports')}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                  <span>Reportes Financieros</span>
+                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Generar informes, balances y análisis financieros detallados
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Expenses */}
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800" onClick={() => navigate('/accounting/expenses')}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white">
+                  <span>Ver Egresos</span>
+                  <ArrowRight className="h-5 w-5 text-gray-400" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Listado detallado de todos los egresos registrados
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Dialogs */}

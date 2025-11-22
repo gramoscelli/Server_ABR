@@ -362,14 +362,17 @@ async function generateData() {
       for (const cashAccount of cashAccounts) {
         const numReconciliations = randomBetween(2, 4);
         for (let i = 0; i < numReconciliations; i++) {
-          const expectedBalance = randomBetween(10000, 80000);
-          const difference = randomBetween(-500, 500);
+          const openingBalance = randomBetween(10000, 80000);
+          const closingBalance = openingBalance + randomBetween(-5000, 15000);
+          const expectedBalance = closingBalance + randomBetween(-500, 500);
+          const difference = closingBalance - expectedBalance;
 
           await CashReconciliation.create({
             account_id: cashAccount.id,
             date: formatDate(randomDate(monthStart, monthEnd)),
+            opening_balance: openingBalance,
+            closing_balance: closingBalance,
             expected_balance: expectedBalance,
-            actual_balance: expectedBalance + difference,
             notes: difference !== 0 ? 'Diferencia detectada en arqueo' : 'Arqueo correcto',
             user_id: userId
           });
