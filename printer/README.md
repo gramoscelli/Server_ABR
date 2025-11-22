@@ -107,7 +107,7 @@ pip install -r requirements.txt
 
 **Note:** Docker is for development/testing only. Production deployment MUST be on Windows with 32-bit Python.
 
-See docker-compose.yml configuration for the printer service.
+See Docker compose configuration for the printer service.
 
 ## Configuration
 

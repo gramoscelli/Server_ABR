@@ -36,7 +36,7 @@ node_modules/
 **Backend (`/app/.gitignore`):**
 - Excludes dependencies, logs, runtime data, IDE files
 
-### 3. Updated `docker-compose.yml`
+### 3. Updated `docker compose`
 Added anonymous volume to exclude `node_modules` from host bind mount:
 
 ```yaml
