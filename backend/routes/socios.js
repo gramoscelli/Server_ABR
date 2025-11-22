@@ -175,7 +175,8 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
       const fixed = socio.toJSON();
 
       // Fix text fields that may have encoding issues
-      const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef', 'So_Email', 'So_NotaCob', 'So_Obs'];
+      const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef', 'So_Email', 'So_NotaCob', 'So_Obs',
+                          'So_Aut_Apellido', 'So_Aut_Nombre', 'So_Aut_Domi', 'So_Aut_Telef'];
       textFields.forEach(field => {
         fixed[field] = fixEncoding(fixed[field]);
       });
