@@ -735,9 +735,9 @@ ENV HOSTNAME "0.0.0.0"
 CMD ["node", "server.js"]
 ```
 
-### 11. Actualizar docker-compose.yml (ya está configurado)
+### 11. Actualizar docker compose (ya está configurado)
 
-El `docker-compose.yml` ya tiene la configuración del frontend:
+El archivo compose ya tiene la configuración del frontend:
 ```yaml
 frontend:
   build:
