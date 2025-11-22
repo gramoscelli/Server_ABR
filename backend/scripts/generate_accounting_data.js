@@ -7,9 +7,11 @@
  *   node scripts/generate_accounting_data.js
  *   node scripts/generate_accounting_data.js --months=6
  *   node scripts/generate_accounting_data.js --clear  # Clear existing data first
+ *   node scripts/generate_accounting_data.js --extend # Extend data to current date
  *
  * Docker usage:
  *   docker compose exec backend node scripts/generate_accounting_data.js
+ *   docker compose exec backend node scripts/generate_accounting_data.js --extend
  */
 
 const {
@@ -24,6 +26,7 @@ const DEFAULT_MONTHS = 3;
 const args = process.argv.slice(2);
 const MONTHS_TO_GENERATE = parseInt(args.find(a => a.startsWith('--months='))?.split('=')[1]) || DEFAULT_MONTHS;
 const CLEAR_EXISTING = args.includes('--clear');
+const EXTEND_TO_CURRENT = args.includes('--extend');
 
 // Synthetic data templates
 const ACCOUNTS_DATA = [
@@ -277,24 +280,71 @@ async function generateData() {
 
     // Generate transactions for the past months
     const today = new Date();
-    const startDate = new Date(today.getFullYear(), today.getMonth() - MONTHS_TO_GENERATE, 1);
-    console.log(`Generando transacciones (${MONTHS_TO_GENERATE} meses)...`);
-    console.log(`  Período: ${formatDate(startDate)} a ${formatDate(today)}\n`);
+    let startDate;
+    let daysToGenerate;
+
+    if (EXTEND_TO_CURRENT) {
+      // Find the most recent transaction date
+      const [lastExpense] = await Expense.findAll({ order: [['date', 'DESC']], limit: 1 });
+      const [lastIncome] = await Income.findAll({ order: [['date', 'DESC']], limit: 1 });
+      const [lastTransfer] = await Transfer.findAll({ order: [['date', 'DESC']], limit: 1 });
+
+      const dates = [
+        lastExpense?.date,
+        lastIncome?.date,
+        lastTransfer?.date
+      ].filter(Boolean).map(d => new Date(d));
+
+      if (dates.length === 0) {
+        console.log('⚠️  No hay datos existentes. Usando --months para generar desde cero.');
+        startDate = new Date(today.getFullYear(), today.getMonth() - MONTHS_TO_GENERATE, 1);
+      } else {
+        const lastDate = new Date(Math.max(...dates));
+        startDate = new Date(lastDate);
+        startDate.setDate(startDate.getDate() + 1); // Start from the day after the last transaction
+
+        if (startDate >= today) {
+          console.log('✓ Los datos ya están actualizados hasta hoy.');
+          process.exit(0);
+        }
+      }
+
+      daysToGenerate = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
+      console.log(`Extendiendo datos hasta fecha actual...`);
+      console.log(`  Período: ${formatDate(startDate)} a ${formatDate(today)} (${daysToGenerate} días)\n`);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth() - MONTHS_TO_GENERATE, 1);
+      console.log(`Generando transacciones (${MONTHS_TO_GENERATE} meses)...`);
+      console.log(`  Período: ${formatDate(startDate)} a ${formatDate(today)}\n`);
+    }
 
     let expenseCount = 0;
     let incomeCount = 0;
     let transferCount = 0;
 
-    // Generate expenses (80-150 per month)
+    // Calculate actual months to generate
+    const monthsDiff = EXTEND_TO_CURRENT
+      ? Math.ceil((today - startDate) / (1000 * 60 * 60 * 24 * 30)) || 1
+      : MONTHS_TO_GENERATE;
+
+    // Generate expenses (80-150 per month, scaled for partial months)
     console.log('  Creando egresos...');
     const leafExpenseCategories = expenseCategories.filter(c =>
       !expenseCategories.some(other => other.parent_id === c.id)
     );
 
-    for (let m = 0; m < MONTHS_TO_GENERATE; m++) {
-      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, 1);
-      const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
-      const numExpenses = randomBetween(80, 150);
+    for (let m = 0; m < monthsDiff; m++) {
+      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, EXTEND_TO_CURRENT && m === 0 ? startDate.getDate() : 1);
+      let monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
+      // Don't generate beyond today
+      if (monthEnd > today) monthEnd = today;
+      // Skip if start is after end
+      if (monthStart > monthEnd) continue;
+
+      // Scale number of transactions based on days in period
+      const daysInPeriod = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
+      const scaleFactor = daysInPeriod / 30;
+      const numExpenses = Math.max(1, Math.round(randomBetween(80, 150) * scaleFactor));
 
       for (let i = 0; i < numExpenses; i++) {
         const category = randomChoice(leafExpenseCategories);
@@ -316,16 +366,21 @@ async function generateData() {
     }
     console.log(`    ✓ ${expenseCount} egresos creados`);
 
-    // Generate incomes (30-60 per month)
+    // Generate incomes (30-60 per month, scaled for partial months)
     console.log('  Creando ingresos...');
     const leafIncomeCategories = incomeCategories.filter(c =>
       !incomeCategories.some(other => other.parent_id === c.id)
     );
 
-    for (let m = 0; m < MONTHS_TO_GENERATE; m++) {
-      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, 1);
-      const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
-      const numIncomes = randomBetween(30, 60);
+    for (let m = 0; m < monthsDiff; m++) {
+      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, EXTEND_TO_CURRENT && m === 0 ? startDate.getDate() : 1);
+      let monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
+      if (monthEnd > today) monthEnd = today;
+      if (monthStart > monthEnd) continue;
+
+      const daysInPeriod = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
+      const scaleFactor = daysInPeriod / 30;
+      const numIncomes = Math.max(1, Math.round(randomBetween(30, 60) * scaleFactor));
 
       for (let i = 0; i < numIncomes; i++) {
         const category = randomChoice(leafIncomeCategories);
@@ -347,12 +402,17 @@ async function generateData() {
     }
     console.log(`    ✓ ${incomeCount} ingresos creados`);
 
-    // Generate transfers (5-15 per month)
+    // Generate transfers (5-15 per month, scaled for partial months)
     console.log('  Creando transferencias...');
-    for (let m = 0; m < MONTHS_TO_GENERATE; m++) {
-      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, 1);
-      const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
-      const numTransfers = randomBetween(5, 15);
+    for (let m = 0; m < monthsDiff; m++) {
+      const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, EXTEND_TO_CURRENT && m === 0 ? startDate.getDate() : 1);
+      let monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + m + 1, 0);
+      if (monthEnd > today) monthEnd = today;
+      if (monthStart > monthEnd) continue;
+
+      const daysInPeriod = Math.ceil((monthEnd - monthStart) / (1000 * 60 * 60 * 24)) + 1;
+      const scaleFactor = daysInPeriod / 30;
+      const numTransfers = Math.max(1, Math.round(randomBetween(5, 15) * scaleFactor));
 
       for (let i = 0; i < numTransfers; i++) {
         const fromAccount = randomChoice(accounts);
@@ -381,7 +441,7 @@ async function generateData() {
     // Generate reconciliations on specific days (7, 14, 21, 28) to avoid duplicates
     const reconciliationDays = [7, 14, 21, 28];
 
-    for (let m = 0; m < MONTHS_TO_GENERATE; m++) {
+    for (let m = 0; m < monthsDiff; m++) {
       const year = startDate.getFullYear();
       const month = startDate.getMonth() + m;
       const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -395,6 +455,8 @@ async function generateData() {
 
           // Skip future dates
           if (reconciliationDate > today) continue;
+          // Skip dates before start date (for --extend mode)
+          if (reconciliationDate < startDate) continue;
 
           const openingBalance = randomBetween(10000, 80000);
           const closingBalance = openingBalance + randomBetween(-5000, 15000);
