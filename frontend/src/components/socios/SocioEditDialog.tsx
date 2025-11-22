@@ -62,6 +62,9 @@ interface SocioFull {
   So_DiferenciaCuota: number
   So_Aut_Apellido: string | null
   So_Aut_Nombre: string | null
+  So_Aut_Domi: string | null
+  So_Aut_Telef: string | null
+  So_Aut_TipoDoc: number | null
   So_Aut_NroDoc: string | null
   Gr_ID: number | null
   TD_ID: number | null
@@ -110,6 +113,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
     So_DiferenciaCuota: '0',
     So_Aut_Apellido: '',
     So_Aut_Nombre: '',
+    So_Aut_Domi: '',
+    So_Aut_Telef: '',
+    So_Aut_TipoDoc: '',
     So_Aut_NroDoc: '',
     Gr_ID: '',
     TD_ID: '',
@@ -175,6 +181,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
             So_DiferenciaCuota: data.So_DiferenciaCuota?.toString() || '0',
             So_Aut_Apellido: data.So_Aut_Apellido || '',
             So_Aut_Nombre: data.So_Aut_Nombre || '',
+            So_Aut_Domi: data.So_Aut_Domi || '',
+            So_Aut_Telef: data.So_Aut_Telef || '',
+            So_Aut_TipoDoc: data.So_Aut_TipoDoc?.toString() || '',
             So_Aut_NroDoc: data.So_Aut_NroDoc || '',
             Gr_ID: data.Gr_ID?.toString() || '',
             TD_ID: data.TD_ID?.toString() || '',
@@ -227,6 +236,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
         So_DiferenciaCuota: parseFloat(formData.So_DiferenciaCuota) || 0,
         So_Aut_Apellido: formData.So_Aut_Apellido,
         So_Aut_Nombre: formData.So_Aut_Nombre,
+        So_Aut_Domi: formData.So_Aut_Domi,
+        So_Aut_Telef: formData.So_Aut_Telef,
+        So_Aut_TipoDoc: formData.So_Aut_TipoDoc ? parseInt(formData.So_Aut_TipoDoc) : null,
         So_Aut_NroDoc: formData.So_Aut_NroDoc,
         Gr_ID: formData.Gr_ID ? parseInt(formData.Gr_ID) : null,
         TD_ID: formData.TD_ID ? parseInt(formData.TD_ID) : null,
@@ -541,7 +553,7 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
                 <User className="h-4 w-4" />
                 Persona Autorizada
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="So_Aut_Apellido">Apellido</Label>
                   <Input
@@ -559,11 +571,45 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
                   />
                 </div>
                 <div>
+                  <Label htmlFor="So_Aut_TipoDoc">Tipo Documento</Label>
+                  <Select
+                    value={formData.So_Aut_TipoDoc}
+                    onValueChange={(value) => handleInputChange('So_Aut_TipoDoc', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposDocumento.map((tipo) => (
+                        <SelectItem key={tipo.TD_ID} value={tipo.TD_ID.toString()}>
+                          {tipo.TD_Tipo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label htmlFor="So_Aut_NroDoc">Número de Documento</Label>
                   <Input
                     id="So_Aut_NroDoc"
                     value={formData.So_Aut_NroDoc}
                     onChange={(e) => handleInputChange('So_Aut_NroDoc', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="So_Aut_Domi">Domicilio</Label>
+                  <Input
+                    id="So_Aut_Domi"
+                    value={formData.So_Aut_Domi}
+                    onChange={(e) => handleInputChange('So_Aut_Domi', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="So_Aut_Telef">Teléfono</Label>
+                  <Input
+                    id="So_Aut_Telef"
+                    value={formData.So_Aut_Telef}
+                    onChange={(e) => handleInputChange('So_Aut_Telef', e.target.value)}
                   />
                 </div>
               </div>
