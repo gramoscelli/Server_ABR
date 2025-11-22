@@ -172,27 +172,19 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
 
     // Fix encoding issues (Latin1 to UTF-8 conversion) and add grupo name
     const fixedSocios = socios.map(socio => {
-      const fixed = socio.toJSON();
-
-      // Fix text fields that may have encoding issues
-      const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef', 'So_Email', 'So_NotaCob', 'So_Obs',
-                          'So_Aut_Apellido', 'So_Aut_Nombre', 'So_Aut_Domi', 'So_Aut_Telef'];
-      textFields.forEach(field => {
-        fixed[field] = fixEncoding(fixed[field]);
-      });
+      const fixed = fixSocioEncoding(socio);
 
       // Add grupo name and fix encoding
       if (fixed.grupo) {
         fixed.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
         fixed.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
-        // Remove the nested grupo object to flatten the response
         delete fixed.grupo;
       }
 
       // Convert photo blob to base64 if exists
       if (fixed.So_Foto && Buffer.isBuffer(fixed.So_Foto)) {
         fixed.So_Foto_Base64 = `data:image/jpeg;base64,${fixed.So_Foto.toString('base64')}`;
-        delete fixed.So_Foto; // Remove the binary data
+        delete fixed.So_Foto;
       } else {
         delete fixed.So_Foto;
       }
@@ -205,7 +197,7 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
         fixed.UltimaCuota_Valor = ultimaCuota.CC_Valor;
         fixed.UltimaCuota_FechaCobrado = ultimaCuota.CC_FechaCobrado;
       }
-      delete fixed.cuotas; // Remove the nested cuotas array
+      delete fixed.cuotas;
 
       return fixed;
     });
@@ -281,25 +273,20 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee', '
       });
     }
 
-    // Fix encoding issues (Latin1 to UTF-8 conversion) and add grupo name
-    const fixed = socio.toJSON();
-    const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef', 'So_Email', 'So_NotaCob', 'So_Obs'];
-    textFields.forEach(field => {
-      fixed[field] = fixEncoding(fixed[field]);
-    });
+    // Fix encoding issues (Latin1 to UTF-8 conversion)
+    const fixed = fixSocioEncoding(socio);
 
     // Add grupo name and fix encoding
     if (fixed.grupo) {
       fixed.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
       fixed.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
-      // Remove the nested grupo object to flatten the response
       delete fixed.grupo;
     }
 
     // Convert photo blob to base64 if exists
     if (fixed.So_Foto && Buffer.isBuffer(fixed.So_Foto)) {
       fixed.So_Foto_Base64 = `data:image/jpeg;base64,${fixed.So_Foto.toString('base64')}`;
-      delete fixed.So_Foto; // Remove the binary data
+      delete fixed.So_Foto;
     } else {
       delete fixed.So_Foto;
     }
@@ -312,7 +299,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee', '
       fixed.UltimaCuota_Valor = ultimaCuota.CC_Valor;
       fixed.UltimaCuota_FechaCobrado = ultimaCuota.CC_FechaCobrado;
     }
-    delete fixed.cuotas; // Remove the nested cuotas array
+    delete fixed.cuotas;
 
     res.json({
       success: true,
@@ -381,18 +368,15 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
     // Only include socios with at least one payment
     const morosos = socios
       .map(socio => {
-        const fixed = socio.toJSON();
+        const json = socio.toJSON ? socio.toJSON() : socio;
 
         // Skip socios without any payments
-        if (!fixed.cuotas || fixed.cuotas.length === 0) {
+        if (!json.cuotas || json.cuotas.length === 0) {
           return null;
         }
 
-        // Fix text fields encoding
-        const textFields = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef'];
-        textFields.forEach(field => {
-          fixed[field] = fixEncoding(fixed[field]);
-        });
+        // Fix text fields encoding using unified function
+        const fixed = fixSocioEncoding(socio);
 
         // Add grupo name
         if (fixed.grupo) {
@@ -416,7 +400,7 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
         fixed.MesesAtraso = monthsDiff;
 
         delete fixed.cuotas;
-        delete fixed.So_Foto; // Remove photo
+        delete fixed.So_Foto;
 
         return fixed;
       })
