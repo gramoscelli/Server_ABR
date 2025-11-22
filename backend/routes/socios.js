@@ -1,46 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const Socio = require('../models/Socio');
-const Grupo = require('../models/Grupo');
-const CobroCuota = require('../models/CobroCuota');
+const { Socio, Grupo, CobroCuota, TipoDocumento, Cobrador, Adicional } = require('../models');
 const { Op } = require('sequelize');
 const { authenticateToken, authenticateTokenOrApiKey, authorizeRoles } = require('../middleware/auth');
+const { fixEncoding } = require('../utils/encoding');
+
+// Text fields that may have encoding issues
+const TEXT_FIELDS = ['So_Nombre', 'So_Apellido', 'So_DomRes', 'So_DomCob', 'So_Telef', 'So_Email', 'So_NotaCob', 'So_Obs',
+                     'So_Aut_Apellido', 'So_Aut_Nombre', 'So_Aut_Domi', 'So_Aut_Telef'];
 
 /**
- * Fix encoding issues - only convert if text appears to be double-encoded
- * Detects patterns like "Ã±" (which should be "ñ") or "Ã³" (which should be "ó")
+ * Fix encoding for socio data
  */
-function fixEncoding(text) {
-  if (!text || typeof text !== 'string') return text;
-
-  // Fix specific mojibake patterns
-  // These occur when UTF-8 data (C3 91 for Ñ) is misinterpreted
-  let fixed = text;
-
-  // Replace known double-encoded patterns
-  const replacements = {
-    'Ã\u2018': 'Ñ',  // C3 91 misread as Ã' (U+2018 left single quotation mark)
-    'Ã±': 'ñ',       // C3 B1
-    'Ã¡': 'á',       // C3 A1
-    'Ã©': 'é',       // C3 A9
-    'Ã­': 'í',       // C3 AD
-    'Ã³': 'ó',       // C3 B3
-    'Ãº': 'ú',       // C3 BA
-    'Ã\x81': 'Á',   // C3 81
-    'Ã‰': 'É',       // C3 89
-    'Ã\x8D': 'Í',   // C3 8D
-    'Ã"': 'Ó',       // C3 93
-    'Ãš': 'Ú',       // C3 9A
-    'Ã¼': 'ü',       // C3 BC
-    'Ã\u0153': 'Ü', // C3 9C
-  };
-
-  for (const [wrong, correct] of Object.entries(replacements)) {
-    if (fixed.includes(wrong)) {
-      fixed = fixed.replace(new RegExp(wrong, 'g'), correct);
-    }
-  }
-
+function fixSocioEncoding(socio) {
+  const fixed = socio.toJSON ? socio.toJSON() : { ...socio };
+  TEXT_FIELDS.forEach(field => {
+    if (fixed[field]) fixed[field] = fixEncoding(fixed[field]);
+  });
   return fixed;
 }
 
@@ -371,6 +347,247 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
       message: 'Error al obtener socios morosos',
       error: error.message
     });
+  }
+});
+
+// =============================================
+// DROPDOWN DATA ENDPOINTS
+// =============================================
+
+/**
+ * GET /api/socios/dropdown/grupos
+ * Get all grupos for dropdown
+ */
+router.get('/dropdown/grupos', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const grupos = await Grupo.findAll({
+      attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota', 'Gr_Habilitado'],
+      order: [['Gr_Nombre', 'ASC']]
+    });
+
+    const fixed = grupos.map(g => {
+      const item = g.toJSON();
+      item.Gr_Nombre = fixEncoding(item.Gr_Nombre);
+      item.Gr_Titulo = fixEncoding(item.Gr_Titulo);
+      return item;
+    });
+
+    res.json({ success: true, data: fixed });
+  } catch (error) {
+    console.error('Error fetching grupos:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener grupos' });
+  }
+});
+
+/**
+ * GET /api/socios/dropdown/tipos-documento
+ * Get all document types for dropdown
+ */
+router.get('/dropdown/tipos-documento', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const tipos = await TipoDocumento.findAll({
+      attributes: ['TD_ID', 'TD_Tipo'],
+      order: [['TD_Tipo', 'ASC']]
+    });
+
+    res.json({ success: true, data: tipos });
+  } catch (error) {
+    console.error('Error fetching tipos documento:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener tipos de documento' });
+  }
+});
+
+/**
+ * GET /api/socios/dropdown/cobradores
+ * Get all cobradores for dropdown
+ */
+router.get('/dropdown/cobradores', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const cobradores = await Cobrador.findAll({
+      attributes: ['Co_ID', 'Co_Nombre', 'Co_Habilitado'],
+      order: [['Co_Nombre', 'ASC']]
+    });
+
+    const fixed = cobradores.map(c => {
+      const item = c.toJSON();
+      item.Co_Nombre = fixEncoding(item.Co_Nombre);
+      return item;
+    });
+
+    res.json({ success: true, data: fixed });
+  } catch (error) {
+    console.error('Error fetching cobradores:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener cobradores' });
+  }
+});
+
+// =============================================
+// SOCIO CRUD ENDPOINTS
+// =============================================
+
+/**
+ * GET /api/socios/:id/full
+ * Get complete socio data including all relations for editing
+ */
+router.get('/:id/full', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const socio = await Socio.findByPk(id, {
+      include: [
+        { model: Grupo, as: 'grupo', attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota'] },
+        { model: TipoDocumento, as: 'tipoDocumento', attributes: ['TD_ID', 'TD_Tipo'] },
+        { model: Cobrador, as: 'cobrador', attributes: ['Co_ID', 'Co_Nombre'] },
+        { model: Adicional, as: 'adicionales', include: [
+          { model: TipoDocumento, as: 'tipoDocumento', attributes: ['TD_ID', 'TD_Tipo'] }
+        ]},
+        {
+          model: CobroCuota, as: 'cuotas',
+          attributes: ['CC_ID', 'CC_Anio', 'CC_Mes', 'CC_Valor', 'CC_Cobrado', 'CC_FechaCobrado'],
+          where: { CC_Anulado: 'N', CC_Cobrado: 'Y' },
+          required: false,
+          limit: 1,
+          order: [['CC_Anio', 'DESC'], ['CC_Mes', 'DESC']]
+        }
+      ]
+    });
+
+    if (!socio) {
+      return res.status(404).json({ success: false, error: 'Socio no encontrado' });
+    }
+
+    const fixed = fixSocioEncoding(socio);
+
+    // Fix related data encoding
+    if (fixed.grupo) {
+      fixed.grupo.Gr_Nombre = fixEncoding(fixed.grupo.Gr_Nombre);
+      fixed.grupo.Gr_Titulo = fixEncoding(fixed.grupo.Gr_Titulo);
+    }
+    if (fixed.cobrador) {
+      fixed.cobrador.Co_Nombre = fixEncoding(fixed.cobrador.Co_Nombre);
+    }
+    if (fixed.adicionales) {
+      fixed.adicionales = fixed.adicionales.map(a => ({
+        ...a,
+        Ad_ApeNom: fixEncoding(a.Ad_ApeNom)
+      }));
+    }
+
+    // Convert photo to base64
+    if (fixed.So_Foto && Buffer.isBuffer(fixed.So_Foto)) {
+      fixed.So_Foto_Base64 = `data:image/jpeg;base64,${fixed.So_Foto.toString('base64')}`;
+    }
+    delete fixed.So_Foto;
+
+    // Extract ultima cuota
+    if (fixed.cuotas && fixed.cuotas.length > 0) {
+      fixed.UltimaCuota = fixed.cuotas[0];
+    }
+    delete fixed.cuotas;
+
+    res.json({ success: true, data: fixed });
+  } catch (error) {
+    console.error('Error fetching full socio:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener datos del socio' });
+  }
+});
+
+/**
+ * PUT /api/socios/:id
+ * Update socio data
+ */
+router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const socio = await Socio.findByPk(id);
+    if (!socio) {
+      return res.status(404).json({ success: false, error: 'Socio no encontrado' });
+    }
+
+    // Allowed fields to update
+    const allowedFields = [
+      'So_Apellido', 'So_Nombre', 'So_DomRes', 'So_DomCob', 'So_Telef',
+      'TD_ID', 'So_NroDoc', 'So_FecNac', 'So_AnioIngre', 'So_MesIngre',
+      'So_NotaCob', 'So_Obs', 'Gr_ID', 'Co_ID', 'So_PersFisica', 'So_Fallecido',
+      'So_DiferenciaCuota', 'So_NroCarnet', 'So_Email',
+      'So_Aut_Apellido', 'So_Aut_Nombre', 'So_Aut_Domi', 'So_Aut_Telef',
+      'So_Aut_TipoDoc', 'So_Aut_NroDoc'
+    ];
+
+    // Update only allowed fields
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        socio[field] = updateData[field];
+      }
+    });
+
+    // Handle photo update separately (base64 to buffer)
+    if (updateData.So_Foto_Base64) {
+      const base64Data = updateData.So_Foto_Base64.replace(/^data:image\/\w+;base64,/, '');
+      socio.So_Foto = Buffer.from(base64Data, 'base64');
+    }
+
+    await socio.save();
+
+    // Return updated socio
+    const updated = await Socio.findByPk(id, {
+      include: [
+        { model: Grupo, as: 'grupo', attributes: ['Gr_ID', 'Gr_Nombre'] },
+        { model: TipoDocumento, as: 'tipoDocumento', attributes: ['TD_ID', 'TD_Tipo'] },
+        { model: Cobrador, as: 'cobrador', attributes: ['Co_ID', 'Co_Nombre'] }
+      ]
+    });
+
+    const fixed = fixSocioEncoding(updated);
+    if (fixed.So_Foto) delete fixed.So_Foto;
+
+    res.json({
+      success: true,
+      message: 'Socio actualizado exitosamente',
+      data: fixed
+    });
+  } catch (error) {
+    console.error('Error updating socio:', error);
+    res.status(500).json({ success: false, error: 'Error al actualizar socio', message: error.message });
+  }
+});
+
+/**
+ * POST /api/socios/:id/dar-baja
+ * Deactivate (dar de baja) a socio - sets So_Fallecido = 'Y'
+ */
+router.post('/:id/dar-baja', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+
+    const socio = await Socio.findByPk(id);
+    if (!socio) {
+      return res.status(404).json({ success: false, error: 'Socio no encontrado' });
+    }
+
+    // Mark as inactive
+    socio.So_Fallecido = 'N'; // Note: 'N' means inactive in this inverted logic
+
+    // Optionally add reason to observations
+    if (motivo) {
+      const fecha = new Date().toLocaleDateString('es-AR');
+      const obsActual = socio.So_Obs || '';
+      socio.So_Obs = `${obsActual}\n[BAJA ${fecha}] ${motivo}`.trim();
+    }
+
+    await socio.save();
+
+    res.json({
+      success: true,
+      message: 'Socio dado de baja exitosamente',
+      data: { So_ID: socio.So_ID, So_Fallecido: socio.So_Fallecido }
+    });
+  } catch (error) {
+    console.error('Error deactivating socio:', error);
+    res.status(500).json({ success: false, error: 'Error al dar de baja al socio' });
   }
 });
 

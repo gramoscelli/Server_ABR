@@ -15,6 +15,9 @@ const OAuthProvider = require('./OAuthProvider');
 const CobroCuota = require('./CobroCuota');
 const Socio = require('./Socio');
 const Grupo = require('./Grupo');
+const TipoDocumento = require('./TipoDocumento');
+const Cobrador = require('./Cobrador');
+const Adicional = require('./Adicional');
 
 /**
  * Define model associations (relationships)
@@ -145,6 +148,47 @@ CobroCuota.belongsTo(Socio, {
   as: 'socio'
 });
 
+// ===== Socios Related Models =====
+
+// Socio belongs to TipoDocumento
+Socio.belongsTo(TipoDocumento, {
+  foreignKey: 'TD_ID',
+  as: 'tipoDocumento'
+});
+
+TipoDocumento.hasMany(Socio, {
+  foreignKey: 'TD_ID',
+  as: 'socios'
+});
+
+// Socio belongs to Cobrador
+Socio.belongsTo(Cobrador, {
+  foreignKey: 'Co_ID',
+  as: 'cobrador'
+});
+
+Cobrador.hasMany(Socio, {
+  foreignKey: 'Co_ID',
+  as: 'socios'
+});
+
+// Socio has many Adicionales
+Socio.hasMany(Adicional, {
+  foreignKey: 'So_ID',
+  as: 'adicionales'
+});
+
+Adicional.belongsTo(Socio, {
+  foreignKey: 'So_ID',
+  as: 'socio'
+});
+
+// Adicional belongs to TipoDocumento
+Adicional.belongsTo(TipoDocumento, {
+  foreignKey: 'TD_ID',
+  as: 'tipoDocumento'
+});
+
 /**
  * Sync models with database
  * WARNING: Use { alter: true } only in development
@@ -175,6 +219,9 @@ module.exports = {
   CobroCuota,
   Socio,
   Grupo,
+  TipoDocumento,
+  Cobrador,
+  Adicional,
   // Utility
   syncModels
 };
