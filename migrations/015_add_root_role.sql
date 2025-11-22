@@ -15,14 +15,14 @@ SELECT r.id, res.id, '["*"]'
 FROM roles r, resources res
 WHERE r.name = 'root' AND res.name = '*';
 
--- Create initial root user if no users exist
+-- Create initial admin user with root role if no users exist
 -- Password: admin123 (CHANGE IMMEDIATELY after first login!)
 -- Hash generated with: bcrypt.hashSync('admin123', 10)
 INSERT INTO usuarios (username, password_hash, email, role_id, is_active, must_change_password, failed_attempts, created_at)
 SELECT
-    'root',
+    'admin',
     '$2b$10$8K1p/a0dL1LXMIgoEDFrwOfMQHZJKCVo3deMK7KYS7jXhGiLz5K8a',
-    'root@localhost',
+    'admin@localhost',
     r.id,
     TRUE,
     TRUE,  -- Force password change on first login
@@ -33,7 +33,7 @@ WHERE r.name = 'root'
 AND NOT EXISTS (SELECT 1 FROM usuarios WHERE role_id = r.id)
 ON DUPLICATE KEY UPDATE username = username;  -- No-op if exists
 
-SELECT 'Migration 015: Root role and initial user created' as status;
-SELECT '⚠️  IMPORTANT: Default root password is "admin123" - CHANGE IT IMMEDIATELY!' as warning;
+SELECT 'Migration 015: Root role and initial admin user created' as status;
+SELECT '⚠️  IMPORTANT: Default admin password is "admin123" - CHANGE IT IMMEDIATELY!' as warning;
 SELECT id, name, description FROM roles ORDER BY id;
 SELECT id, username, email, role_id, must_change_password FROM usuarios;
