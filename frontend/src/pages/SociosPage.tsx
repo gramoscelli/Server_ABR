@@ -147,10 +147,33 @@ export default function SociosPage() {
     }
   }
 
-  const handleSocioSaved = () => {
+  const handleSocioSaved = async () => {
     // Refresh the search results after saving
     if (searchTerm.trim()) {
-      handleSearch(searchTerm)
+      try {
+        const response = await fetchWithAuth(
+          `/api/socios/search?q=${encodeURIComponent(searchTerm)}&limit=20`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+        )
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            const newSocios = result.data || []
+            setSocios(newSocios)
+
+            // Update selectedSocio with fresh data
+            if (selectedSocio) {
+              const updatedSocio = newSocios.find((s: Socio) => s.So_ID === selectedSocio.So_ID)
+              if (updatedSocio) {
+                setSelectedSocio(updatedSocio)
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing socios:', error)
+      }
     }
   }
 
