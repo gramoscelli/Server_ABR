@@ -210,6 +210,22 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
       return fixed;
     });
 
+    // Get tipo documento names for autorizados
+    const tipoDocIds = [...new Set(fixedSocios.map(s => s.So_Aut_TipoDoc).filter(id => id))];
+    if (tipoDocIds.length > 0) {
+      const tiposDoc = await TipoDocumento.findAll({
+        where: { TD_ID: { [Op.in]: tipoDocIds } },
+        attributes: ['TD_ID', 'TD_Tipo']
+      });
+      const tipoDocMap = {};
+      tiposDoc.forEach(td => { tipoDocMap[td.TD_ID] = td.TD_Tipo; });
+      fixedSocios.forEach(s => {
+        if (s.So_Aut_TipoDoc && tipoDocMap[s.So_Aut_TipoDoc]) {
+          s.TD_Aut_Tipo = tipoDocMap[s.So_Aut_TipoDoc];
+        }
+      });
+    }
+
     res.json({
       success: true,
       data: fixedSocios,
