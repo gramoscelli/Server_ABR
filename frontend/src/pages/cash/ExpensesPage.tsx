@@ -11,7 +11,7 @@ import {
   Info
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { authService } from '@/lib/auth'
+import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
@@ -62,20 +62,38 @@ export default function ExpensesPage() {
     }
 
     fetchData()
-  }, [navigate])
+  }, [navigate, selectedDate])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      // TODO: Implement API calls to fetch expenses and statistics
-      setStats({
-        income: 0,
-        expense: 0,
-        balance: 0,
-        cashAccount: 3000000,
-        totalAvailable: 3000000,
-        totalReal: 3000000
-      })
-      setExpenses([])
+      // Format selected date as YYYY-MM-DD for API
+      const dateStr = selectedDate.toISOString().split('T')[0]
+
+      // Fetch expenses for the selected day
+      const expensesResponse = await fetchWithAuth(
+        `/api/accounting/expenses?start_date=${dateStr}&end_date=${dateStr}`
+      )
+
+      if (expensesResponse.ok) {
+        const expensesData = await expensesResponse.json()
+        const formattedExpenses = expensesData.expenses?.map((exp: { id: number; date: string; ExpenseCategory?: { name: string }; description: string; amount: number }) => ({
+          id: exp.id,
+          date: exp.date,
+          category: exp.ExpenseCategory?.name || 'Sin categoría',
+          description: exp.description || 'Sin descripción',
+          amount: parseFloat(String(exp.amount))
+        })) || []
+        setExpenses(formattedExpenses)
+
+        // Calculate totals from expenses
+        const totalExpense = formattedExpenses.reduce((sum: number, exp: Expense) => sum + exp.amount, 0)
+        setStats(prev => ({
+          ...prev,
+          expense: totalExpense,
+          balance: prev.income - totalExpense
+        }))
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
