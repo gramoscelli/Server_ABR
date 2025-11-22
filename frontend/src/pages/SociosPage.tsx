@@ -377,80 +377,53 @@ export default function SociosPage() {
                       </div>
                     </div>
 
-                    {/* Detalles del socio */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Nombre
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Nombre || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Apellido
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Apellido || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            DNI
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
-                            {selectedSocio.So_NroDoc || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Teléfono
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Telef || 'No especificado'}
-                          </p>
-                        </div>
+                    {/* Detalles del socio - Layout compacto en dos columnas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Nombre</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Nombre || 'No especificado'}
+                        </p>
                       </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Número de Socio
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
-                            {selectedSocio.So_ID}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Grupo
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.Gr_Nombre || (selectedSocio.Gr_ID ? `Grupo #${selectedSocio.Gr_ID}` : 'Sin grupo')}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Email
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Email || 'No especificado'}
-                          </p>
-                        </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Apellido</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Apellido || 'No especificado'}
+                        </p>
                       </div>
-                    </div>
-
-                    {/* Domicilio */}
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        Domicilio
-                      </label>
-                      <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                        {selectedSocio.So_DomRes || 'No especificado'}
-                      </p>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">DNI</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
+                          {selectedSocio.So_NroDoc || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Teléfono</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Telef || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Grupo</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.Gr_Nombre || (selectedSocio.Gr_ID ? `Grupo #${selectedSocio.Gr_ID}` : 'Sin grupo')}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Email</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Email || 'No especificado'}
+                        </p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Domicilio
+                        </label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_DomRes || 'No especificado'}
+                        </p>
+                      </div>
                     </div>
 
                     {/* Persona Autorizada */}
@@ -469,14 +442,12 @@ export default function SociosPage() {
                               </p>
                             </div>
                           )}
-                          {(selectedSocio.So_Aut_NroDoc || selectedSocio.TD_Aut_Tipo) && (
-                            <div>
-                              <label className="text-xs font-medium text-blue-600 block mb-1">Documento</label>
-                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded font-mono">
-                                {selectedSocio.TD_Aut_Tipo && `${selectedSocio.TD_Aut_Tipo}: `}{selectedSocio.So_Aut_NroDoc || 'Sin número'}
-                              </p>
-                            </div>
-                          )}
+                          <div>
+                            <label className="text-xs font-medium text-blue-600 block mb-1">Documento</label>
+                            <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded font-mono">
+                              {selectedSocio.TD_Aut_Tipo ? `${selectedSocio.TD_Aut_Tipo}: ` : ''}{selectedSocio.So_Aut_NroDoc || 'No especificado'}
+                            </p>
+                          </div>
                           {selectedSocio.So_Aut_Telef && (
                             <div>
                               <label className="text-xs font-medium text-blue-600 block mb-1">Teléfono</label>
