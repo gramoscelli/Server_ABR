@@ -104,13 +104,13 @@ DROP COLUMN role;
 -- Step 7: Create a sample printer user for testing
 -- Password: printer123 (hashed with bcrypt)
 -- Note: To generate new hash: docker exec -i nodejs node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('printer123', 10).then(hash => console.log(hash));"
-INSERT INTO usuarios (username, password_hash, email, role_id, is_active, failed_attempts, created_at)
+INSERT INTO usuarios (username, password_hash, email, role_id, active, failed_attempts, created_at)
 SELECT
     'printer_client',
     '$2b$10$nKEFOKIs9IjTclWd89xPWuGzs5KBSeIpy5bUruF4m7sW0l/LQKNc.',  -- bcrypt hash of 'printer123'
     'printer@example.com',
     r.id,
-    1,
+    TRUE,
     0,
     NOW()
 FROM roles r
