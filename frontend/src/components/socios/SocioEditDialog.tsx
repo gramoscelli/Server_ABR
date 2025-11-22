@@ -60,8 +60,9 @@ interface SocioFull {
   So_PersFisica: 'Y' | 'N'
   So_Fallecido: 'Y' | 'N'
   So_DiferenciaCuota: number
-  So_Aut_ApeNom: string | null
-  So_Aut_DocNro: string | null
+  So_Aut_Apellido: string | null
+  So_Aut_Nombre: string | null
+  So_Aut_NroDoc: string | null
   Gr_ID: number | null
   TD_ID: number | null
   Co_ID: number | null
@@ -107,8 +108,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
     So_PersFisica: 'Y' as 'Y' | 'N',
     So_Fallecido: 'N' as 'Y' | 'N',
     So_DiferenciaCuota: '0',
-    So_Aut_ApeNom: '',
-    So_Aut_DocNro: '',
+    So_Aut_Apellido: '',
+    So_Aut_Nombre: '',
+    So_Aut_NroDoc: '',
     Gr_ID: '',
     TD_ID: '',
     Co_ID: '',
@@ -171,8 +173,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
             So_PersFisica: data.So_PersFisica || 'Y',
             So_Fallecido: data.So_Fallecido || 'N',
             So_DiferenciaCuota: data.So_DiferenciaCuota?.toString() || '0',
-            So_Aut_ApeNom: data.So_Aut_ApeNom || '',
-            So_Aut_DocNro: data.So_Aut_DocNro || '',
+            So_Aut_Apellido: data.So_Aut_Apellido || '',
+            So_Aut_Nombre: data.So_Aut_Nombre || '',
+            So_Aut_NroDoc: data.So_Aut_NroDoc || '',
             Gr_ID: data.Gr_ID?.toString() || '',
             TD_ID: data.TD_ID?.toString() || '',
             Co_ID: data.Co_ID?.toString() || '',
@@ -222,8 +225,9 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
         So_PersFisica: formData.So_PersFisica,
         So_Fallecido: formData.So_Fallecido,
         So_DiferenciaCuota: parseFloat(formData.So_DiferenciaCuota) || 0,
-        So_Aut_ApeNom: formData.So_Aut_ApeNom,
-        So_Aut_DocNro: formData.So_Aut_DocNro,
+        So_Aut_Apellido: formData.So_Aut_Apellido,
+        So_Aut_Nombre: formData.So_Aut_Nombre,
+        So_Aut_NroDoc: formData.So_Aut_NroDoc,
         Gr_ID: formData.Gr_ID ? parseInt(formData.Gr_ID) : null,
         TD_ID: formData.TD_ID ? parseInt(formData.TD_ID) : null,
         Co_ID: formData.Co_ID ? parseInt(formData.Co_ID) : null,
@@ -537,21 +541,29 @@ export function SocioEditDialog({ socioId, open, onOpenChange, onSaved }: SocioE
                 <User className="h-4 w-4" />
                 Persona Autorizada
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="So_Aut_ApeNom">Apellido y Nombre</Label>
+                  <Label htmlFor="So_Aut_Apellido">Apellido</Label>
                   <Input
-                    id="So_Aut_ApeNom"
-                    value={formData.So_Aut_ApeNom}
-                    onChange={(e) => handleInputChange('So_Aut_ApeNom', e.target.value)}
+                    id="So_Aut_Apellido"
+                    value={formData.So_Aut_Apellido}
+                    onChange={(e) => handleInputChange('So_Aut_Apellido', e.target.value)}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="So_Aut_DocNro">Número de Documento</Label>
+                  <Label htmlFor="So_Aut_Nombre">Nombre</Label>
                   <Input
-                    id="So_Aut_DocNro"
-                    value={formData.So_Aut_DocNro}
-                    onChange={(e) => handleInputChange('So_Aut_DocNro', e.target.value)}
+                    id="So_Aut_Nombre"
+                    value={formData.So_Aut_Nombre}
+                    onChange={(e) => handleInputChange('So_Aut_Nombre', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="So_Aut_NroDoc">Número de Documento</Label>
+                  <Input
+                    id="So_Aut_NroDoc"
+                    value={formData.So_Aut_NroDoc}
+                    onChange={(e) => handleInputChange('So_Aut_NroDoc', e.target.value)}
                   />
                 </div>
               </div>
