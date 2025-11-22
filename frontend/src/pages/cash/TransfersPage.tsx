@@ -11,7 +11,7 @@ import {
   Info
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { authService } from '@/lib/auth'
+import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
@@ -63,20 +63,31 @@ export default function TransfersPage() {
     }
 
     fetchData()
-  }, [navigate])
+  }, [navigate, selectedDate])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      // TODO: Implement API calls to fetch transfers and statistics
-      setStats({
-        income: 0,
-        expense: 0,
-        balance: 0,
-        cashAccount: 3000000,
-        totalAvailable: 3000000,
-        totalReal: 3000000
-      })
-      setTransfers([])
+      // Format selected date as YYYY-MM-DD for API
+      const dateStr = selectedDate.toISOString().split('T')[0]
+
+      // Fetch transfers for the selected day
+      const transfersResponse = await fetchWithAuth(
+        `/api/accounting/transfers?start_date=${dateStr}&end_date=${dateStr}`
+      )
+
+      if (transfersResponse.ok) {
+        const transfersData = await transfersResponse.json()
+        const formattedTransfers = transfersData.transfers?.map((tr: { id: number; date: string; FromAccount?: { name: string }; ToAccount?: { name: string }; description: string; amount: number }) => ({
+          id: tr.id,
+          date: tr.date,
+          fromAccount: tr.FromAccount?.name || 'Cuenta origen',
+          toAccount: tr.ToAccount?.name || 'Cuenta destino',
+          description: tr.description || 'Sin descripción',
+          amount: parseFloat(String(tr.amount))
+        })) || []
+        setTransfers(formattedTransfers)
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {

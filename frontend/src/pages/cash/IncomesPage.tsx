@@ -11,7 +11,7 @@ import {
   Info
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { authService } from '@/lib/auth'
+import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
@@ -62,20 +62,38 @@ export default function IncomesPage() {
     }
 
     fetchData()
-  }, [navigate])
+  }, [navigate, selectedDate])
 
   const fetchData = async () => {
+    setLoading(true)
     try {
-      // TODO: Implement API calls to fetch incomes and statistics
-      setStats({
-        income: 0,
-        expense: 0,
-        balance: 0,
-        cashAccount: 3000000,
-        totalAvailable: 3000000,
-        totalReal: 3000000
-      })
-      setIncomes([])
+      // Format selected date as YYYY-MM-DD for API
+      const dateStr = selectedDate.toISOString().split('T')[0]
+
+      // Fetch incomes for the selected day
+      const incomesResponse = await fetchWithAuth(
+        `/api/accounting/incomes?start_date=${dateStr}&end_date=${dateStr}`
+      )
+
+      if (incomesResponse.ok) {
+        const incomesData = await incomesResponse.json()
+        const formattedIncomes = incomesData.incomes?.map((inc: { id: number; date: string; IncomeCategory?: { name: string }; description: string; amount: number }) => ({
+          id: inc.id,
+          date: inc.date,
+          category: inc.IncomeCategory?.name || 'Sin categoría',
+          description: inc.description || 'Sin descripción',
+          amount: parseFloat(String(inc.amount))
+        })) || []
+        setIncomes(formattedIncomes)
+
+        // Calculate totals from incomes
+        const totalIncome = formattedIncomes.reduce((sum: number, inc: Income) => sum + inc.amount, 0)
+        setStats(prev => ({
+          ...prev,
+          income: totalIncome,
+          balance: totalIncome - prev.expense
+        }))
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
