@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, User, MapPin, Users as UsersIcon, X, Loader2, Pencil } from 'lucide-react'
+import { Search, User, MapPin, Users as UsersIcon, X, Loader2, Pencil, Save, FileText } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
@@ -26,6 +27,7 @@ interface Socio {
   UltimaCuota_Mes?: number
   UltimaCuota_Valor?: number
   UltimaCuota_FechaCobrado?: string
+  So_Obs?: string | null
   // Persona autorizada
   So_Aut_Apellido?: string | null
   So_Aut_Nombre?: string | null
@@ -47,6 +49,10 @@ export default function SociosPage() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
+  // Estado para edición de observaciones
+  const [editingObs, setEditingObs] = useState(false)
+  const [obsValue, setObsValue] = useState('')
+  const [savingObs, setSavingObs] = useState(false)
 
   useEffect(() => {
     // Check if user has access (root, admin_employee, or library_employee)
@@ -147,6 +153,9 @@ export default function SociosPage() {
 
   const handleSelectSocio = (socio: Socio) => {
     setSelectedSocio(socio)
+    // Sincronizar observaciones al seleccionar un socio
+    setObsValue(socio.So_Obs || '')
+    setEditingObs(false)
   }
 
   const handleEditClick = () => {
@@ -183,6 +192,57 @@ export default function SociosPage() {
         console.error('Error refreshing socios:', error)
       }
     }
+  }
+
+  const handleSaveObs = async () => {
+    if (!selectedSocio) return
+
+    setSavingObs(true)
+    try {
+      const response = await fetchWithAuth(
+        `/api/socios/${selectedSocio.So_ID}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ So_Obs: obsValue })
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Error al guardar')
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        // Actualizar el socio seleccionado localmente
+        setSelectedSocio(prev => prev ? { ...prev, So_Obs: obsValue } : null)
+        // Actualizar en la lista de socios
+        setSocios(prev => prev.map(s =>
+          s.So_ID === selectedSocio.So_ID ? { ...s, So_Obs: obsValue } : s
+        ))
+        setEditingObs(false)
+        toast({
+          title: 'Guardado',
+          description: 'Las observaciones se guardaron correctamente.'
+        })
+      } else {
+        throw new Error(result.message || 'Error al guardar')
+      }
+    } catch (error) {
+      console.error('Error saving observations:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudieron guardar las observaciones.',
+        variant: 'destructive'
+      })
+    } finally {
+      setSavingObs(false)
+    }
+  }
+
+  const handleCancelEditObs = () => {
+    setObsValue(selectedSocio?.So_Obs || '')
+    setEditingObs(false)
   }
 
   return (
@@ -467,6 +527,65 @@ export default function SociosPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Observaciones - Campo editable */}
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Observaciones
+                        </h3>
+                        {canEdit && !editingObs && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingObs(true)}
+                            className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                        )}
+                      </div>
+                      {editingObs ? (
+                        <div className="space-y-3">
+                          <Textarea
+                            value={obsValue}
+                            onChange={(e) => setObsValue(e.target.value)}
+                            placeholder="Escribir observaciones..."
+                            className="min-h-[100px] bg-white border-amber-200 focus:border-amber-400"
+                            disabled={savingObs}
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEditObs}
+                              disabled={savingObs}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveObs}
+                              disabled={savingObs}
+                              className="bg-amber-600 hover:bg-amber-700"
+                            >
+                              {savingObs ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-1" />
+                              )}
+                              Guardar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-700 bg-white px-3 py-2 rounded min-h-[60px] whitespace-pre-wrap">
+                          {selectedSocio.So_Obs || <span className="text-gray-400 italic">Sin observaciones</span>}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
