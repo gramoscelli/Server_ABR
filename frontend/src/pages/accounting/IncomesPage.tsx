@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CompactDatePicker } from '@/components/ui/compact-date-picker'
+import { PeriodFilter, PeriodFilterValue, createPeriodValue } from '@/components/ui/period-filter'
 import {
   Wallet,
   Plus,
@@ -35,7 +35,7 @@ export default function IncomesPage() {
   })
   const [incomes, setIncomes] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [period, setPeriod] = useState<PeriodFilterValue>(createPeriodValue('this_month'))
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
   const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
@@ -51,23 +51,24 @@ export default function IncomesPage() {
     }
 
     fetchData()
-  }, [navigate, selectedDate])
+  }, [navigate, period])
 
   const fetchData = async () => {
     try {
       setLoading(true)
 
-      // Get the start and end of the selected month
-      const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-      const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+      // Build query params based on period filter
+      const params: { start_date?: string; end_date?: string; limit: number } = { limit: 100 }
 
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      if (period.range.start && period.range.end) {
+        params.start_date = period.range.start.toISOString().split('T')[0]
+        params.end_date = period.range.end.toISOString().split('T')[0]
+      }
 
       // Fetch dashboard data for period stats
       const [dashboardData, incomesResponse] = await Promise.all([
-        accountingService.getDashboard({ start_date: startDateStr, end_date: endDateStr }),
-        accountingService.getIncomes({ start_date: startDateStr, end_date: endDateStr, limit: 100 }),
+        accountingService.getDashboard(params.start_date && params.end_date ? { start_date: params.start_date, end_date: params.end_date } : {}),
+        accountingService.getIncomes(params),
       ])
 
       console.log('Dashboard data:', dashboardData)
@@ -94,7 +95,7 @@ export default function IncomesPage() {
     }
   }
 
-  const monthYear = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const periodLabel = period.label
 
   const handleAddIncome = async (data: IncomeFormData) => {
     try {
@@ -202,11 +203,11 @@ export default function IncomesPage() {
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Ingresos</h1>
-              <p className="mt-1 text-sm text-gray-500 capitalize">{monthYear}</p>
+              <p className="mt-1 text-sm text-gray-500">{periodLabel}</p>
             </div>
-            <CompactDatePicker
-              value={selectedDate}
-              onChange={setSelectedDate}
+            <PeriodFilter
+              value={period}
+              onChange={setPeriod}
             />
           </div>
           <div className="flex gap-2">

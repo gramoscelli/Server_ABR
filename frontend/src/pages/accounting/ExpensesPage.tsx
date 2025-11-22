@@ -1,14 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CompactDatePicker } from '@/components/ui/compact-date-picker'
+import { PeriodFilter, PeriodFilterValue, createPeriodValue } from '@/components/ui/period-filter'
 import {
   DollarSign,
   Plus,
   Filter,
   Download,
-  Calendar as CalendarIcon,
   Trash2,
-  Edit,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { authService } from '@/lib/auth'
@@ -38,7 +36,7 @@ export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [period, setPeriod] = useState<PeriodFilterValue>(createPeriodValue('this_month'))
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
   const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
@@ -54,24 +52,26 @@ export default function ExpensesPage() {
     }
 
     fetchData()
-  }, [navigate, selectedDate])
+  }, [navigate, period])
 
   const fetchData = async () => {
     try {
       setLoading(true)
 
-      // Get the start and end of the selected month
-      const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-      const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+      // Build query params based on period filter
+      const params: { start_date?: string; end_date?: string; limit: number } = { limit: 100 }
 
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      if (period.range.start && period.range.end) {
+        params.start_date = period.range.start.toISOString().split('T')[0]
+        params.end_date = period.range.end.toISOString().split('T')[0]
+      }
 
       // Fetch dashboard data for period stats
+      const dashboardParams = params.start_date && params.end_date ? { start_date: params.start_date, end_date: params.end_date } : {}
       const [dashboardData, expensesResponse, categoryStatsData] = await Promise.all([
-        accountingService.getDashboard({ start_date: startDateStr, end_date: endDateStr }),
-        accountingService.getExpenses({ start_date: startDateStr, end_date: endDateStr, limit: 100 }),
-        accountingService.getExpenseStatsByCategory({ start_date: startDateStr, end_date: endDateStr }),
+        accountingService.getDashboard(dashboardParams),
+        accountingService.getExpenses(params),
+        accountingService.getExpenseStatsByCategory(dashboardParams),
       ])
 
       console.log('Dashboard data:', dashboardData)
@@ -100,7 +100,7 @@ export default function ExpensesPage() {
     }
   }
 
-  const monthYear = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const periodLabel = period.label
 
   const handleAddExpense = async (data: ExpenseFormData) => {
     try {
@@ -208,11 +208,11 @@ export default function ExpensesPage() {
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Egresos</h1>
-              <p className="mt-1 text-sm text-gray-500 capitalize">{monthYear}</p>
+              <p className="mt-1 text-sm text-gray-500">{periodLabel}</p>
             </div>
-            <CompactDatePicker
-              value={selectedDate}
-              onChange={setSelectedDate}
+            <PeriodFilter
+              value={period}
+              onChange={setPeriod}
             />
           </div>
           <div className="flex gap-2">

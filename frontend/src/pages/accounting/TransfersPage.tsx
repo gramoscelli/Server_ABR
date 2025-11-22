@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CompactDatePicker } from '@/components/ui/compact-date-picker'
+import { PeriodFilter, PeriodFilterValue, createPeriodValue } from '@/components/ui/period-filter'
 import {
   ArrowLeftRight,
   Plus,
@@ -35,7 +35,7 @@ export default function TransfersPage() {
   })
   const [transfers, setTransfers] = useState<Transfer[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [period, setPeriod] = useState<PeriodFilterValue>(createPeriodValue('this_month'))
   const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
@@ -51,23 +51,25 @@ export default function TransfersPage() {
     }
 
     fetchData()
-  }, [navigate, selectedDate])
+  }, [navigate, period])
 
   const fetchData = async () => {
     try {
       setLoading(true)
 
-      // Get the start and end of the selected month
-      const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-      const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
+      // Build query params based on period filter
+      const params: { start_date?: string; end_date?: string; limit: number } = { limit: 100 }
 
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      if (period.range.start && period.range.end) {
+        params.start_date = period.range.start.toISOString().split('T')[0]
+        params.end_date = period.range.end.toISOString().split('T')[0]
+      }
 
       // Fetch dashboard data for period stats
+      const dashboardParams = params.start_date && params.end_date ? { start_date: params.start_date, end_date: params.end_date } : {}
       const [dashboardData, transfersResponse] = await Promise.all([
-        accountingService.getDashboard({ start_date: startDateStr, end_date: endDateStr }),
-        accountingService.getTransfers({ start_date: startDateStr, end_date: endDateStr, limit: 100 }),
+        accountingService.getDashboard(dashboardParams),
+        accountingService.getTransfers(params),
       ])
 
       console.log('Dashboard data:', dashboardData)
@@ -94,7 +96,7 @@ export default function TransfersPage() {
     }
   }
 
-  const monthYear = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const periodLabel = period.label
 
   const handleAddTransfer = async (data: TransferFormData) => {
     try {
@@ -202,11 +204,11 @@ export default function TransfersPage() {
           <div className="flex items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Transferencias</h1>
-              <p className="mt-1 text-sm text-gray-500 capitalize">{monthYear}</p>
+              <p className="mt-1 text-sm text-gray-500">{periodLabel}</p>
             </div>
-            <CompactDatePicker
-              value={selectedDate}
-              onChange={setSelectedDate}
+            <PeriodFilter
+              value={period}
+              onChange={setPeriod}
             />
           </div>
           <div className="flex gap-2">
