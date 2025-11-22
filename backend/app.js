@@ -173,9 +173,11 @@ app.use(function(err, req, res, next) {
     });
   }
 
-  // render the error page for non-API routes
-  res.status(err.status || 500);
-  res.render('error');
+  // Return JSON for all routes (no views configured)
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error',
+    ...(req.app.get('env') === 'development' && { stack: err.stack })
+  });
 });
 
 module.exports = app;
