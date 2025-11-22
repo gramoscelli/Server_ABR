@@ -31,7 +31,9 @@ interface Socio {
   So_Aut_Nombre?: string | null
   So_Aut_Domi?: string | null
   So_Aut_Telef?: string | null
+  So_Aut_TipoDoc?: number | null
   So_Aut_NroDoc?: string | null
+  TD_Aut_Tipo?: string | null
 }
 
 export default function SociosPage() {
@@ -467,11 +469,11 @@ export default function SociosPage() {
                               </p>
                             </div>
                           )}
-                          {selectedSocio.So_Aut_NroDoc && (
+                          {(selectedSocio.So_Aut_NroDoc || selectedSocio.TD_Aut_Tipo) && (
                             <div>
-                              <label className="text-xs font-medium text-blue-600 block mb-1">DNI</label>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Documento</label>
                               <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded font-mono">
-                                {selectedSocio.So_Aut_NroDoc}
+                                {selectedSocio.TD_Aut_Tipo && `${selectedSocio.TD_Aut_Tipo}: `}{selectedSocio.So_Aut_NroDoc || 'Sin número'}
                               </p>
                             </div>
                           )}
