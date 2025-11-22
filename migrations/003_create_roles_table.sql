@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS roles (
 -- Step 2: Insert default roles with ACL permissions
 INSERT INTO roles (name, description, permissions, is_system) VALUES
     (
-        'admin',
-        'Full administrative access to all resources (system role - cannot be modified)',
+        'root',
+        'Super administrator with full system access (system role - cannot be modified)',
         JSON_OBJECT(
             'users', JSON_ARRAY('create', 'read', 'update', 'delete'),
             'roles', JSON_ARRAY('create', 'read', 'update', 'delete'),
@@ -32,6 +32,8 @@ INSERT INTO roles (name, description, permissions, is_system) VALUES
             'tirada', JSON_ARRAY('create', 'read', 'update', 'delete', 'print'),
             'socios', JSON_ARRAY('create', 'read', 'update', 'delete'),
             'cobrocuotas', JSON_ARRAY('create', 'read', 'update', 'delete'),
+            'accounting', JSON_ARRAY('create', 'read', 'update', 'delete'),
+            'admin', JSON_ARRAY('create', 'read', 'update', 'delete'),
             '*', JSON_ARRAY('*')
         ),
         TRUE
