@@ -6,6 +6,18 @@ const router = express.Router();
 const { Income, IncomeCategory, Account, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { fixEncoding } = require('../../utils/encoding');
+
+// Fix encoding for income data
+function fixIncomeEncoding(income) {
+  if (!income) return income;
+  const fixed = income.toJSON ? income.toJSON() : { ...income };
+  if (fixed.description) fixed.description = fixEncoding(fixed.description);
+  if (fixed.notes) fixed.notes = fixEncoding(fixed.notes);
+  if (fixed.category?.name) fixed.category.name = fixEncoding(fixed.category.name);
+  if (fixed.account?.name) fixed.account.name = fixEncoding(fixed.account.name);
+  return fixed;
+}
 
 // GET all incomes
 router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
@@ -33,9 +45,10 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     });
 
     const totalAmount = incomes.reduce((sum, inc) => sum + parseFloat(inc.amount), 0);
+    const fixedIncomes = incomes.map(fixIncomeEncoding);
     res.json({
       success: true,
-      data: incomes,
+      data: fixedIncomes,
       pagination: { total: count, page: parseInt(page), limit: parseInt(limit), pages: Math.ceil(count / parseInt(limit)) },
       summary: { totalAmount: totalAmount.toFixed(2), count: incomes.length }
     });
@@ -52,7 +65,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       include: [{ model: IncomeCategory, as: 'category' }, { model: Account, as: 'account' }]
     });
     if (!income) return res.status(404).json({ success: false, error: 'Ingreso no encontrado' });
-    res.json({ success: true, data: income });
+    res.json({ success: true, data: fixIncomeEncoding(income) });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Error al obtener ingreso', message: error.message });
   }
