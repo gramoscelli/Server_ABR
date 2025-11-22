@@ -71,8 +71,9 @@ export default function ReconciliationsPage() {
       await accountingService.createCashReconciliation({
         account_id: data.account_id,
         date: data.date,
-        expected_balance: Number(data.expected_balance),
-        actual_balance: Number(data.actual_balance),
+        opening_balance: data.opening_balance,
+        closing_balance: data.closing_balance,
+        expected_balance: data.expected_balance,
         notes: data.notes || undefined,
       })
 
@@ -98,9 +99,7 @@ export default function ReconciliationsPage() {
 
     try {
       await accountingService.updateCashReconciliation(editingReconciliation.id, {
-        date: data.date,
-        expected_balance: Number(data.expected_balance),
-        actual_balance: Number(data.actual_balance),
+        closing_balance: data.closing_balance,
         notes: data.notes || undefined,
       })
 
@@ -195,8 +194,8 @@ export default function ReconciliationsPage() {
               <div className="space-y-3">
                 {reconciliations.map((reconciliation) => {
                   const expected = Number(reconciliation.expected_balance) || 0
-                  const actual = Number(reconciliation.actual_balance) || 0
-                  const difference = actual - expected
+                  const closing = Number(reconciliation.closing_balance) || 0
+                  const difference = closing - expected
                   const isBalanced = difference === 0
 
                   return (
@@ -231,7 +230,7 @@ export default function ReconciliationsPage() {
                             <div>
                               <p className="text-xs text-gray-500">Real</p>
                               <p className="font-semibold text-gray-900">
-                                ${actual.toFixed(2)}
+                                ${closing.toFixed(2)}
                               </p>
                             </div>
                             <div>
@@ -250,12 +249,10 @@ export default function ReconciliationsPage() {
 
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span>
-                              {reconciliation.date ? new Date(reconciliation.date).toLocaleString('es-ES', {
+                              {reconciliation.date ? new Date(reconciliation.date + 'T00:00:00').toLocaleDateString('es-ES', {
                                 day: '2-digit',
                                 month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
+                                year: 'numeric'
                               }) : 'Sin fecha'}
                             </span>
                             {reconciliation.user && (
