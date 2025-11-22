@@ -264,7 +264,14 @@ function App() {
           />
           <Route
             path="/accounting/reconciliations"
-            element={<Navigate to="/accounting/operations" replace />}
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <ReconciliationsPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
           />
 
           {/* Admin Module */}
