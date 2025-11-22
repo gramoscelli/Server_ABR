@@ -53,7 +53,8 @@ async function generateToken(req, res) {
     // Return token to client
     // Client should include this in X-CSRF-Token header for protected requests
     res.json({
-      token,
+      csrfToken: token,
+      token, // Keep for backwards compatibility
       expiresAt: csrfToken.expires_at.toISOString(),
       expiresIn: CSRF_TOKEN_EXPIRY_HOURS * 3600 // seconds
     });
