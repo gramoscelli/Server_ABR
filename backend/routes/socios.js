@@ -20,6 +20,82 @@ function fixSocioEncoding(socio) {
   return fixed;
 }
 
+// =============================================
+// DROPDOWN DATA ENDPOINTS
+// IMPORTANT: These must be defined BEFORE routes with :id parameters
+// =============================================
+
+/**
+ * GET /api/socios/dropdown/grupos
+ * Get all grupos for dropdown
+ */
+router.get('/dropdown/grupos', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const grupos = await Grupo.findAll({
+      attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota', 'Gr_Habilitado'],
+      order: [['Gr_Nombre', 'ASC']]
+    });
+
+    const fixed = grupos.map(g => {
+      const item = g.toJSON();
+      item.Gr_Nombre = fixEncoding(item.Gr_Nombre);
+      item.Gr_Titulo = fixEncoding(item.Gr_Titulo);
+      return item;
+    });
+
+    res.json({ success: true, data: fixed });
+  } catch (error) {
+    console.error('Error fetching grupos:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener grupos' });
+  }
+});
+
+/**
+ * GET /api/socios/dropdown/tipos-documento
+ * Get all document types for dropdown
+ */
+router.get('/dropdown/tipos-documento', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const tipos = await TipoDocumento.findAll({
+      attributes: ['TD_ID', 'TD_Tipo'],
+      order: [['TD_Tipo', 'ASC']]
+    });
+
+    res.json({ success: true, data: tipos });
+  } catch (error) {
+    console.error('Error fetching tipos documento:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener tipos de documento' });
+  }
+});
+
+/**
+ * GET /api/socios/dropdown/cobradores
+ * Get all cobradores for dropdown
+ */
+router.get('/dropdown/cobradores', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const cobradores = await Cobrador.findAll({
+      attributes: ['Co_ID', 'Co_Nombre', 'Co_Habilitado'],
+      order: [['Co_Nombre', 'ASC']]
+    });
+
+    const fixed = cobradores.map(c => {
+      const item = c.toJSON();
+      item.Co_Nombre = fixEncoding(item.Co_Nombre);
+      return item;
+    });
+
+    res.json({ success: true, data: fixed });
+  } catch (error) {
+    console.error('Error fetching cobradores:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener cobradores' });
+  }
+});
+
+// =============================================
+// SEARCH ENDPOINTS
+// =============================================
+
 /**
  * GET /api/socios/search
  * Search for socios by name, surname, ID, or document number (DNI)
@@ -347,77 +423,6 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
       message: 'Error al obtener socios morosos',
       error: error.message
     });
-  }
-});
-
-// =============================================
-// DROPDOWN DATA ENDPOINTS
-// =============================================
-
-/**
- * GET /api/socios/dropdown/grupos
- * Get all grupos for dropdown
- */
-router.get('/dropdown/grupos', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
-  try {
-    const grupos = await Grupo.findAll({
-      attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota', 'Gr_Habilitado'],
-      order: [['Gr_Nombre', 'ASC']]
-    });
-
-    const fixed = grupos.map(g => {
-      const item = g.toJSON();
-      item.Gr_Nombre = fixEncoding(item.Gr_Nombre);
-      item.Gr_Titulo = fixEncoding(item.Gr_Titulo);
-      return item;
-    });
-
-    res.json({ success: true, data: fixed });
-  } catch (error) {
-    console.error('Error fetching grupos:', error);
-    res.status(500).json({ success: false, error: 'Error al obtener grupos' });
-  }
-});
-
-/**
- * GET /api/socios/dropdown/tipos-documento
- * Get all document types for dropdown
- */
-router.get('/dropdown/tipos-documento', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
-  try {
-    const tipos = await TipoDocumento.findAll({
-      attributes: ['TD_ID', 'TD_Tipo'],
-      order: [['TD_Tipo', 'ASC']]
-    });
-
-    res.json({ success: true, data: tipos });
-  } catch (error) {
-    console.error('Error fetching tipos documento:', error);
-    res.status(500).json({ success: false, error: 'Error al obtener tipos de documento' });
-  }
-});
-
-/**
- * GET /api/socios/dropdown/cobradores
- * Get all cobradores for dropdown
- */
-router.get('/dropdown/cobradores', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
-  try {
-    const cobradores = await Cobrador.findAll({
-      attributes: ['Co_ID', 'Co_Nombre', 'Co_Habilitado'],
-      order: [['Co_Nombre', 'ASC']]
-    });
-
-    const fixed = cobradores.map(c => {
-      const item = c.toJSON();
-      item.Co_Nombre = fixEncoding(item.Co_Nombre);
-      return item;
-    });
-
-    res.json({ success: true, data: fixed });
-  } catch (error) {
-    console.error('Error fetching cobradores:', error);
-    res.status(500).json({ success: false, error: 'Error al obtener cobradores' });
   }
 });
 
