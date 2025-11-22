@@ -231,10 +231,10 @@ X-CSRF-Token: <csrf_token>
 
 ```bash
 # Inside the Docker container
-docker compose exec app node scripts/create_admin_user.js <username> <password> [email]
+docker compose exec backend node scripts/create_admin_user.js <username> <password> [email]
 
 # Example
-docker compose exec app node scripts/create_admin_user.js admin SecurePass123! admin@example.com
+docker compose exec backend node scripts/create_admin_user.js admin SecurePass123! admin@example.com
 ```
 
 ### Method 2: Direct Database Update
@@ -439,7 +439,7 @@ CREATE TABLE usuarios (
 
 1. **Create admin user:**
    ```bash
-   docker compose exec app node scripts/create_admin_user.js admin Pass123! admin@test.com
+   docker compose exec backend node scripts/create_admin_user.js admin Pass123! admin@test.com
    ```
 
 2. **Create regular user:**
