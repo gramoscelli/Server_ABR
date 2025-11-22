@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, User, MapPin, Users as UsersIcon, X, Loader2 } from 'lucide-react'
+import { Search, User, MapPin, Users as UsersIcon, X, Loader2, Pencil } from 'lucide-react'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/ui/use-toast'
+import { SocioEditDialog } from '@/components/socios/SocioEditDialog'
 
 interface Socio {
   So_ID: number
@@ -36,16 +37,20 @@ export default function SociosPage() {
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
 
   useEffect(() => {
     // Check if user has access (root, admin_employee, or library_employee)
     const user = authService.getUser()
     const hasAccess = user?.role === 'root' || user?.role === 'admin_employee' || user?.role === 'library_employee'
+    const hasEditAccess = user?.role === 'root' || user?.role === 'admin_employee'
 
     if (!hasAccess) {
       navigate('/profile')
       return
     }
+    setCanEdit(hasEditAccess)
   }, [navigate])
 
   const handleSearch = useCallback(async (term: string) => {
@@ -134,6 +139,19 @@ export default function SociosPage() {
 
   const handleSelectSocio = (socio: Socio) => {
     setSelectedSocio(socio)
+  }
+
+  const handleEditClick = () => {
+    if (selectedSocio) {
+      setEditDialogOpen(true)
+    }
+  }
+
+  const handleSocioSaved = () => {
+    // Refresh the search results after saving
+    if (searchTerm.trim()) {
+      handleSearch(searchTerm)
+    }
   }
 
   return (
@@ -273,12 +291,27 @@ export default function SociosPage() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h2 className="text-2xl font-bold text-gray-900">
-                            {selectedSocio.So_Apellido}, {selectedSocio.So_Nombre}
-                          </h2>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Número de Socio: <span className="font-semibold">#{selectedSocio.So_ID}</span>
-                          </p>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h2 className="text-2xl font-bold text-gray-900">
+                                {selectedSocio.So_Apellido}, {selectedSocio.So_Nombre}
+                              </h2>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Número de Socio: <span className="font-semibold">#{selectedSocio.So_ID}</span>
+                              </p>
+                            </div>
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleEditClick}
+                                className="flex items-center gap-2"
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Editar
+                              </Button>
+                            )}
+                          </div>
                           {selectedSocio.UltimaCuota_Anio && selectedSocio.UltimaCuota_Mes && (
                             (() => {
                               const now = new Date()
@@ -408,6 +441,14 @@ export default function SociosPage() {
             </Card>
           </div>
         </div>
+
+        {/* Edit Dialog */}
+        <SocioEditDialog
+          socioId={selectedSocio?.So_ID ?? null}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSaved={handleSocioSaved}
+        />
       </div>
   )
 }
