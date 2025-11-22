@@ -535,7 +535,7 @@ export default function SociosPage() {
                           <FileText className="h-4 w-4" />
                           Observaciones
                         </h3>
-                        {canEdit && !editingObs && (
+                        {!editingObs && (
                           <Button
                             variant="ghost"
                             size="sm"
