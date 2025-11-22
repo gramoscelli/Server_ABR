@@ -75,7 +75,7 @@ router.get('/dropdown/tipos-documento', authenticateToken, authorizeRoles('root'
 router.get('/dropdown/cobradores', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
     const cobradores = await Cobrador.findAll({
-      attributes: ['Co_ID', 'Co_Nombre', 'Co_Habilitado'],
+      attributes: ['Co_ID', 'Co_Nombre'],
       order: [['Co_Nombre', 'ASC']]
     });
 
