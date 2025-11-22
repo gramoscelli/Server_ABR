@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
 import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { MovementsCalendar } from '@/components/cash/MovementsCalendar'
 
 interface CashStats {
   income: number
@@ -171,6 +172,12 @@ export default function IncomesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Incomes List */}
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Movements Calendar */}
+            <MovementsCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
 
             {/* Incomes List */}
             <Card>

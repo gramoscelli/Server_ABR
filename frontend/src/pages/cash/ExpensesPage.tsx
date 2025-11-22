@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
 import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
 import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { MovementsCalendar } from '@/components/cash/MovementsCalendar'
 
 interface CashStats {
   income: number
@@ -172,23 +173,11 @@ export default function ExpensesPage() {
           {/* Left Column - Charts */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Expenses by Category Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Egresos por Categoría</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-                    <svg className="w-16 h-16 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="12" cy="12" r="10" opacity="0.3" />
-                      <path d="M12 2 L12 12 L18 8 Z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No hay egresos disponibles en el periodo seleccionado</p>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Movements Calendar */}
+            <MovementsCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
 
             {/* Expenses List */}
             <Card>
