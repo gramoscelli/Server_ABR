@@ -10,25 +10,6 @@ import { useNavigate } from 'react-router-dom'
 export default function SecurityPage() {
   const navigate = useNavigate()
 
-  const securitySections = [
-    {
-      title: 'Roles de Usuario',
-      description: 'Gestiona los roles del sistema y asigna usuarios a cada rol',
-      icon: Shield,
-      color: 'bg-purple-500',
-      route: '/admin/roles',
-      stats: 'Crear, editar y eliminar roles. Ver distribución de usuarios.',
-    },
-    {
-      title: 'Permisos y Accesos',
-      description: 'Configura permisos detallados para cada rol del sistema',
-      icon: Lock,
-      color: 'bg-blue-500',
-      route: '/admin/roles',
-      stats: 'Matriz de permisos por recurso: leer, crear, actualizar, eliminar.',
-    },
-  ]
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -39,45 +20,42 @@ export default function SecurityPage() {
         </p>
       </div>
 
-      {/* Security Sections */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {securitySections.map((section, index) => {
-          const Icon = section.icon
-          return (
-            <Card
-              key={index}
-              className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800"
-              onClick={() => navigate(section.route)}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`p-3 rounded-lg ${section.color}`}>
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-gray-900 dark:text-white">
-                      {section.title}
-                    </CardTitle>
-                  </div>
-                </div>
-                <CardDescription className="text-gray-600 dark:text-gray-400">
-                  {section.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {section.stats && (
-                  <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-                    {section.stats}
-                  </p>
-                )}
-                <Button variant="outline" className="w-full">
-                  Administrar
-                </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      {/* Main Card */}
+      <Card
+        className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800"
+        onClick={() => navigate('/admin/roles')}
+      >
+        <CardHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 rounded-lg bg-purple-500">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-gray-900 dark:text-white">
+                Roles y Permisos
+              </CardTitle>
+            </div>
+          </div>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
+            Gestiona los roles del sistema, asigna usuarios y configura permisos detallados para cada rol
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500">
+              <Users className="h-4 w-4" />
+              <span>Crear, editar y eliminar roles</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-500">
+              <Lock className="h-4 w-4" />
+              <span>Matriz de permisos por recurso</span>
+            </div>
+          </div>
+          <Button variant="outline" className="w-full">
+            Administrar Roles y Permisos
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Security Guidelines */}
       <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
