@@ -41,6 +41,7 @@ const RolesPage = lazy(() => import('@/pages/admin/RolesPage'))
 const RolePermissionsPage = lazy(() => import('@/pages/admin/RolePermissionsPage'))
 const ApiKeysPage = lazy(() => import('@/pages/admin/ApiKeysPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
+const EmailSettingsPage = lazy(() => import('@/pages/admin/EmailSettingsPage'))
 
 // Profile and auth pages
 const ChangePasswordPage = lazy(() => import('@/pages/ChangePasswordPage'))
@@ -370,6 +371,17 @@ function App() {
               <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
                   <SettingsPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/email-settings"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <EmailSettingsPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }
