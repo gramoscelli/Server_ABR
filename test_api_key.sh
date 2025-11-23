@@ -104,7 +104,7 @@ test_endpoint() {
         --max-time 30 \
         "${BASE_URL}${path}" 2>/dev/null) || {
         echo -e "  ${RED}✗${NC} [ERR] ${name} (${path}) - Error de conexión"
-        ((ERRORS++))
+        ERRORS=$((ERRORS + 1))
         return 1
     }
 
@@ -118,17 +118,17 @@ test_endpoint() {
         200|201)
             icon="✓"
             color="$GREEN"
-            ((ACCESSIBLE++))
+            ACCESSIBLE=$((ACCESSIBLE + 1))
             ;;
         401)
             icon="✗"
             color="$RED"
-            ((RESTRICTED++))
+            RESTRICTED=$((RESTRICTED + 1))
             ;;
         403)
             icon="⊘"
             color="$YELLOW"
-            ((RESTRICTED++))
+            RESTRICTED=$((RESTRICTED + 1))
             ;;
         404)
             icon="?"
