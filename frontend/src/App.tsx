@@ -42,6 +42,7 @@ const RolePermissionsPage = lazy(() => import('@/pages/admin/RolePermissionsPage
 const ApiKeysPage = lazy(() => import('@/pages/admin/ApiKeysPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
 const EmailSettingsPage = lazy(() => import('@/pages/admin/EmailSettingsPage'))
+const WhatsAppSettingsPage = lazy(() => import('@/pages/admin/WhatsAppSettingsPage'))
 
 // Profile and auth pages
 const ChangePasswordPage = lazy(() => import('@/pages/ChangePasswordPage'))
@@ -382,6 +383,17 @@ function App() {
               <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
                   <EmailSettingsPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/whatsapp-settings"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <WhatsAppSettingsPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }

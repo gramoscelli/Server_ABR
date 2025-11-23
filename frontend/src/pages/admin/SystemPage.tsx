@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Download,
+  MessageCircle,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
@@ -247,6 +248,13 @@ export default function SystemPage() {
       icon: Mail,
       color: 'bg-green-500',
       route: '/admin/email-settings',
+    },
+    {
+      title: 'WhatsApp',
+      description: 'Conecta WhatsApp para enviar notificaciones y mensajes',
+      icon: MessageCircle,
+      color: 'bg-emerald-500',
+      route: '/admin/whatsapp-settings',
     },
     {
       title: 'Configuración General',
