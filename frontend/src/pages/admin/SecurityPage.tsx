@@ -2,10 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import {
   Shield,
-  Plus,
   Users,
   Lock,
-  Key,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -48,8 +46,8 @@ export default function SecurityPage() {
           return (
             <Card
               key={index}
-              className={`${!section.coming_soon ? 'cursor-pointer hover:shadow-lg' : 'opacity-75'} transition-shadow dark:bg-gray-800`}
-              onClick={() => !section.coming_soon && navigate(section.route!)}
+              className="cursor-pointer hover:shadow-lg transition-shadow dark:bg-gray-800"
+              onClick={() => navigate(section.route)}
             >
               <CardHeader>
                 <div className="flex items-center gap-3 mb-2">
@@ -57,13 +55,8 @@ export default function SecurityPage() {
                     <Icon className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <CardTitle className="text-gray-900 dark:text-white flex items-center gap-2">
+                    <CardTitle className="text-gray-900 dark:text-white">
                       {section.title}
-                      {section.coming_soon && (
-                        <span className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
-                          Próximamente
-                        </span>
-                      )}
                     </CardTitle>
                   </div>
                 </div>
@@ -77,15 +70,9 @@ export default function SecurityPage() {
                     {section.stats}
                   </p>
                 )}
-                {!section.coming_soon ? (
-                  <Button variant="outline" className="w-full">
-                    Administrar
-                  </Button>
-                ) : (
-                  <Button variant="outline" className="w-full" disabled>
-                    En desarrollo
-                  </Button>
-                )}
+                <Button variant="outline" className="w-full">
+                  Administrar
+                </Button>
               </CardContent>
             </Card>
           )
@@ -102,16 +89,16 @@ export default function SecurityPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-blue-800 dark:text-blue-300">
           <p>
-            • <strong>Principio de menor privilegio:</strong> Asigna a los usuarios solo los permisos necesarios para realizar sus tareas.
+            * <strong>Principio de menor privilegio:</strong> Asigna a los usuarios solo los permisos necesarios para realizar sus tareas.
           </p>
           <p>
-            • <strong>Revisión periódica:</strong> Revisa regularmente los roles y permisos asignados a cada usuario.
+            * <strong>Revisión periódica:</strong> Revisa regularmente los roles y permisos asignados a cada usuario.
           </p>
           <p>
-            • <strong>Roles predefinidos:</strong> Utiliza los roles predefinidos del sistema como base y personaliza según necesidades específicas.
+            * <strong>Roles predefinidos:</strong> Utiliza los roles predefinidos del sistema como base y personaliza según necesidades específicas.
           </p>
           <p>
-            • <strong>Auditoría:</strong> Mantén un registro de cambios en roles y permisos para trazabilidad.
+            * <strong>Auditoría:</strong> Mantén un registro de cambios en roles y permisos para trazabilidad.
           </p>
         </CardContent>
       </Card>
