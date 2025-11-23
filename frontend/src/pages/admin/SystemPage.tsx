@@ -36,6 +36,14 @@ interface SystemInfo {
   diskUsage: number
 }
 
+interface BackupInfo {
+  filename: string
+  size: number
+  sizeFormatted: string
+  createdAt: string
+  createdAtFormatted: string
+}
+
 export default function SystemPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -54,6 +62,9 @@ export default function SystemPage() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [backups, setBackups] = useState<BackupInfo[]>([])
+  const [creatingBackup, setCreatingBackup] = useState(false)
+  const [loadingBackups, setLoadingBackups] = useState(false)
 
   useEffect(() => {
     const user = authService.getUser()
@@ -65,7 +76,73 @@ export default function SystemPage() {
     }
 
     loadSystemInfo()
+    loadBackups()
   }, [navigate])
+
+  const loadBackups = async () => {
+    setLoadingBackups(true)
+    try {
+      const response = await fetchWithAuth('/api/admin/backups')
+      if (response.ok) {
+        const data = await response.json()
+        setBackups(data.backups || [])
+        // Update lastBackup in systemInfo
+        if (data.backups && data.backups.length > 0) {
+          setSystemInfo(prev => ({
+            ...prev,
+            lastBackup: data.backups[0].createdAtFormatted
+          }))
+        }
+      }
+    } catch (error) {
+      console.error('Error loading backups:', error)
+    } finally {
+      setLoadingBackups(false)
+    }
+  }
+
+  const handleCreateBackup = async () => {
+    setCreatingBackup(true)
+    try {
+      // Get CSRF token
+      const csrfRes = await fetch('/api/csrf-token', { credentials: 'include' })
+      const { csrfToken } = await csrfRes.json()
+
+      const response = await fetchWithAuth('/api/admin/backup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: 'Backup creado',
+          description: `${data.backup.filename} (${data.backup.sizeFormatted})`,
+        })
+        // Reload backups list
+        await loadBackups()
+      } else {
+        const error = await response.json()
+        toast({
+          title: 'Error',
+          description: error.message || 'No se pudo crear el backup',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Error creating backup:', error)
+      toast({
+        title: 'Error',
+        description: 'Error de conexión al crear el backup',
+        variant: 'destructive'
+      })
+    } finally {
+      setCreatingBackup(false)
+    }
+  }
 
   const loadSystemInfo = async () => {
     try {
@@ -306,12 +383,64 @@ export default function SystemPage() {
               </div>
             </div>
           </div>
+
+          {/* Create Backup Button */}
           <div className="mt-4 flex gap-2">
-            <Button variant="outline" size="sm" disabled>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar Backup
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreateBackup}
+              disabled={creatingBackup}
+            >
+              {creatingBackup ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Creando backup...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Crear Backup
+                </>
+              )}
             </Button>
           </div>
+
+          {/* Backups List */}
+          {backups.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Últimos Backups</h4>
+              <div className="space-y-2">
+                {backups.slice(0, 5).map((backup, index) => (
+                  <div
+                    key={backup.filename}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      index === 0 ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Database className={`h-4 w-4 ${index === 0 ? 'text-green-600' : 'text-gray-400'}`} />
+                      <div>
+                        <div className={`text-sm font-medium ${index === 0 ? 'text-green-900' : 'text-gray-900'}`}>
+                          {backup.createdAtFormatted}
+                        </div>
+                        <div className="text-xs text-gray-500">{backup.filename}</div>
+                      </div>
+                    </div>
+                    <div className={`text-sm ${index === 0 ? 'text-green-700' : 'text-gray-600'}`}>
+                      {backup.sizeFormatted}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {loadingBackups && backups.length === 0 && (
+            <div className="mt-4 text-center text-sm text-gray-500">
+              Cargando backups...
+            </div>
+          )}
         </CardContent>
       </Card>
 
