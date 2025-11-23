@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const {
+  authenticateApiKey,
   createApiKey,
   revokeApiKey,
   deleteApiKey,
@@ -147,6 +148,53 @@ router.delete('/:id', authenticateToken, authorizeRoles('root'), async (req, res
     res.status(500).json({
       error: 'Error interno del servidor',
       message: 'Ocurrió un error al eliminar la clave API'
+    });
+  }
+});
+
+/**
+ * GET /api/api-keys/verify
+ * Verify an API key and return its info
+ * Uses API key authentication (X-API-Key header)
+ * This endpoint is specifically for testing API key validity
+ */
+router.get('/verify', authenticateApiKey, async (req, res) => {
+  try {
+    // req.apiKey is set by authenticateApiKey middleware
+    const { ApiKey } = require('../models');
+
+    // Get full API key info
+    const apiKeyRecord = await ApiKey.findByPk(req.apiKey.id, {
+      attributes: ['id', 'name', 'active', 'created_at', 'expires_at', 'last_used']
+    });
+
+    if (!apiKeyRecord) {
+      return res.status(404).json({
+        error: 'No encontrado',
+        message: 'Información de la clave API no disponible'
+      });
+    }
+
+    res.json({
+      valid: true,
+      apiKey: {
+        id: apiKeyRecord.id,
+        name: apiKeyRecord.name,
+        active: apiKeyRecord.active,
+        created_at: apiKeyRecord.created_at,
+        expires_at: apiKeyRecord.expires_at,
+        last_used: apiKeyRecord.last_used,
+        user: req.apiKey.username,
+        role: req.apiKey.role
+      },
+      message: 'Clave API válida y activa'
+    });
+
+  } catch (error) {
+    console.error('Verify API key error:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: 'Ocurrió un error al verificar la clave API'
     });
   }
 });

@@ -15,7 +15,6 @@ const ApiKey = sequelize.define('api_keys', {
   key_hash: {
     type: DataTypes.STRING(255),
     allowNull: false,
-    field: 'api_key',  // Map to api_key column in database
     validate: {
       notEmpty: true
     }
@@ -39,15 +38,13 @@ const ApiKey = sequelize.define('api_keys', {
   },
   active: {
     type: DataTypes.BOOLEAN,
-    field: 'is_active',  // Map to is_active column in database
     defaultValue: true,
     allowNull: false
   },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
-    allowNull: false,
-    field: 'created_at'
+    allowNull: false
   },
   expires_at: {
     type: DataTypes.DATE,
