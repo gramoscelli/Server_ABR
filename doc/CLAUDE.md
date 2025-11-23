@@ -79,7 +79,7 @@ docker-compose up -d
 docker-compose down
 
 # View logs
-docker-compose logs -f app        # Node.js logs
+docker-compose logs -f backend        # Node.js logs
 docker-compose logs -f db         # MySQL logs
 docker-compose logs -f python     # Backup service logs
 

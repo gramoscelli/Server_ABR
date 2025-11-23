@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { AdminLayout } from '@/components/AdminLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -141,8 +140,7 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Cambiar Contraseña</h1>
           <p className="mt-2 text-gray-600">
@@ -314,7 +312,6 @@ export default function ChangePasswordPage() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    </AdminLayout>
+    </div>
   )
 }

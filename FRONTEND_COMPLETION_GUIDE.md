@@ -735,9 +735,9 @@ ENV HOSTNAME "0.0.0.0"
 CMD ["node", "server.js"]
 ```
 
-### 11. Actualizar docker-compose.yml (ya está configurado)
+### 11. Actualizar docker compose (ya está configurado)
 
-El `docker-compose.yml` ya tiene la configuración del frontend:
+El archivo compose ya tiene la configuración del frontend:
 ```yaml
 frontend:
   build:
@@ -773,7 +773,7 @@ docker compose up -d --build
 docker compose logs -f frontend
 
 # Ver logs del backend
-docker compose logs -f app
+docker compose logs -f backend
 
 # Ver estado de todos los servicios
 docker compose ps
@@ -835,7 +835,7 @@ Verificar que `BACKEND_API_URL=http://app:3000` esté usando el nombre del servi
 ### Logs útiles
 ```bash
 # Ver logs en tiempo real
-docker compose logs -f frontend app
+docker compose logs -f frontend backend
 
 # Ver logs solo de errores
 docker compose logs frontend | grep -i error

@@ -291,8 +291,8 @@ test_new_endpoint() {
 
 **Solution**:
 ```bash
-docker compose ps app
-docker compose up -d app
+docker compose ps backend
+docker compose up -d backend
 ```
 
 ### Issue: CSRF token extraction fails
@@ -363,7 +363,7 @@ jobs:
 ## Support
 
 For issues or questions:
-1. Check application logs: `docker compose logs app`
+1. Check application logs: `docker compose logs backend`
 2. Verify database connection: `docker compose exec db mysql -uroot -pabr2005`
 3. Check server status: `curl http://localhost:3000/api/csrf-token`
 
