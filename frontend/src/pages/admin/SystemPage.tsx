@@ -198,6 +198,13 @@ export default function SystemPage() {
       route: '/admin/api-keys',
     },
     {
+      title: 'Configuración de Email',
+      description: 'Configura el servidor SMTP para envío de notificaciones',
+      icon: Mail,
+      color: 'bg-green-500',
+      route: '/admin/email-settings',
+    },
+    {
       title: 'Configuración General',
       description: 'Parámetros y configuración global del sistema',
       icon: Settings,
