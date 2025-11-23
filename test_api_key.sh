@@ -158,7 +158,7 @@ verify_api_key() {
     echo -e "  ${DIM}Servidor: ${BASE_URL}${NC}"
     echo ""
 
-    # Probar con el endpoint de roles
+    # Probar con el endpoint de verificación de API keys
     local response
     local http_code
 
@@ -167,7 +167,7 @@ verify_api_key() {
         -H "Content-Type: application/json" \
         --connect-timeout 10 \
         --max-time 30 \
-        "${BASE_URL}/api/roles" 2>/dev/null) || {
+        "${BASE_URL}/api/api-keys/verify" 2>/dev/null) || {
         print_result "Estado" "✗ ERROR DE CONEXIÓN" "error"
         print_result "Detalle" "No se pudo conectar con el servidor" "warning"
         return 1
@@ -180,11 +180,19 @@ verify_api_key() {
         200)
             print_result "Estado" "✓ CLAVE VÁLIDA" "success"
 
-            # Intentar extraer información de los roles
-            local roles_count=$(echo "$body" | grep -o '"roles":\[' | wc -l)
-            if [ "$roles_count" -gt 0 ]; then
-                local total=$(echo "$body" | grep -oP '"roles":\[[^\]]*\]' | grep -o '{' | wc -l)
-                print_result "Roles encontrados" "$total" "info"
+            # Extraer información de la respuesta
+            local name=$(echo "$body" | grep -oP '"name"\s*:\s*"\K[^"]+' || echo "")
+            local user=$(echo "$body" | grep -oP '"user"\s*:\s*"\K[^"]+' || echo "")
+            local role=$(echo "$body" | grep -oP '"role"\s*:\s*"\K[^"]+' || echo "")
+            local expires=$(echo "$body" | grep -oP '"expires_at"\s*:\s*"\K[^"]+' || echo "")
+
+            [ -n "$name" ] && print_result "Nombre" "$name" "info"
+            [ -n "$user" ] && print_result "Usuario" "$user" "info"
+            [ -n "$role" ] && print_result "Rol" "$role" "info"
+            if [ -n "$expires" ] && [ "$expires" != "null" ]; then
+                print_result "Expira" "$expires" "warning"
+            else
+                print_result "Expira" "Sin expiración" "success"
             fi
             return 0
             ;;
@@ -207,70 +215,6 @@ verify_api_key() {
     esac
 }
 
-# Función para obtener información de las claves API
-get_api_key_info() {
-    print_section "INFORMACIÓN DE CLAVES API"
-
-    local response
-    local http_code
-
-    response=$(curl -s -w "\n%{http_code}" \
-        -H "X-API-Key: ${API_KEY}" \
-        -H "Content-Type: application/json" \
-        --connect-timeout 10 \
-        --max-time 30 \
-        "${BASE_URL}/api/api-keys" 2>/dev/null) || {
-        print_result "Info" "No se pudo obtener información" "warning"
-        return 1
-    }
-
-    http_code=$(echo "$response" | tail -n1)
-    local body=$(echo "$response" | sed '$d')
-
-    if [ "$http_code" = "200" ]; then
-        # Parsear JSON básico con grep/sed (sin jq)
-        echo ""
-
-        # Contar claves
-        local count=$(echo "$body" | grep -o '"id":' | wc -l)
-        print_result "Claves registradas" "$count" "info"
-
-        # Mostrar cada clave (parsing básico)
-        echo "$body" | grep -oP '\{[^{}]*"name"\s*:\s*"[^"]*"[^{}]*\}' | while read -r key_json; do
-            echo ""
-            local name=$(echo "$key_json" | grep -oP '"name"\s*:\s*"\K[^"]+')
-            local active=$(echo "$key_json" | grep -oP '"active"\s*:\s*\K(true|false)')
-            local created=$(echo "$key_json" | grep -oP '"created_at"\s*:\s*"\K[^"]+')
-            local expires=$(echo "$key_json" | grep -oP '"expires_at"\s*:\s*"\K[^"]+' || echo "")
-            local last_used=$(echo "$key_json" | grep -oP '"last_used"\s*:\s*"\K[^"]+' || echo "")
-
-            echo -e "  ${WHITE}Clave: ${name}${NC}"
-
-            if [ "$active" = "true" ]; then
-                print_result "    Estado" "Activa" "success"
-            else
-                print_result "    Estado" "Inactiva" "error"
-            fi
-
-            [ -n "$created" ] && print_result "    Creada" "$created" "neutral"
-
-            if [ -n "$expires" ] && [ "$expires" != "null" ]; then
-                print_result "    Expira" "$expires" "warning"
-            else
-                print_result "    Expira" "Sin expiración" "success"
-            fi
-
-            if [ -n "$last_used" ] && [ "$last_used" != "null" ]; then
-                print_result "    Último uso" "$last_used" "neutral"
-            else
-                print_result "    Último uso" "Nunca" "dim"
-            fi
-        done
-    else
-        print_result "Info" "No se pudo obtener información de claves (HTTP $http_code)" "warning"
-    fi
-}
-
 # Función para probar el alcance
 test_scope() {
     print_section "ALCANCE Y PERMISOS"
@@ -279,11 +223,17 @@ test_scope() {
     echo -e "  ${DIM}Probando acceso a endpoints...${NC}"
     echo ""
 
-    # Lista de endpoints a probar
+    # Endpoints que aceptan API Key
+    echo -e "  ${WHITE}Endpoints con autenticación API Key:${NC}"
+    test_endpoint "/api/api-keys/verify" "Verificar Clave API" "api_keys"
+
+    echo ""
+    echo -e "  ${WHITE}Endpoints con autenticación JWT (requieren token):${NC}"
+    # Estos endpoints requieren JWT, se espera que fallen con API key
     test_endpoint "/api/roles" "Roles" "roles"
     test_endpoint "/api/roles/stats" "Estadísticas de Roles" "roles"
     test_endpoint "/api/admin/users" "Usuarios" "users"
-    test_endpoint "/api/api-keys" "Claves API" "api_keys"
+    test_endpoint "/api/api-keys" "Gestión Claves API" "api_keys"
     test_endpoint "/api/socios/search?q=test" "Búsqueda de Socios" "socios"
     test_endpoint "/api/tirada/current" "Tirada Actual" "tirada"
     test_endpoint "/api/accounting/summary" "Resumen Contable" "accounting"
@@ -292,8 +242,12 @@ test_scope() {
     echo ""
     echo -e "  ${WHITE}Resumen de Alcance:${NC}"
     print_result "Endpoints accesibles" "$ACCESSIBLE" "success"
-    print_result "Endpoints restringidos" "$RESTRICTED" "warning"
+    print_result "Endpoints restringidos (JWT)" "$RESTRICTED" "warning"
     print_result "Errores" "$ERRORS" "error"
+
+    echo ""
+    echo -e "  ${DIM}Nota: La mayoría de endpoints requieren autenticación JWT.${NC}"
+    echo -e "  ${DIM}Las API keys actualmente solo pueden verificar su propia validez.${NC}"
 }
 
 # Función para mostrar la leyenda
@@ -373,7 +327,6 @@ echo -e "  ${DIM}Clave a verificar: ${MASKED_KEY}${NC}"
 
 # Ejecutar verificaciones
 if verify_api_key; then
-    get_api_key_info
     test_scope
 fi
 
