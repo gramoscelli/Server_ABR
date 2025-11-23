@@ -1,4 +1,3 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const pino = require('pino');
 const path = require('path');
@@ -17,6 +16,27 @@ const statusEmitter = new EventEmitter();
 // Default session ID for the server (single instance)
 const DEFAULT_SESSION_ID = 'biblio-server';
 
+// Cache for Baileys module (loaded dynamically)
+let baileysModule = null;
+
+/**
+ * Load Baileys module dynamically (ESM module in CommonJS)
+ * @returns {Promise<Object>} Baileys module exports
+ */
+async function loadBaileys() {
+  if (baileysModule) {
+    return baileysModule;
+  }
+
+  try {
+    baileysModule = await import('@whiskeysockets/baileys');
+    return baileysModule;
+  } catch (error) {
+    console.error('Error loading Baileys module:', error);
+    throw new Error('Failed to load WhatsApp library');
+  }
+}
+
 /**
  * Initialize a WhatsApp connection for a given session
  * @param {string} sessionId - Unique identifier for this WhatsApp session
@@ -31,6 +51,10 @@ async function initializeWhatsAppConnection(sessionId) {
         sessionId
       };
     }
+
+    // Load Baileys dynamically
+    const baileys = await loadBaileys();
+    const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
 
     const authFolder = path.join(__dirname, '../.whatsapp-auth', sessionId);
 
@@ -79,7 +103,9 @@ async function initializeWhatsAppConnection(sessionId) {
       }
 
       if (connection === 'close') {
-        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        // Load Baileys to get DisconnectReason
+        const { DisconnectReason: DR } = await loadBaileys();
+        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DR.loggedOut;
 
         connectionStates.set(sessionId, {
           status: 'disconnected',
@@ -227,6 +253,7 @@ async function disconnectSession(sessionId) {
     await sock.logout();
     connections.delete(sessionId);
     qrCodes.delete(sessionId);
+    qrCodesBase64.delete(sessionId);
     connectionStates.delete(sessionId);
 
     // Optionally delete auth folder
