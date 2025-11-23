@@ -38,6 +38,7 @@ const UsersPage = lazy(() => import('@/pages/admin/UsersPage'))
 const SecurityPage = lazy(() => import('@/pages/admin/SecurityPage'))
 const SystemPage = lazy(() => import('@/pages/admin/SystemPage'))
 const RolesPage = lazy(() => import('@/pages/admin/RolesPage'))
+const RolePermissionsPage = lazy(() => import('@/pages/admin/RolePermissionsPage'))
 const ApiKeysPage = lazy(() => import('@/pages/admin/ApiKeysPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
 
@@ -336,6 +337,17 @@ function App() {
               <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
                   <RolesPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/roles/:roleId/permissions"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <RolePermissionsPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }

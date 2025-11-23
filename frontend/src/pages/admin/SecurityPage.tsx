@@ -15,18 +15,19 @@ export default function SecurityPage() {
   const securitySections = [
     {
       title: 'Roles de Usuario',
-      description: 'Gestiona los roles y permisos de acceso al sistema',
+      description: 'Gestiona los roles del sistema y asigna usuarios a cada rol',
       icon: Shield,
       color: 'bg-purple-500',
       route: '/admin/roles',
-      stats: 'Administrador, Empleado Administrativo, Empleado de Biblioteca...',
+      stats: 'Crear, editar y eliminar roles. Ver distribución de usuarios.',
     },
     {
       title: 'Permisos y Accesos',
       description: 'Configura permisos detallados para cada rol del sistema',
       icon: Lock,
       color: 'bg-blue-500',
-      coming_soon: true,
+      route: '/admin/roles',
+      stats: 'Matriz de permisos por recurso: leer, crear, actualizar, eliminar.',
     },
   ]
 
