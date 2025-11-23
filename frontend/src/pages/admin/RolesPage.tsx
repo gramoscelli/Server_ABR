@@ -560,7 +560,7 @@ export default function RolesPage() {
             <AlertDialogCancel disabled={submitting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteRole}
-              disabled={submitting || (selectedRole && selectedRole.count > 0)}
+              disabled={submitting || !!(selectedRole && selectedRole.count > 0)}
               className="bg-red-600 hover:bg-red-700"
             >
               {submitting ? 'Eliminando...' : 'Eliminar'}
