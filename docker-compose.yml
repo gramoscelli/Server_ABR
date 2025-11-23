@@ -65,6 +65,8 @@ services:
       - ./backend:/usr/src/app
       # Exclude node_modules from host mount - keep it in container only
       - /usr/src/app/node_modules
+      # Backup directory accessible from host
+      - ./db_backup:/app/db_backup
     ports:
       - 3000:3000
     depends_on:

@@ -118,9 +118,13 @@ export default function SystemPage() {
 
       if (response.ok) {
         const data = await response.json()
+        let description = `${data.backup.filename} (${data.backup.sizeFormatted})`
+        if (data.cleanup && data.cleanup.deleted > 0) {
+          description += ` - Se eliminaron ${data.cleanup.deleted} backup(s) antiguo(s)`
+        }
         toast({
           title: 'Backup creado',
-          description: `${data.backup.filename} (${data.backup.sizeFormatted})`,
+          description,
         })
         // Reload backups list
         await loadBackups()
@@ -530,8 +534,8 @@ export default function SystemPage() {
                 Mantenimiento del Sistema
               </h3>
               <p className="text-sm text-yellow-800 mt-1">
-                Los backups automáticos se ejecutan diariamente a las 9:48 AM (lunes a sábado).
-                Los backups se almacenan en Mega.nz y se mantienen los 10 más recientes.
+                Los backups automáticos se ejecutan diariamente a las 9:48 AM (lunes a sábado) y se almacenan en Mega.nz.
+                Los backups manuales se mantienen localmente (máximo 5, los más antiguos se eliminan automáticamente).
               </p>
             </div>
           </div>
