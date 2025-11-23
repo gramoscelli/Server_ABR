@@ -260,14 +260,11 @@ export default function DashboardPage() {
   }
 
   const goToToday = () => {
+    setViewMode('day')
     setCalendarMonth(today)
-    if (viewMode === 'day') {
-      setSelectedRange({ start: today, end: today })
-    } else if (viewMode === 'week') {
-      setSelectedRange(getWeekRange(today))
-    } else if (viewMode === 'month') {
-      setSelectedRange(getMonthRange(today))
-    }
+    setSelectedRange({ start: today, end: today })
+    setRangeStart(null)
+    setHoverDate(null)
   }
 
   // ============================================================================
