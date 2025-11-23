@@ -52,6 +52,52 @@ export const API_ENDPOINTS = {
     SEND: '/api/whatsapp/send',
     STATUS: '/api/whatsapp/status',
   },
+
+  // Accounting endpoints
+  ACCOUNTING: {
+    // Dashboard
+    DASHBOARD: '/api/accounting/dashboard',
+    DASHBOARD_MONTHLY: '/api/accounting/dashboard/monthly',
+
+    // Accounts
+    ACCOUNTS: '/api/accounting/accounts',
+    ACCOUNT_BY_ID: (id: number) => `/api/accounting/accounts/${id}`,
+    ACCOUNT_BALANCE: (id: number) => `/api/accounting/accounts/${id}/balance`,
+    ACCOUNT_BALANCE_HISTORY: (id: number) => `/api/accounting/accounts/${id}/balance-history`,
+
+    // Expenses
+    EXPENSES: '/api/accounting/expenses',
+    EXPENSE_BY_ID: (id: number) => `/api/accounting/expenses/${id}`,
+    EXPENSES_STATS_BY_CATEGORY: '/api/accounting/expenses/stats/by-category',
+
+    // Incomes
+    INCOMES: '/api/accounting/incomes',
+    INCOME_BY_ID: (id: number) => `/api/accounting/incomes/${id}`,
+
+    // Transfers
+    TRANSFERS: '/api/accounting/transfers',
+    TRANSFER_BY_ID: (id: number) => `/api/accounting/transfers/${id}`,
+
+    // Expense Categories
+    EXPENSE_CATEGORIES: '/api/accounting/expense-categories',
+    EXPENSE_CATEGORY_BY_ID: (id: number) => `/api/accounting/expense-categories/${id}`,
+    EXPENSE_CATEGORIES_REORDER: '/api/accounting/expense-categories/reorder',
+
+    // Income Categories
+    INCOME_CATEGORIES: '/api/accounting/income-categories',
+    INCOME_CATEGORY_BY_ID: (id: number) => `/api/accounting/income-categories/${id}`,
+
+    // Transfer Types
+    TRANSFER_TYPES: '/api/accounting/transfer-types',
+    TRANSFER_TYPE_BY_ID: (id: number) => `/api/accounting/transfer-types/${id}`,
+
+    // Cash Reconciliations
+    CASH_RECONCILIATIONS: '/api/accounting/cash-reconciliations',
+    CASH_RECONCILIATION_BY_ID: (id: number) => `/api/accounting/cash-reconciliations/${id}`,
+    CASH_RECONCILIATION_BY_DATE: (date: string) => `/api/accounting/cash-reconciliations/date/${date}`,
+    CASH_RECONCILIATION_CALCULATE: (accountId: number, date: string) =>
+      `/api/accounting/cash-reconciliations/calculate/${accountId}/${date}`,
+  },
 } as const
 
 // HTTP Methods

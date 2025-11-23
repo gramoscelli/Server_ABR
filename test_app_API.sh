@@ -527,7 +527,7 @@ test_library_employee_role() {
     else
         print_error "Failed to login as test_user (HTTP $HTTP_CODE)"
         print_response "$BODY"
-        echo "Note: Make sure test user exists. Run: docker compose exec app node scripts/create_test_user.js"
+        echo "Note: Make sure test user exists. Run: docker compose exec backend node scripts/create_test_user.js"
     fi
 }
 

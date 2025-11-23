@@ -1,12 +1,13 @@
-import { AdminLayout } from '@/components/AdminLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, User, MapPin, Users as UsersIcon, X, Loader2 } from 'lucide-react'
+import { Search, User, MapPin, Users as UsersIcon, X, Loader2, Pencil, Save, FileText } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { authService, fetchWithAuth } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/ui/use-toast'
+import { SocioEditDialog } from '@/components/socios/SocioEditDialog'
 
 interface Socio {
   So_ID: number
@@ -26,6 +27,15 @@ interface Socio {
   UltimaCuota_Mes?: number
   UltimaCuota_Valor?: number
   UltimaCuota_FechaCobrado?: string
+  So_Obs?: string | null
+  // Persona autorizada
+  So_Aut_Apellido?: string | null
+  So_Aut_Nombre?: string | null
+  So_Aut_Domi?: string | null
+  So_Aut_Telef?: string | null
+  So_Aut_TipoDoc?: number | null
+  So_Aut_NroDoc?: string | null
+  TD_Aut_Tipo?: string | null
 }
 
 export default function SociosPage() {
@@ -37,16 +47,24 @@ export default function SociosPage() {
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
+  // Estado para edición de observaciones
+  const [editingObs, setEditingObs] = useState(false)
+  const [obsValue, setObsValue] = useState('')
+  const [savingObs, setSavingObs] = useState(false)
 
   useEffect(() => {
     // Check if user has access (root, admin_employee, or library_employee)
     const user = authService.getUser()
     const hasAccess = user?.role === 'root' || user?.role === 'admin_employee' || user?.role === 'library_employee'
+    const hasEditAccess = user?.role === 'root' || user?.role === 'admin_employee'
 
     if (!hasAccess) {
       navigate('/profile')
       return
     }
+    setCanEdit(hasEditAccess)
   }, [navigate])
 
   const handleSearch = useCallback(async (term: string) => {
@@ -135,10 +153,99 @@ export default function SociosPage() {
 
   const handleSelectSocio = (socio: Socio) => {
     setSelectedSocio(socio)
+    // Sincronizar observaciones al seleccionar un socio
+    setObsValue(socio.So_Obs || '')
+    setEditingObs(false)
+  }
+
+  const handleEditClick = () => {
+    if (selectedSocio) {
+      setEditDialogOpen(true)
+    }
+  }
+
+  const handleSocioSaved = async () => {
+    // Refresh the search results after saving
+    if (searchTerm.trim()) {
+      try {
+        const response = await fetchWithAuth(
+          `/api/socios/search?q=${encodeURIComponent(searchTerm)}&limit=20`,
+          { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+        )
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            const newSocios = result.data || []
+            setSocios(newSocios)
+
+            // Update selectedSocio with fresh data
+            if (selectedSocio) {
+              const updatedSocio = newSocios.find((s: Socio) => s.So_ID === selectedSocio.So_ID)
+              if (updatedSocio) {
+                setSelectedSocio(updatedSocio)
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error refreshing socios:', error)
+      }
+    }
+  }
+
+  const handleSaveObs = async () => {
+    if (!selectedSocio) return
+
+    setSavingObs(true)
+    try {
+      const response = await fetchWithAuth(
+        `/api/socios/${selectedSocio.So_ID}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ So_Obs: obsValue })
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Error al guardar')
+      }
+
+      const result = await response.json()
+      if (result.success) {
+        // Actualizar el socio seleccionado localmente
+        setSelectedSocio(prev => prev ? { ...prev, So_Obs: obsValue } : null)
+        // Actualizar en la lista de socios
+        setSocios(prev => prev.map(s =>
+          s.So_ID === selectedSocio.So_ID ? { ...s, So_Obs: obsValue } : s
+        ))
+        setEditingObs(false)
+        toast({
+          title: 'Guardado',
+          description: 'Las observaciones se guardaron correctamente.'
+        })
+      } else {
+        throw new Error(result.message || 'Error al guardar')
+      }
+    } catch (error) {
+      console.error('Error saving observations:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudieron guardar las observaciones.',
+        variant: 'destructive'
+      })
+    } finally {
+      setSavingObs(false)
+    }
+  }
+
+  const handleCancelEditObs = () => {
+    setObsValue(selectedSocio?.So_Obs || '')
+    setEditingObs(false)
   }
 
   return (
-    <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -275,12 +382,32 @@ export default function SociosPage() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <h2 className="text-2xl font-bold text-gray-900">
-                            {selectedSocio.So_Apellido}, {selectedSocio.So_Nombre}
-                          </h2>
-                          <p className="text-sm text-gray-600 mt-1">
-                            Número de Socio: <span className="font-semibold">#{selectedSocio.So_ID}</span>
-                          </p>
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h2 className="text-2xl font-bold text-gray-900">
+                                {selectedSocio.So_Apellido}, {selectedSocio.So_Nombre}
+                              </h2>
+                              {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre) && (
+                                <p className="text-sm text-blue-700 mt-1">
+                                  Autorizado: {selectedSocio.So_Aut_Apellido}{selectedSocio.So_Aut_Apellido && selectedSocio.So_Aut_Nombre ? ', ' : ''}{selectedSocio.So_Aut_Nombre}
+                                </p>
+                              )}
+                              <p className="text-sm text-gray-600 mt-1">
+                                Número de Socio: <span className="font-semibold">#{selectedSocio.So_ID}</span>
+                              </p>
+                            </div>
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleEditClick}
+                                className="flex items-center gap-2"
+                              >
+                                <Pencil className="h-4 w-4" />
+                                Editar
+                              </Button>
+                            )}
+                          </div>
                           {selectedSocio.UltimaCuota_Anio && selectedSocio.UltimaCuota_Mes && (
                             (() => {
                               const now = new Date()
@@ -310,99 +437,154 @@ export default function SociosPage() {
                       </div>
                     </div>
 
-                    {/* Detalles del socio */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Nombre
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Nombre || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Apellido
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Apellido || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            DNI
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
-                            {selectedSocio.So_NroDoc || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Teléfono
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Telef || 'No especificado'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Número de Socio
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
-                            {selectedSocio.So_ID}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Grupo
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.Gr_Nombre || (selectedSocio.Gr_ID ? `Grupo #${selectedSocio.Gr_ID}` : 'Sin grupo')}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Email
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_Email || 'No especificado'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 block mb-1">
-                            Fecha de Nacimiento
-                          </label>
-                          <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                            {selectedSocio.So_FecNac || 'No especificado'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Domicilios */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Detalles del socio - Layout compacto en dos columnas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Nombre</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Nombre || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Apellido</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Apellido || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">DNI</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg font-mono">
+                          {selectedSocio.So_NroDoc || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Teléfono</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Telef || 'No especificado'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Grupo</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.Gr_Nombre || (selectedSocio.Gr_ID ? `Grupo #${selectedSocio.Gr_ID}` : 'Sin grupo')}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 block mb-1">Email</label>
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
+                          {selectedSocio.So_Email || 'No especificado'}
+                        </p>
+                      </div>
+                      <div className="md:col-span-2">
                         <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
                           <MapPin className="h-4 w-4" />
-                          Domicilio de Residencia
+                          Domicilio
                         </label>
-                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
+                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
                           {selectedSocio.So_DomRes || 'No especificado'}
                         </p>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 block mb-1 flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          Domicilio de Cobro
-                        </label>
-                        <p className="text-base text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">
-                          {selectedSocio.So_DomCob || 'No especificado'}
-                        </p>
+                    </div>
+
+                    {/* Persona Autorizada */}
+                    {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre || selectedSocio.So_Aut_NroDoc || selectedSocio.So_Aut_Telef || selectedSocio.So_Aut_Domi) && (
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                        <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          Persona Autorizada
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {(selectedSocio.So_Aut_Apellido || selectedSocio.So_Aut_Nombre) && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Nombre</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Apellido}{selectedSocio.So_Aut_Apellido && selectedSocio.So_Aut_Nombre ? ', ' : ''}{selectedSocio.So_Aut_Nombre}
+                              </p>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-xs font-medium text-blue-600 block mb-1">Documento</label>
+                            <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded font-mono">
+                              {selectedSocio.TD_Aut_Tipo ? `${selectedSocio.TD_Aut_Tipo}: ` : ''}{selectedSocio.So_Aut_NroDoc || 'No especificado'}
+                            </p>
+                          </div>
+                          {selectedSocio.So_Aut_Telef && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Teléfono</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Telef}
+                              </p>
+                            </div>
+                          )}
+                          {selectedSocio.So_Aut_Domi && (
+                            <div>
+                              <label className="text-xs font-medium text-blue-600 block mb-1">Domicilio</label>
+                              <p className="text-sm text-gray-900 bg-white px-3 py-2 rounded">
+                                {selectedSocio.So_Aut_Domi}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
+                    )}
+
+                    {/* Observaciones - Campo editable */}
+                    <div className="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-amber-800 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Observaciones
+                        </h3>
+                        {!editingObs && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingObs(true)}
+                            className="text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                        )}
+                      </div>
+                      {editingObs ? (
+                        <div className="space-y-3">
+                          <Textarea
+                            value={obsValue}
+                            onChange={(e) => setObsValue(e.target.value)}
+                            placeholder="Escribir observaciones..."
+                            className="min-h-[100px] bg-white border-amber-200 focus:border-amber-400"
+                            disabled={savingObs}
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEditObs}
+                              disabled={savingObs}
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveObs}
+                              disabled={savingObs}
+                              className="bg-amber-600 hover:bg-amber-700"
+                            >
+                              {savingObs ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                              ) : (
+                                <Save className="h-4 w-4 mr-1" />
+                              )}
+                              Guardar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-700 bg-white px-3 py-2 rounded min-h-[60px] whitespace-pre-wrap">
+                          {selectedSocio.So_Obs || <span className="text-gray-400 italic">Sin observaciones</span>}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -410,7 +592,14 @@ export default function SociosPage() {
             </Card>
           </div>
         </div>
+
+        {/* Edit Dialog */}
+        <SocioEditDialog
+          socioId={selectedSocio?.So_ID ?? null}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSaved={handleSocioSaved}
+        />
       </div>
-    </AdminLayout>
   )
 }

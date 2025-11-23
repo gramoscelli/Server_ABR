@@ -400,7 +400,7 @@ curl -X POST http://localhost:3000/api/auth/register \
 
 2. Revisar logs del backend:
    ```bash
-   docker exec nodejs cat /app/logs/*.log
+   docker exec backend cat /app/logs/*.log
    ```
 
 3. Verificar que el token no haya expirado (5 min)

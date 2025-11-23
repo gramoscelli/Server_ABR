@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS roles (
 -- Step 2: Insert default roles with ACL permissions
 INSERT INTO roles (name, description, permissions, is_system) VALUES
     (
-        'admin',
-        'Full administrative access to all resources (system role - cannot be modified)',
+        'root',
+        'Super administrator with full system access (system role - cannot be modified)',
         JSON_OBJECT(
             'users', JSON_ARRAY('create', 'read', 'update', 'delete'),
             'roles', JSON_ARRAY('create', 'read', 'update', 'delete'),
@@ -32,6 +32,8 @@ INSERT INTO roles (name, description, permissions, is_system) VALUES
             'tirada', JSON_ARRAY('create', 'read', 'update', 'delete', 'print'),
             'socios', JSON_ARRAY('create', 'read', 'update', 'delete'),
             'cobrocuotas', JSON_ARRAY('create', 'read', 'update', 'delete'),
+            'accounting', JSON_ARRAY('create', 'read', 'update', 'delete'),
+            'admin', JSON_ARRAY('create', 'read', 'update', 'delete'),
             '*', JSON_ARRAY('*')
         ),
         TRUE
@@ -104,13 +106,13 @@ DROP COLUMN role;
 -- Step 7: Create a sample printer user for testing
 -- Password: printer123 (hashed with bcrypt)
 -- Note: To generate new hash: docker exec -i nodejs node -e "const bcrypt = require('bcryptjs'); bcrypt.hash('printer123', 10).then(hash => console.log(hash));"
-INSERT INTO usuarios (username, password_hash, email, role_id, is_active, failed_attempts, created_at)
+INSERT INTO usuarios (username, password_hash, email, role_id, active, failed_attempts, created_at)
 SELECT
     'printer_client',
     '$2b$10$nKEFOKIs9IjTclWd89xPWuGzs5KBSeIpy5bUruF4m7sW0l/LQKNc.',  -- bcrypt hash of 'printer123'
     'printer@example.com',
     r.id,
-    1,
+    TRUE,
     0,
     NOW()
 FROM roles r

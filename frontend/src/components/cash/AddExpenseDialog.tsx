@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Upload } from 'lucide-react'
+import { accountingService } from '@/lib/accountingService'
+import type { Account, ExpenseCategory } from '@/types/accounting'
 
 interface AddExpenseDialogProps {
   open: boolean
@@ -26,48 +28,88 @@ interface AddExpenseDialogProps {
 
 export interface ExpenseFormData {
   amount: string
-  currency: string
-  fromAccount: string
+  account_id: number
   date: string
-  multiCategory: boolean
-  category: string
+  category_id: number | null
   description: string
-  attachments: File[]
+  attachment_url?: string
 }
 
 export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDialogProps) {
   const [formData, setFormData] = useState<ExpenseFormData>({
     amount: '',
-    currency: 'ARS',
-    fromAccount: 'Cash',
-    date: new Date().toISOString().split('T')[0],
-    multiCategory: false,
-    category: '',
+    account_id: 0,
+    date: new Date().toISOString().slice(0, 16),
+    category_id: null,
     description: '',
-    attachments: [],
   })
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [categories, setCategories] = useState<ExpenseCategory[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit?.(formData)
-    // Reset form
-    setFormData({
-      amount: '',
-      currency: 'ARS',
-      fromAccount: 'Cash',
-      date: new Date().toISOString().split('T')[0],
-      multiCategory: false,
-      category: '',
-      description: '',
-      attachments: [],
-    })
-    onOpenChange(false)
+  useEffect(() => {
+    if (open) {
+      loadData()
+    }
+  }, [open])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [accountsResponse, categoriesData] = await Promise.all([
+        accountingService.getAccounts({ is_active: true }),
+        accountingService.getExpenseCategories(),
+      ])
+      setAccounts(accountsResponse.data)
+      setCategories(categoriesData)
+
+      // Set default account if available
+      if (accountsResponse.data.length > 0 && !formData.account_id) {
+        setFormData(prev => ({ ...prev, account_id: accountsResponse.data[0].id }))
+      }
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (files) {
-      setFormData({ ...formData, attachments: Array.from(files) })
+  const flattenCategories = (cats: ExpenseCategory[]): ExpenseCategory[] => {
+    let result: ExpenseCategory[] = []
+    for (const cat of cats) {
+      result.push(cat)
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        result = result.concat(flattenCategories(cat.subcategories))
+      }
+    }
+    return result
+  }
+
+  const allCategories = flattenCategories(categories)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.account_id) {
+      alert('Por favor selecciona una cuenta')
+      return
+    }
+
+    try {
+      setLoading(true)
+      await onSubmit?.(formData)
+      // Reset form
+      setFormData({
+        amount: '',
+        account_id: accounts.length > 0 ? accounts[0].id : 0,
+        date: new Date().toISOString().slice(0, 16),
+        category_id: null,
+        description: '',
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error creating expense:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -84,101 +126,79 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
             <Label htmlFor="amount" className="text-sm font-medium text-gray-700">
               Monto
             </Label>
-            <div className="flex gap-2">
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
-                placeholder="0"
-                value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="flex-1"
-                required
-              />
-              <Select
-                value={formData.currency}
-                onValueChange={(value) => setFormData({ ...formData, currency: value })}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ARS">ARS</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Input
+              id="amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              required
+              disabled={loading}
+            />
           </div>
 
-          {/* From Account & Date */}
+          {/* Account & Date */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fromAccount" className="text-sm font-medium text-gray-700">
-                Desde la Cuenta
+              <Label htmlFor="account" className="text-sm font-medium text-gray-700">
+                Cuenta
               </Label>
               <Select
-                value={formData.fromAccount}
-                onValueChange={(value) => setFormData({ ...formData, fromAccount: value })}
+                value={String(formData.account_id)}
+                onValueChange={(value) => setFormData({ ...formData, account_id: parseInt(value) })}
+                disabled={loading || accounts.length === 0}
               >
-                <SelectTrigger id="fromAccount">
-                  <SelectValue />
+                <SelectTrigger id="account">
+                  <SelectValue placeholder="Seleccionar cuenta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cash">Efectivo</SelectItem>
-                  <SelectItem value="Bank">Banco</SelectItem>
-                  <SelectItem value="Savings">Ahorros</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={String(account.id)}>
+                      {account.name} ({account.type})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-medium text-gray-700">
-                Fecha
+                Fecha y Hora
               </Label>
               <Input
                 id="date"
-                type="date"
+                type="datetime-local"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
+                disabled={loading}
               />
             </div>
-          </div>
-
-          {/* Multi-category expense toggle */}
-          <div className="flex items-center justify-between py-2">
-            <Label htmlFor="multi-category" className="text-sm font-medium text-gray-700">
-              Gasto multicategoría
-            </Label>
-            <Switch
-              id="multi-category"
-              checked={formData.multiCategory}
-              onCheckedChange={(checked) => setFormData({ ...formData, multiCategory: checked })}
-            />
           </div>
 
           {/* Category */}
           <div className="space-y-2">
             <Label htmlFor="category" className="text-sm font-medium text-gray-700">
-              Categoría
+              Categoría (Opcional)
             </Label>
             <Select
-              value={formData.category}
-              onValueChange={(value) => setFormData({ ...formData, category: value })}
+              value={formData.category_id ? String(formData.category_id) : 'none'}
+              onValueChange={(value) =>
+                setFormData({ ...formData, category_id: value === 'none' ? null : parseInt(value) })
+              }
+              disabled={loading}
             >
               <SelectTrigger id="category">
                 <SelectValue placeholder="Sin Categoría" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sin Categoría</SelectItem>
-                <SelectItem value="food">Comida y Restaurantes</SelectItem>
-                <SelectItem value="transport">Transporte</SelectItem>
-                <SelectItem value="utilities">Servicios</SelectItem>
-                <SelectItem value="entertainment">Entretenimiento</SelectItem>
-                <SelectItem value="shopping">Compras</SelectItem>
-                <SelectItem value="healthcare">Salud</SelectItem>
-                <SelectItem value="other">Otro</SelectItem>
+                {allCategories.map((category) => (
+                  <SelectItem key={category.id} value={String(category.id)}>
+                    {category.parent_id ? `  ${category.name}` : category.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -186,46 +206,25 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description" className="text-sm font-medium text-gray-700">
-              Descripción
+              Descripción (Opcional)
             </Label>
             <textarea
               id="description"
-              placeholder="Descripción"
+              placeholder="Descripción del egreso"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading}
             />
-          </div>
-
-          {/* File Upload */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">Adjuntos</Label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-              <input
-                type="file"
-                multiple
-                onChange={handleFileUpload}
-                className="hidden"
-                id="file-upload-expense"
-              />
-              <label htmlFor="file-upload-expense" className="cursor-pointer">
-                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Haz clic para subir o arrastra y suelta</p>
-              </label>
-              {formData.attachments.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  {formData.attachments.length} archivo(s) seleccionado(s)
-                </p>
-              )}
-            </div>
           </div>
 
           {/* Submit Button */}
           <Button
             type="submit"
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold h-12 text-base"
+            disabled={loading || accounts.length === 0}
           >
-            Agregar Egreso
+            {loading ? 'Guardando...' : 'Agregar Egreso'}
           </Button>
         </form>
       </DialogContent>

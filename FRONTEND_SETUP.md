@@ -219,7 +219,7 @@ EXPOSE 3001
 CMD ["npm", "start"]
 ```
 
-### docker-compose.yml (actualizar)
+### Configuración de servicios (actualizar)
 ```yaml
 services:
   frontend:
