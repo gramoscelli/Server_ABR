@@ -815,4 +815,275 @@ router.post('/users/:userId/approve', authenticateToken, authorizeRoles('admin',
   }
 });
 
+// ============================================
+// BACKUP ENDPOINTS
+// ============================================
+
+const { exec } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const util = require('util');
+const execPromise = util.promisify(exec);
+
+// Backup directory - adjust path as needed
+const BACKUP_DIR = process.env.BACKUP_DIR || '/app/db_backup';
+
+/**
+ * GET /api/admin/backups
+ * List recent backups (admin only)
+ */
+router.get('/backups', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    // Ensure backup directory exists
+    if (!fs.existsSync(BACKUP_DIR)) {
+      return res.json({ backups: [], message: 'Directorio de backups no encontrado' });
+    }
+
+    // Read backup files
+    const files = fs.readdirSync(BACKUP_DIR)
+      .filter(file => file.startsWith('backup_') && (file.endsWith('.sql') || file.endsWith('.sql.bz2') || file.endsWith('.sql.gz')))
+      .map(file => {
+        const filePath = path.join(BACKUP_DIR, file);
+        const stats = fs.statSync(filePath);
+
+        // Extract date from filename (backup_YYYY-MM-DD_HH:MM:SS.sql)
+        const match = file.match(/backup_(\d{4}-\d{2}-\d{2}_\d{2}[:\-]\d{2}[:\-]\d{2})/);
+        let createdAt = stats.mtime;
+
+        if (match) {
+          const dateStr = match[1].replace(/_/g, 'T').replace(/-(\d{2})-(\d{2})$/, ':$1:$2');
+          const parsedDate = new Date(dateStr.replace(/_/, 'T'));
+          if (!isNaN(parsedDate.getTime())) {
+            createdAt = parsedDate;
+          }
+        }
+
+        return {
+          filename: file,
+          size: stats.size,
+          sizeFormatted: formatBytes(stats.size),
+          createdAt: createdAt.toISOString(),
+          createdAtFormatted: createdAt.toLocaleString('es-AR', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 10); // Last 10 backups
+
+    res.json({ backups: files });
+
+  } catch (error) {
+    console.error('List backups error:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: 'Ocurrió un error al listar los backups'
+    });
+  }
+});
+
+/**
+ * GET /api/admin/backups/:filename
+ * Download a specific backup file (admin only)
+ */
+router.get('/backups/:filename', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Validate filename to prevent directory traversal
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({
+        error: 'Nombre de archivo inválido',
+        message: 'El nombre del archivo no es válido'
+      });
+    }
+
+    // Only allow backup files
+    if (!filename.startsWith('backup_') || (!filename.endsWith('.sql') && !filename.endsWith('.sql.bz2') && !filename.endsWith('.sql.gz'))) {
+      return res.status(400).json({
+        error: 'Archivo no permitido',
+        message: 'Solo se pueden descargar archivos de backup'
+      });
+    }
+
+    const filePath = path.join(BACKUP_DIR, filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        error: 'Archivo no encontrado',
+        message: 'El archivo de backup no existe'
+      });
+    }
+
+    // Get file stats
+    const stats = fs.statSync(filePath);
+
+    // Set headers for download
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', stats.size);
+
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+    console.log(`[Backup] Download started: ${filename} by ${req.user.username}`);
+
+  } catch (error) {
+    console.error('Download backup error:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: 'Ocurrió un error al descargar el backup'
+    });
+  }
+});
+
+/**
+ * POST /api/admin/backup
+ * Create a new database backup (admin only)
+ */
+router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    // Ensure backup directory exists
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+
+    // Get database credentials from environment
+    const dbHost = process.env.MYSQL_HOST || 'mysql';
+    const dbPort = process.env.MYSQL_PORT || '3306';
+    const dbUser = process.env.MYSQL_USER;
+    const dbPassword = process.env.MYSQL_PASSWORD;
+    const dbName = process.env.MYSQL_DATABASE;
+
+    if (!dbUser || !dbPassword || !dbName) {
+      return res.status(500).json({
+        error: 'Configuración incompleta',
+        message: 'Faltan credenciales de base de datos en la configuración'
+      });
+    }
+
+    // Generate backup filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backupFilename = `backup_${timestamp}.sql`;
+    const backupPath = path.join(BACKUP_DIR, backupFilename);
+
+    // Build mysqldump command
+    const mysqldumpCmd = `mysqldump --host=${dbHost} --port=${dbPort} --user=${dbUser} --password=${dbPassword} --single-transaction --quick ${dbName} > "${backupPath}"`;
+
+    console.log(`[Backup] Starting backup to ${backupPath}`);
+    console.log(`[Backup] Initiated by ${req.user.username} (ID: ${req.user.id})`);
+
+    // Execute mysqldump
+    await execPromise(mysqldumpCmd);
+
+    // Verify file was created
+    if (!fs.existsSync(backupPath)) {
+      throw new Error('El archivo de backup no fue creado');
+    }
+
+    const stats = fs.statSync(backupPath);
+
+    console.log(`[Backup] Completed successfully: ${backupFilename} (${formatBytes(stats.size)})`);
+
+    // Clean up old backups, keeping only the last 5
+    const cleanupResult = cleanupOldBackups(5);
+    if (cleanupResult.deleted > 0) {
+      console.log(`[Backup] Cleanup: deleted ${cleanupResult.deleted} old backup(s), kept ${cleanupResult.kept}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Backup creado exitosamente',
+      backup: {
+        filename: backupFilename,
+        size: stats.size,
+        sizeFormatted: formatBytes(stats.size),
+        createdAt: new Date().toISOString(),
+        createdAtFormatted: new Date().toLocaleString('es-AR', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      },
+      cleanup: cleanupResult.deleted > 0 ? {
+        deleted: cleanupResult.deleted,
+        kept: cleanupResult.kept
+      } : undefined
+    });
+
+  } catch (error) {
+    console.error('Create backup error:', error);
+    res.status(500).json({
+      error: 'Error al crear backup',
+      message: error.message || 'Ocurrió un error al crear el backup de la base de datos'
+    });
+  }
+});
+
+/**
+ * Helper function to format bytes
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Helper function to clean up old backups, keeping only the most recent N
+ */
+function cleanupOldBackups(maxBackups = 5) {
+  try {
+    if (!fs.existsSync(BACKUP_DIR)) {
+      return { deleted: 0, kept: 0 };
+    }
+
+    // Get all backup files
+    const backupFiles = fs.readdirSync(BACKUP_DIR)
+      .filter(file => file.startsWith('backup_') && (file.endsWith('.sql') || file.endsWith('.sql.bz2') || file.endsWith('.sql.gz')))
+      .map(file => {
+        const filePath = path.join(BACKUP_DIR, file);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: file,
+          path: filePath,
+          mtime: stats.mtime.getTime()
+        };
+      })
+      .sort((a, b) => b.mtime - a.mtime); // Sort by modification time, newest first
+
+    // Delete backups beyond the limit
+    const toDelete = backupFiles.slice(maxBackups);
+    let deletedCount = 0;
+
+    for (const backup of toDelete) {
+      try {
+        fs.unlinkSync(backup.path);
+        console.log(`[Backup Cleanup] Deleted old backup: ${backup.filename}`);
+        deletedCount++;
+      } catch (err) {
+        console.error(`[Backup Cleanup] Failed to delete ${backup.filename}:`, err.message);
+      }
+    }
+
+    return {
+      deleted: deletedCount,
+      kept: Math.min(backupFiles.length, maxBackups)
+    };
+  } catch (error) {
+    console.error('[Backup Cleanup] Error during cleanup:', error);
+    return { deleted: 0, kept: 0, error: error.message };
+  }
+}
+
 module.exports = router;

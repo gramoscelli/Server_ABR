@@ -1,6 +1,9 @@
 # pull the Node.js Docker image
 FROM node:lts-iron
 
+# Install mysql-client for mysqldump (used for backups)
+RUN apt-get update && apt-get install -y default-mysql-client && rm -rf /var/lib/apt/lists/*
+
 # create the directory inside the container
 WORKDIR /usr/src/app
 

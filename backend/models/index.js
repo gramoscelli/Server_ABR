@@ -18,6 +18,7 @@ const Grupo = require('./Grupo');
 const TipoDocumento = require('./TipoDocumento');
 const Cobrador = require('./Cobrador');
 const Adicional = require('./Adicional');
+const Setting = require('./Setting');
 
 /**
  * Define model associations (relationships)
@@ -222,6 +223,8 @@ module.exports = {
   TipoDocumento,
   Cobrador,
   Adicional,
+  // Configuration
+  Setting,
   // Utility
   syncModels
 };

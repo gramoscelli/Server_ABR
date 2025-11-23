@@ -18,7 +18,13 @@ const Role = sequelize.define('roles', {
     unique: true,
     validate: {
       notEmpty: true,
-      isIn: [['root', 'library_employee', 'new_user', 'admin_employee']]
+      len: [2, 50],
+      isValidName(value) {
+        // Only allow alphanumeric, underscore, and hyphen
+        if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(value)) {
+          throw new Error('El nombre del rol debe comenzar con letra y contener solo letras, números, guiones y guiones bajos');
+        }
+      }
     }
   },
   description: {
@@ -151,9 +157,20 @@ Role.getIdByName = async function(name) {
   return role ? role.id : null;
 };
 
-// Check if role name is valid
-Role.isValidRole = function(name) {
-  return ['root', 'library_employee', 'readonly', 'printer', 'new_user', 'admin_employee'].includes(name);
+// Check if role name is valid (checks database)
+Role.isValidRole = async function(name) {
+  const role = await Role.findByName(name);
+  return role !== null;
+};
+
+// Get all system (non-deletable) roles
+Role.getSystemRoles = function() {
+  return ['root', 'new_user'];
+};
+
+// Check if a role is a system role (cannot be deleted)
+Role.isSystemRole = function(name) {
+  return Role.getSystemRoles().includes(name);
 };
 
 module.exports = Role;
