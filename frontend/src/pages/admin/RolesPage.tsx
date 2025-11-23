@@ -512,7 +512,7 @@ export default function RolesPage() {
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                disabled={selectedRole && isSystemRole(selectedRole.name)}
+                disabled={!!(selectedRole && isSystemRole(selectedRole.name))}
               />
               {selectedRole && isSystemRole(selectedRole.name) && (
                 <p className="text-xs text-amber-600">
