@@ -887,6 +887,63 @@ router.get('/backups', authenticateToken, authorizeRoles('root'), async (req, re
 });
 
 /**
+ * GET /api/admin/backups/:filename
+ * Download a specific backup file (admin only)
+ */
+router.get('/backups/:filename', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    // Validate filename to prevent directory traversal
+    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({
+        error: 'Nombre de archivo inválido',
+        message: 'El nombre del archivo no es válido'
+      });
+    }
+
+    // Only allow backup files
+    if (!filename.startsWith('backup_') || (!filename.endsWith('.sql') && !filename.endsWith('.sql.bz2') && !filename.endsWith('.sql.gz'))) {
+      return res.status(400).json({
+        error: 'Archivo no permitido',
+        message: 'Solo se pueden descargar archivos de backup'
+      });
+    }
+
+    const filePath = path.join(BACKUP_DIR, filename);
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        error: 'Archivo no encontrado',
+        message: 'El archivo de backup no existe'
+      });
+    }
+
+    // Get file stats
+    const stats = fs.statSync(filePath);
+
+    // Set headers for download
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', stats.size);
+
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+    console.log(`[Backup] Download started: ${filename} by ${req.user.username}`);
+
+  } catch (error) {
+    console.error('Download backup error:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      message: 'Ocurrió un error al descargar el backup'
+    });
+  }
+});
+
+/**
  * POST /api/admin/backup
  * Create a new database backup (admin only)
  */

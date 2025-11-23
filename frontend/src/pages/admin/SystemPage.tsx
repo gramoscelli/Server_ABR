@@ -148,6 +148,50 @@ export default function SystemPage() {
     }
   }
 
+  const handleDownloadBackup = async (filename: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`/api/admin/backups/${encodeURIComponent(filename)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        toast({
+          title: 'Error',
+          description: error.message || 'No se pudo descargar el backup',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast({
+        title: 'Descarga iniciada',
+        description: filename
+      })
+    } catch (error) {
+      console.error('Error downloading backup:', error)
+      toast({
+        title: 'Error',
+        description: 'Error de conexión al descargar el backup',
+        variant: 'destructive'
+      })
+    }
+  }
+
   const loadSystemInfo = async () => {
     try {
       // Simular carga de información del sistema
@@ -438,8 +482,18 @@ export default function SystemPage() {
                         <div className="text-xs text-gray-500">{backup.filename}</div>
                       </div>
                     </div>
-                    <div className={`text-sm ${index === 0 ? 'text-green-700' : 'text-gray-600'}`}>
-                      {backup.sizeFormatted}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm ${index === 0 ? 'text-green-700' : 'text-gray-600'}`}>
+                        {backup.sizeFormatted}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadBackup(backup.filename)}
+                        title="Descargar backup"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
