@@ -1,28 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const whatsappService = require('../services/whatsapp');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+
+// All WhatsApp routes require root or admin_employee role
+const whatsappAuth = [authenticateToken, authorizeRoles('root', 'admin_employee')];
 
 /**
  * @route POST /api/whatsapp/session/init
  * @desc Initialize a new WhatsApp session
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.post('/session/init', authenticateToken, async (req, res) => {
+router.post('/session/init', whatsappAuth, async (req, res) => {
   try {
-    const { sessionId } = req.body;
+    // Use default session or provided sessionId
+    const sessionId = req.body.sessionId || whatsappService.getDefaultSessionId();
 
-    if (!sessionId) {
-      return res.status(400).json({
-        success: false,
-        error: 'sessionId is required'
-      });
-    }
-
-    // Use user ID as part of session if not provided explicitly
-    const fullSessionId = sessionId || `user_${req.user.id}`;
-
-    const result = await whatsappService.initializeWhatsAppConnection(fullSessionId);
+    const result = await whatsappService.initializeWhatsAppConnection(sessionId);
 
     res.json(result);
 
@@ -38,9 +32,9 @@ router.post('/session/init', authenticateToken, async (req, res) => {
 /**
  * @route GET /api/whatsapp/session/:sessionId/qr
  * @desc Get QR code for a session
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.get('/session/:sessionId/qr', authenticateToken, (req, res) => {
+router.get('/session/:sessionId/qr', whatsappAuth, (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -64,9 +58,9 @@ router.get('/session/:sessionId/qr', authenticateToken, (req, res) => {
 /**
  * @route GET /api/whatsapp/session/:sessionId/status
  * @desc Get connection status for a session
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.get('/session/:sessionId/status', authenticateToken, (req, res) => {
+router.get('/session/:sessionId/status', whatsappAuth, (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -86,15 +80,18 @@ router.get('/session/:sessionId/status', authenticateToken, (req, res) => {
 /**
  * @route GET /api/whatsapp/sessions
  * @desc Get all active sessions
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.get('/sessions', authenticateToken, (req, res) => {
+router.get('/sessions', whatsappAuth, (req, res) => {
   try {
     const sessions = whatsappService.getAllSessions();
+    const storedSessions = whatsappService.getStoredSessions();
 
     res.json({
       success: true,
-      sessions
+      sessions,
+      storedSessions,
+      defaultSessionId: whatsappService.getDefaultSessionId()
     });
 
   } catch (error) {
@@ -107,18 +104,45 @@ router.get('/sessions', authenticateToken, (req, res) => {
 });
 
 /**
+ * @route GET /api/whatsapp/status
+ * @desc Get overall WhatsApp service status (default session)
+ * @access Protected (root, admin_employee)
+ */
+router.get('/status', whatsappAuth, (req, res) => {
+  try {
+    const defaultSessionId = whatsappService.getDefaultSessionId();
+    const status = whatsappService.getConnectionStatus(defaultSessionId);
+    const hasStoredSession = whatsappService.sessionExists(defaultSessionId);
+
+    res.json({
+      success: true,
+      ...status,
+      hasStoredSession
+    });
+
+  } catch (error) {
+    console.error('Error getting WhatsApp status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get WhatsApp status'
+    });
+  }
+});
+
+/**
  * @route POST /api/whatsapp/message/send
  * @desc Send a WhatsApp message
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.post('/message/send', authenticateToken, async (req, res) => {
+router.post('/message/send', whatsappAuth, async (req, res) => {
   try {
-    const { sessionId, to, message } = req.body;
+    const { to, message } = req.body;
+    const sessionId = req.body.sessionId || whatsappService.getDefaultSessionId();
 
-    if (!sessionId || !to || !message) {
+    if (!to || !message) {
       return res.status(400).json({
         success: false,
-        error: 'sessionId, to, and message are required'
+        error: 'to and message are required'
       });
     }
 
@@ -153,9 +177,9 @@ router.post('/message/send', authenticateToken, async (req, res) => {
 /**
  * @route DELETE /api/whatsapp/session/:sessionId
  * @desc Disconnect and logout from a WhatsApp session
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.delete('/session/:sessionId', authenticateToken, async (req, res) => {
+router.delete('/session/:sessionId', whatsappAuth, async (req, res) => {
   try {
     const { sessionId } = req.params;
 
@@ -179,9 +203,9 @@ router.delete('/session/:sessionId', authenticateToken, async (req, res) => {
 /**
  * @route POST /api/whatsapp/message/bulk
  * @desc Send bulk WhatsApp messages
- * @access Protected
+ * @access Protected (root, admin_employee)
  */
-router.post('/message/bulk', authenticateToken, async (req, res) => {
+router.post('/message/bulk', whatsappAuth, async (req, res) => {
   try {
     const { sessionId, recipients } = req.body;
 
