@@ -1,17 +1,41 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 const pino = require('pino');
 const path = require('path');
 const fs = require('fs');
 
 // Store active WhatsApp connections
 const connections = new Map();
-const qrCodes = new Map();
+const qrCodes = new Map();           // Raw QR data
+const qrCodesBase64 = new Map();     // Base64 image QR
 const connectionStates = new Map();
 
 // Events emitter for status updates
 const { EventEmitter } = require('events');
 const statusEmitter = new EventEmitter();
+
+// Default session ID for the server (single instance)
+const DEFAULT_SESSION_ID = 'biblio-server';
+
+// Cache for Baileys module (loaded dynamically)
+let baileysModule = null;
+
+/**
+ * Load Baileys module dynamically (ESM module in CommonJS)
+ * @returns {Promise<Object>} Baileys module exports
+ */
+async function loadBaileys() {
+  if (baileysModule) {
+    return baileysModule;
+  }
+
+  try {
+    baileysModule = await import('@whiskeysockets/baileys');
+    return baileysModule;
+  } catch (error) {
+    console.error('Error loading Baileys module:', error);
+    throw new Error('Failed to load WhatsApp library');
+  }
+}
 
 /**
  * Initialize a WhatsApp connection for a given session
@@ -27,6 +51,10 @@ async function initializeWhatsAppConnection(sessionId) {
         sessionId
       };
     }
+
+    // Load Baileys dynamically
+    const baileys = await loadBaileys();
+    const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = baileys;
 
     const authFolder = path.join(__dirname, '../.whatsapp-auth', sessionId);
 
@@ -56,12 +84,28 @@ async function initializeWhatsAppConnection(sessionId) {
 
       if (qr) {
         qrCodes.set(sessionId, qr);
-        connectionStates.set(sessionId, { status: 'qr_ready', qr });
-        statusEmitter.emit('qr', { sessionId, qr });
+        // Generate base64 QR code image
+        try {
+          const qrBase64 = await QRCode.toDataURL(qr, {
+            errorCorrectionLevel: 'M',
+            type: 'image/png',
+            width: 300,
+            margin: 2
+          });
+          qrCodesBase64.set(sessionId, qrBase64);
+          connectionStates.set(sessionId, { status: 'qr_ready', qr, qrBase64 });
+          statusEmitter.emit('qr', { sessionId, qr, qrBase64 });
+        } catch (qrErr) {
+          console.error('Error generating QR base64:', qrErr);
+          connectionStates.set(sessionId, { status: 'qr_ready', qr });
+          statusEmitter.emit('qr', { sessionId, qr });
+        }
       }
 
       if (connection === 'close') {
-        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        // Load Baileys to get DisconnectReason
+        const { DisconnectReason: DR } = await loadBaileys();
+        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DR.loggedOut;
 
         connectionStates.set(sessionId, {
           status: 'disconnected',
@@ -70,6 +114,7 @@ async function initializeWhatsAppConnection(sessionId) {
 
         connections.delete(sessionId);
         qrCodes.delete(sessionId);
+        qrCodesBase64.delete(sessionId);
 
         if (shouldReconnect) {
           statusEmitter.emit('reconnecting', { sessionId });
@@ -82,6 +127,7 @@ async function initializeWhatsAppConnection(sessionId) {
       if (connection === 'open') {
         connectionStates.set(sessionId, { status: 'connected' });
         qrCodes.delete(sessionId);
+        qrCodesBase64.delete(sessionId);
         statusEmitter.emit('connected', { sessionId });
       }
     });
@@ -113,19 +159,23 @@ async function initializeWhatsAppConnection(sessionId) {
  */
 function getQRCode(sessionId) {
   const qr = qrCodes.get(sessionId);
+  const qrBase64 = qrCodesBase64.get(sessionId);
   const state = connectionStates.get(sessionId);
 
   if (!qr && state?.status !== 'qr_ready') {
     return {
       success: false,
-      message: 'No QR code available. Initialize connection first.'
+      message: 'No QR code available. Initialize connection first.',
+      status: state?.status || 'not_initialized'
     };
   }
 
   return {
     success: true,
     qr,
-    sessionId
+    qrBase64,
+    sessionId,
+    status: state?.status || 'unknown'
   };
 }
 
@@ -203,6 +253,7 @@ async function disconnectSession(sessionId) {
     await sock.logout();
     connections.delete(sessionId);
     qrCodes.delete(sessionId);
+    qrCodesBase64.delete(sessionId);
     connectionStates.delete(sessionId);
 
     // Optionally delete auth folder
@@ -244,6 +295,39 @@ function getAllSessions() {
   return sessions;
 }
 
+/**
+ * Get the default session ID
+ * @returns {string} Default session ID
+ */
+function getDefaultSessionId() {
+  return DEFAULT_SESSION_ID;
+}
+
+/**
+ * Check if a session exists (either active or has stored credentials)
+ * @param {string} sessionId - Session identifier
+ * @returns {boolean} True if session exists
+ */
+function sessionExists(sessionId) {
+  const authFolder = path.join(__dirname, '../.whatsapp-auth', sessionId);
+  return connections.has(sessionId) || fs.existsSync(authFolder);
+}
+
+/**
+ * Get stored sessions from auth folder
+ * @returns {Array} List of stored session IDs
+ */
+function getStoredSessions() {
+  const authDir = path.join(__dirname, '../.whatsapp-auth');
+  if (!fs.existsSync(authDir)) {
+    return [];
+  }
+  return fs.readdirSync(authDir).filter(name => {
+    const fullPath = path.join(authDir, name);
+    return fs.statSync(fullPath).isDirectory();
+  });
+}
+
 module.exports = {
   initializeWhatsAppConnection,
   getQRCode,
@@ -251,5 +335,9 @@ module.exports = {
   getConnectionStatus,
   disconnectSession,
   getAllSessions,
-  statusEmitter
+  getDefaultSessionId,
+  sessionExists,
+  getStoredSessions,
+  statusEmitter,
+  DEFAULT_SESSION_ID
 };

@@ -17,7 +17,7 @@ var rolesRouter = require('./routes/roles');
 var captchaRouter = require('./routes/captcha');
 var sociosRouter = require('./routes/socios');
 var settingsRouter = require('./routes/settings');
-// var whatsappRouter = require('./routes/whatsapp'); // Temporarily disabled due to ES module issues
+var whatsappRouter = require('./routes/whatsapp');
 
 // Accounting routes
 var accountingExpenseCategoriesRouter = require('./routes/accounting/expenseCategories');
@@ -143,7 +143,7 @@ app.use('/api/csrf', apiLimiter, csrfRouter); // CSRF management routes
 app.use('/api/roles', apiLimiter, validateCsrfToken, rolesRouter); // Role management routes
 app.use('/api/socios', apiLimiter, sociosRouter); // Socios search routes (read-only, no CSRF needed)
 app.use('/api/settings', apiLimiter, validateCsrfToken, settingsRouter); // System settings routes
-// app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // Temporarily disabled - WhatsApp integration routes
+app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // WhatsApp integration routes
 
 // Accounting module routes (protected, state-changing routes need CSRF)
 // Note: authenticateToken runs BEFORE rate limiter so authenticated users skip rate limiting
