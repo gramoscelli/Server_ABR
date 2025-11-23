@@ -934,6 +934,12 @@ router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, re
 
     console.log(`[Backup] Completed successfully: ${backupFilename} (${formatBytes(stats.size)})`);
 
+    // Clean up old backups, keeping only the last 5
+    const cleanupResult = cleanupOldBackups(5);
+    if (cleanupResult.deleted > 0) {
+      console.log(`[Backup] Cleanup: deleted ${cleanupResult.deleted} old backup(s), kept ${cleanupResult.kept}`);
+    }
+
     res.json({
       success: true,
       message: 'Backup creado exitosamente',
@@ -949,7 +955,11 @@ router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, re
           hour: '2-digit',
           minute: '2-digit'
         })
-      }
+      },
+      cleanup: cleanupResult.deleted > 0 ? {
+        deleted: cleanupResult.deleted,
+        kept: cleanupResult.kept
+      } : undefined
     });
 
   } catch (error) {
@@ -970,6 +980,53 @@ function formatBytes(bytes) {
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Helper function to clean up old backups, keeping only the most recent N
+ */
+function cleanupOldBackups(maxBackups = 5) {
+  try {
+    if (!fs.existsSync(BACKUP_DIR)) {
+      return { deleted: 0, kept: 0 };
+    }
+
+    // Get all backup files
+    const backupFiles = fs.readdirSync(BACKUP_DIR)
+      .filter(file => file.startsWith('backup_') && (file.endsWith('.sql') || file.endsWith('.sql.bz2') || file.endsWith('.sql.gz')))
+      .map(file => {
+        const filePath = path.join(BACKUP_DIR, file);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: file,
+          path: filePath,
+          mtime: stats.mtime.getTime()
+        };
+      })
+      .sort((a, b) => b.mtime - a.mtime); // Sort by modification time, newest first
+
+    // Delete backups beyond the limit
+    const toDelete = backupFiles.slice(maxBackups);
+    let deletedCount = 0;
+
+    for (const backup of toDelete) {
+      try {
+        fs.unlinkSync(backup.path);
+        console.log(`[Backup Cleanup] Deleted old backup: ${backup.filename}`);
+        deletedCount++;
+      } catch (err) {
+        console.error(`[Backup Cleanup] Failed to delete ${backup.filename}:`, err.message);
+      }
+    }
+
+    return {
+      deleted: deletedCount,
+      kept: Math.min(backupFiles.length, maxBackups)
+    };
+  } catch (error) {
+    console.error('[Backup Cleanup] Error during cleanup:', error);
+    return { deleted: 0, kept: 0, error: error.message };
+  }
 }
 
 module.exports = router;
