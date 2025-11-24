@@ -20,3 +20,14 @@ SEQUELIZE_MIGRATION.md
 # Test coverage
 app/coverage/
 *.log
+
+# Temporary images in root
+/*.jpg
+/*.png
+
+# Windows zone identifier files
+*:Zone.Identifier
+
+# Backups and secrets
+db_backup/
+secrets/
