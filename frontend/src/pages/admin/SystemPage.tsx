@@ -151,7 +151,7 @@ export default function SystemPage() {
 
   const handleDownloadBackup = async (filename: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = authService.getAccessToken()
       const response = await fetch(`/api/admin/backups/${encodeURIComponent(filename)}`, {
         headers: {
           'Authorization': `Bearer ${token}`
