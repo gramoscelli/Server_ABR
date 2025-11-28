@@ -4,6 +4,7 @@ frontend/node_modules/
 node_modules/
 .env
 data/
+db_backup/
 app/.whatsapp-auth/
 backend/.whatsapp-auth/
 
