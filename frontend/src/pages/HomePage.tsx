@@ -5,6 +5,7 @@ import {
   Users,
   BookOpen,
   DollarSign,
+  ShoppingCart,
   Settings,
 } from 'lucide-react'
 import { Header } from '@/components/Header'
@@ -51,6 +52,16 @@ const modules: Module[] = [
     color: 'text-purple-600',
     bgGradient: 'from-purple-500 to-purple-600',
     allowedRoles: ['root', 'admin_employee'],
+  },
+  {
+    id: 'purchases',
+    name: 'Compras',
+    description: 'Gestión de compras y proveedores',
+    icon: ShoppingCart,
+    path: '/purchases',
+    color: 'text-orange-600',
+    bgGradient: 'from-orange-500 to-orange-600',
+    allowedRoles: ['root', 'admin_employee', 'board_member'],
   },
   {
     id: 'admin',

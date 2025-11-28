@@ -33,9 +33,17 @@ export function ModuleLayout({
   navigation,
 }: ModuleLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
+    const stored = localStorage.getItem('sidebarCollapsed')
+    return stored === 'true'
+  })
   const location = useLocation()
   const { effectiveTheme } = useTheme()
+
+  // Persist sidebar state
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(desktopSidebarCollapsed))
+  }, [desktopSidebarCollapsed])
 
   // Get theme-appropriate sidebar colors
   const getSidebarColor = () => {
