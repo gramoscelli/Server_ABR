@@ -8,7 +8,7 @@ No saved Mega session
 Generating new Mega login session
 Your current storage is:
 {'used': 0.0, 'total': 21474836480.0}
-Iniciando backup de la base mysql en  /app/backup/backup_2025-11-14_09:48:06.sql
-Iniciando compresion de la base mysql en  /app/backup/backup_2025-11-14_09:48:06.sql.bz2
-Uploading the file /app/backup/backup_2025-11-14_09:48:06.sql.bz2
+Iniciando backup de la base mysql en  /app/backup/backup_2025-11-26_09:48:05.sql
+Iniciando compresion de la base mysql en  /app/backup/backup_2025-11-26_09:48:05.sql.bz2
+Uploading the file /app/backup/backup_2025-11-26_09:48:05.sql.bz2
 bye!

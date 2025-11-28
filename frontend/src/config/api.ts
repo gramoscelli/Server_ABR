@@ -98,6 +98,49 @@ export const API_ENDPOINTS = {
     CASH_RECONCILIATION_CALCULATE: (accountId: number, date: string) =>
       `/api/accounting/cash-reconciliations/calculate/${accountId}/${date}`,
   },
+
+  // Purchases module endpoints
+  PURCHASES: {
+    // Settings
+    SETTINGS: '/api/purchases/settings',
+    SETTING_BY_KEY: (key: string) => `/api/purchases/settings/${key}`,
+
+    // Supplier Categories
+    SUPPLIER_CATEGORIES: '/api/purchases/supplier-categories',
+    SUPPLIER_CATEGORY_BY_ID: (id: number) => `/api/purchases/supplier-categories/${id}`,
+
+    // Suppliers
+    SUPPLIERS: '/api/purchases/suppliers',
+    SUPPLIER_BY_ID: (id: number) => `/api/purchases/suppliers/${id}`,
+
+    // Purchase Categories
+    CATEGORIES: '/api/purchases/categories',
+    CATEGORY_BY_ID: (id: number) => `/api/purchases/categories/${id}`,
+
+    // Purchase Requests
+    REQUESTS: '/api/purchases/requests',
+    REQUEST_BY_ID: (id: number) => `/api/purchases/requests/${id}`,
+    REQUESTS_PENDING_APPROVAL: '/api/purchases/requests/pending-approval',
+    REQUEST_SUBMIT: (id: number) => `/api/purchases/requests/${id}/submit`,
+    REQUEST_APPROVE: (id: number) => `/api/purchases/requests/${id}/approve`,
+    REQUEST_REJECT: (id: number) => `/api/purchases/requests/${id}/reject`,
+    REQUEST_CANCEL: (id: number) => `/api/purchases/requests/${id}/cancel`,
+    REQUEST_GENERATE_RFQ_PDF: (id: number) => `/api/purchases/requests/${id}/generate-rfq-pdf`,
+    REQUEST_SEND_RFQ_EMAIL: (id: number) => `/api/purchases/requests/${id}/send-rfq-email`,
+    REQUEST_SEND_RFQ_WHATSAPP: (id: number) => `/api/purchases/requests/${id}/send-rfq-whatsapp`,
+
+    // Quotations
+    QUOTATIONS: '/api/purchases/quotations',
+    QUOTATION_BY_ID: (id: number) => `/api/purchases/quotations/${id}`,
+    QUOTATIONS_COMPARE: (requestId: number) => `/api/purchases/quotations/compare/${requestId}`,
+    QUOTATION_SELECT: (id: number) => `/api/purchases/quotations/${id}/select`,
+
+    // Purchase Orders
+    ORDERS: '/api/purchases/orders',
+    ORDER_BY_ID: (id: number) => `/api/purchases/orders/${id}`,
+    ORDER_STATUS: (id: number) => `/api/purchases/orders/${id}/status`,
+    ORDER_TO_EXPENSE: (id: number) => `/api/purchases/orders/${id}/to-expense`,
+  },
 } as const
 
 // HTTP Methods

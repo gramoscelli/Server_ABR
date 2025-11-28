@@ -37,8 +37,8 @@ The system uses a role-based access control (RBAC) model where each user is assi
 
 | Resource | Actions Allowed |
 |----------|----------------|
-| `users` | *(none)* |
-| `roles` | *(none)* |
+| `users`    | *(none)* |
+| `roles`    | *(none)* |
 | `api_keys` | *(none)* |
 | `library_associateds` | `*` (wildcard - all actions) |
 
