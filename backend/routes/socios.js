@@ -350,8 +350,8 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
       delete fixed.cuotas;
       delete fixed.So_Foto;
 
-      // Add to grupo
-      if (reportData[fixed.Gr_ID]) {
+      // Add to grupo (only if socio has a valid Gr_ID)
+      if (fixed.Gr_ID && reportData[fixed.Gr_ID]) {
         reportData[fixed.Gr_ID].socios.push(fixed);
         reportData[fixed.Gr_ID].totalSocios++;
         // Use grupo Gr_Cuota value, not socio's value
@@ -361,6 +361,9 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
         if (mesesAtraso !== null && mesesAtraso > 0) {
           reportData[fixed.Gr_ID].sociosMorados++;
         }
+      } else if (fixed.Gr_ID) {
+        // Log if socio has a grupo ID but grupo doesn't exist in reportData
+        console.warn(`Socio ${fixed.So_ID} has Gr_ID ${fixed.Gr_ID} but grupo not found in report data`);
       }
     });
 
