@@ -354,7 +354,8 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
       if (reportData[fixed.Gr_ID]) {
         reportData[fixed.Gr_ID].socios.push(fixed);
         reportData[fixed.Gr_ID].totalSocios++;
-        reportData[fixed.Gr_ID].totalCuota += fixed.Gr_Cuota || 0;
+        // Use grupo Gr_Cuota value, not socio's value
+        reportData[fixed.Gr_ID].totalCuota += reportData[fixed.Gr_ID].Gr_Cuota || 0;
 
         // Count morosos (socios with payment delay > 0)
         if (mesesAtraso !== null && mesesAtraso > 0) {
