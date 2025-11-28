@@ -250,18 +250,21 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
 router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin_employee', 'library_employee'), async (req, res) => {
   try {
     const { includeInactive = false } = req.query;
+    console.log('[report/por-grupo] Starting report generation, includeInactive:', includeInactive);
 
     // Get all grupos
     const grupos = await Grupo.findAll({
       attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota'],
       order: [['Gr_Nombre', 'ASC']]
     });
+    console.log('[report/por-grupo] Found', grupos.length, 'grupos');
 
     // Get all socios with their grupo and latest payment info
     const whereClause = {};
     if (includeInactive === 'false') {
       whereClause.So_Fallecido = 'Y'; // Only active socios
     }
+    console.log('[report/por-grupo] Where clause:', whereClause);
 
     const socios = await Socio.findAll({
       where: whereClause,
@@ -286,6 +289,7 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
       ],
       order: [['Gr_ID', 'ASC'], ['So_Apellido', 'ASC'], ['So_Nombre', 'ASC']]
     });
+    console.log('[report/por-grupo] Found', socios.length, 'socios');
 
     // Organize data by grupo
     const reportData = {};
@@ -369,17 +373,21 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
 
     // Convert to array, removing empty grupos
     const report = Object.values(reportData).filter(g => g.totalSocios > 0);
+    console.log('[report/por-grupo] Generated report with', report.length, 'grupos containing socios');
+
+    const summary = {
+      totalGrupos: report.length,
+      totalSocios: socios.length,
+      totalCuotaMensual: report.reduce((sum, g) => sum + g.totalCuota, 0),
+      totalMorados: report.reduce((sum, g) => sum + g.sociosMorados, 0),
+      fechaGeneracion: new Date().toISOString()
+    };
+    console.log('[report/por-grupo] Summary:', summary);
 
     res.json({
       success: true,
       data: report,
-      summary: {
-        totalGrupos: report.length,
-        totalSocios: socios.length,
-        totalCuotaMensual: report.reduce((sum, g) => sum + g.totalCuota, 0),
-        totalMorados: report.reduce((sum, g) => sum + g.sociosMorados, 0),
-        fechaGeneracion: new Date().toISOString()
-      }
+      summary
     });
   } catch (error) {
     console.error('Error generating report por grupo:', error);
