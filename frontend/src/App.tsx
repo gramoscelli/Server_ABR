@@ -28,6 +28,17 @@ const IncomesPage = lazy(() => import('@/pages/accounting/IncomesPage'))
 const TransfersPage = lazy(() => import('@/pages/accounting/TransfersPage'))
 const ReconciliationsPage = lazy(() => import('@/pages/accounting/ReconciliationsPage'))
 
+// Purchases module pages
+const PurchasesDashboardPage = lazy(() => import('@/pages/purchases/PurchasesDashboardPage'))
+const SuppliersPage = lazy(() => import('@/pages/purchases/SuppliersPage'))
+const RequestsPage = lazy(() => import('@/pages/purchases/RequestsPage'))
+const RequestDetailPage = lazy(() => import('@/pages/purchases/RequestDetailPage'))
+const NewRequestPage = lazy(() => import('@/pages/purchases/NewRequestPage'))
+const QuotationsPage = lazy(() => import('@/pages/purchases/QuotationsPage'))
+const QuotationComparePage = lazy(() => import('@/pages/purchases/QuotationComparePage'))
+const OrderDetailPage = lazy(() => import('@/pages/purchases/OrderDetailPage'))
+const PurchasesSettingsPage = lazy(() => import('@/pages/purchases/SettingsPage'))
+
 // Socios module pages
 const SociosPage = lazy(() => import('@/pages/SociosPage'))
 const SociosReportsPage = lazy(() => import('@/pages/socios/ReportsPage'))
@@ -53,6 +64,7 @@ const PendingApprovalPage = lazy(() => import('@/pages/PendingApprovalPage'))
 import { SociosLayout } from '@/components/layouts/SociosLayout'
 import { LibraryLayout } from '@/components/layouts/LibraryLayout'
 import { AccountingLayout } from '@/components/layouts/AccountingLayout'
+import { PurchasesLayout } from '@/components/layouts/PurchasesLayout'
 import { AdminModuleLayout } from '@/components/layouts/AdminModuleLayout'
 
 // Loading component for Suspense fallback
@@ -272,6 +284,118 @@ function App() {
                 <AccountingLayout>
                   <ReconciliationsPage />
                 </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+
+          {/* Purchases Module */}
+          <Route
+            path="/purchases"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <PurchasesDashboardPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/suppliers"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <SuppliersPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/requests"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <RequestsPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/requests/new"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <NewRequestPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/requests/:id/edit"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <NewRequestPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/requests/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <RequestDetailPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/quotations"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <QuotationsPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/quotations/compare/:requestId"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <QuotationComparePage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/orders/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <OrderDetailPage />
+                </PurchasesLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/purchases/settings"
+            element={
+              <ProtectedRoute requireAdmin>
+                <PurchasesLayout>
+                  <PurchasesSettingsPage />
+                </PurchasesLayout>
               </ProtectedRoute>
             }
             errorElement={<RouteErrorBoundary />}

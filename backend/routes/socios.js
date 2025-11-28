@@ -236,6 +236,169 @@ router.get('/search', authenticateTokenOrApiKey, authorizeRoles('root', 'admin_e
   }
 });
 
+// =============================================
+// REPORT ENDPOINTS
+// IMPORTANT: These must be defined BEFORE routes with :id parameters
+// =============================================
+
+/**
+ * GET /api/socios/report/por-grupo
+ * Get socios grouped by grupo with statistics
+ * Query params:
+ *   - includeInactive: whether to include inactive socios (default: false)
+ */
+router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin_employee', 'library_employee'), async (req, res) => {
+  try {
+    const { includeInactive = false } = req.query;
+    console.log('[report/por-grupo] Starting report generation, includeInactive:', includeInactive);
+
+    // Get all grupos
+    const grupos = await Grupo.findAll({
+      attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota'],
+      order: [['Gr_Nombre', 'ASC']]
+    });
+    console.log('[report/por-grupo] Found', grupos.length, 'grupos');
+
+    // Get all socios with their grupo and latest payment info
+    const whereClause = {};
+    if (includeInactive === 'false') {
+      whereClause.So_Fallecido = 'Y'; // Only active socios
+    }
+    console.log('[report/por-grupo] Where clause:', whereClause);
+
+    const socios = await Socio.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Grupo,
+          as: 'grupo',
+          attributes: ['Gr_ID', 'Gr_Nombre', 'Gr_Titulo', 'Gr_Cuota']
+        },
+        {
+          model: CobroCuota,
+          as: 'cuotas',
+          attributes: ['CC_ID', 'CC_Anio', 'CC_Mes', 'CC_Valor', 'CC_Cobrado', 'CC_FechaCobrado'],
+          where: {
+            CC_Anulado: 'N',
+            CC_Cobrado: 'Y'
+          },
+          required: false,
+          limit: 1,
+          order: [['CC_Anio', 'DESC'], ['CC_Mes', 'DESC']]
+        }
+      ],
+      order: [['Gr_ID', 'ASC'], ['So_Apellido', 'ASC'], ['So_Nombre', 'ASC']]
+    });
+    console.log('[report/por-grupo] Found', socios.length, 'socios');
+
+    // Organize data by grupo
+    const reportData = {};
+
+    grupos.forEach(grupo => {
+      const grupoData = grupo.toJSON();
+      grupoData.Gr_Nombre = fixEncoding(grupoData.Gr_Nombre);
+      grupoData.Gr_Titulo = fixEncoding(grupoData.Gr_Titulo);
+
+      reportData[grupo.Gr_ID] = {
+        ...grupoData,
+        socios: [],
+        totalSocios: 0,
+        totalCuota: 0,
+        sociosMorados: 0,
+        ultimaActualizacion: new Date().toISOString()
+      };
+    });
+
+    // Add socios to their respective grupos
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    socios.forEach(socio => {
+      const json = socio.toJSON();
+      const fixed = fixSocioEncoding(socio);
+
+      // Add grupo reference
+      if (json.grupo) {
+        fixed.grupo = {
+          Gr_ID: json.grupo.Gr_ID,
+          Gr_Nombre: fixEncoding(json.grupo.Gr_Nombre),
+          Gr_Titulo: fixEncoding(json.grupo.Gr_Titulo),
+          Gr_Cuota: json.grupo.Gr_Cuota
+        };
+      }
+
+      // Calculate payment status
+      let estadoPago = 'Sin pagos';
+      let mesesAtraso = null;
+
+      if (fixed.cuotas && fixed.cuotas.length > 0) {
+        const ultimaCuota = fixed.cuotas[0];
+        const monthsDiff = (currentYear - ultimaCuota.CC_Anio) * 12 + (currentMonth - ultimaCuota.CC_Mes);
+        mesesAtraso = monthsDiff;
+
+        if (monthsDiff === 0) {
+          estadoPago = 'Al día';
+        } else if (monthsDiff > 0) {
+          estadoPago = `${monthsDiff} mes(es) atraso`;
+        }
+
+        fixed.UltimaCuota_Anio = ultimaCuota.CC_Anio;
+        fixed.UltimaCuota_Mes = ultimaCuota.CC_Mes;
+        fixed.UltimaCuota_Valor = ultimaCuota.CC_Valor;
+        fixed.UltimaCuota_FechaCobrado = ultimaCuota.CC_FechaCobrado;
+      }
+
+      fixed.estadoPago = estadoPago;
+      fixed.mesesAtraso = mesesAtraso;
+      delete fixed.cuotas;
+      delete fixed.So_Foto;
+
+      // Add to grupo (only if socio has a valid Gr_ID)
+      if (fixed.Gr_ID && reportData[fixed.Gr_ID]) {
+        reportData[fixed.Gr_ID].socios.push(fixed);
+        reportData[fixed.Gr_ID].totalSocios++;
+        // Use grupo Gr_Cuota value, not socio's value
+        reportData[fixed.Gr_ID].totalCuota += reportData[fixed.Gr_ID].Gr_Cuota || 0;
+
+        // Count morosos (socios with payment delay > 0)
+        if (mesesAtraso !== null && mesesAtraso > 0) {
+          reportData[fixed.Gr_ID].sociosMorados++;
+        }
+      } else if (fixed.Gr_ID) {
+        // Log if socio has a grupo ID but grupo doesn't exist in reportData
+        console.warn(`Socio ${fixed.So_ID} has Gr_ID ${fixed.Gr_ID} but grupo not found in report data`);
+      }
+    });
+
+    // Convert to array, removing empty grupos
+    const report = Object.values(reportData).filter(g => g.totalSocios > 0);
+    console.log('[report/por-grupo] Generated report with', report.length, 'grupos containing socios');
+
+    const summary = {
+      totalGrupos: report.length,
+      totalSocios: socios.length,
+      totalCuotaMensual: report.reduce((sum, g) => sum + g.totalCuota, 0),
+      totalMorados: report.reduce((sum, g) => sum + g.sociosMorados, 0),
+      fechaGeneracion: new Date().toISOString()
+    };
+    console.log('[report/por-grupo] Summary:', summary);
+
+    res.json({
+      success: true,
+      data: report,
+      summary
+    });
+  } catch (error) {
+    console.error('Error generating report por grupo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al generar reporte por grupo',
+      error: error.message
+    });
+  }
+});
+
 /**
  * GET /api/socios/:id
  * Get a single socio by ID

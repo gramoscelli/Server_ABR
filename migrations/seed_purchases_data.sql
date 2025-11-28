@@ -1,0 +1,745 @@
+-- ============================================================================
+-- SEED DATA FOR PURCHASES MODULE - VERSIÓN EXTENDIDA
+-- Script para generar datos sintéticos realistas del módulo de compras
+-- - 150+ proveedores distribuidos en 10 categorías
+-- - 1500 solicitudes de compra distribuidas en 2 años
+-- - Respeta horarios: no domingos, sábados medio día
+-- - Variabilidad: días con pocas/ninguna compra y días con muchas (máx 20)
+-- - Compras > 1 mes cerradas (completed/cancelled)
+-- - Múltiples cotizaciones por solicitud (especialmente en compras grandes)
+-- - Compras grandes (>$100k) tienen 2-5 cotizaciones de diferentes proveedores
+-- ============================================================================
+
+USE accounting;
+
+-- ============================================================================
+-- LIMPIAR DATOS EXISTENTES
+-- ============================================================================
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE purchase_order_items;
+TRUNCATE TABLE purchase_orders;
+TRUNCATE TABLE quotation_items;
+TRUNCATE TABLE quotations;
+TRUNCATE TABLE purchase_request_history;
+TRUNCATE TABLE purchase_request_items;
+TRUNCATE TABLE purchase_requests;
+TRUNCATE TABLE suppliers;
+TRUNCATE TABLE supplier_categories;
+TRUNCATE TABLE purchase_categories;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================================
+-- 1. CATEGORÍAS DE PROVEEDORES
+-- ============================================================================
+INSERT INTO supplier_categories (name, description, color, order_index, is_active) VALUES
+('Papelería y Librería', 'Proveedores de artículos de papelería, útiles escolares y material de oficina', '#3B82F6', 1, TRUE),
+('Tecnología', 'Proveedores de equipos informáticos, software y servicios tecnológicos', '#8B5CF6', 2, TRUE),
+('Mantenimiento', 'Servicios de mantenimiento, limpieza y reparaciones', '#F59E0B', 3, TRUE),
+('Mobiliario', 'Proveedores de muebles y equipamiento para la biblioteca', '#10B981', 4, TRUE),
+('Servicios Profesionales', 'Contadores, abogados, consultores y otros profesionales', '#EC4899', 5, TRUE),
+('Imprenta y Diseño', 'Servicios de impresión, diseño gráfico y cartelería', '#06B6D4', 6, TRUE),
+('Alimentos y Bebidas', 'Proveedores para eventos y cafetería', '#EF4444', 7, TRUE),
+('Seguridad', 'Servicios de vigilancia, alarmas y seguridad', '#6366F1', 8, TRUE),
+('Editorial y Libros', 'Editoriales y distribuidoras de libros', '#F97316', 9, TRUE),
+('Construcción', 'Materiales y servicios de construcción y refacción', '#84CC16', 10, TRUE);
+
+-- ============================================================================
+-- 2. CATEGORÍAS DE COMPRAS
+-- ============================================================================
+INSERT INTO purchase_categories (name, parent_id, color, order_index, is_active) VALUES
+('Insumos de Oficina', NULL, '#3B82F6', 1, TRUE),
+('Equipamiento Tecnológico', NULL, '#8B5CF6', 2, TRUE),
+('Mantenimiento Edilicio', NULL, '#F59E0B', 3, TRUE),
+('Mobiliario y Equipamiento', NULL, '#10B981', 4, TRUE),
+('Servicios', NULL, '#EC4899', 5, TRUE),
+('Eventos y Actividades', NULL, '#06B6D4', 6, TRUE),
+('Biblioteca - Material', NULL, '#EF4444', 7, TRUE);
+
+-- Subcategorías
+INSERT INTO purchase_categories (name, parent_id, color, order_index, is_active) VALUES
+('Papelería', 1, '#60A5FA', 1, TRUE),
+('Útiles de oficina', 1, '#60A5FA', 2, TRUE),
+('Tóner e insumos de impresión', 1, '#60A5FA', 3, TRUE),
+('Computadoras', 2, '#A78BFA', 1, TRUE),
+('Impresoras', 2, '#A78BFA', 2, TRUE),
+('Software y licencias', 2, '#A78BFA', 3, TRUE),
+('Redes y conectividad', 2, '#A78BFA', 4, TRUE),
+('Electricidad', 3, '#FBBF24', 1, TRUE),
+('Plomería', 3, '#FBBF24', 2, TRUE),
+('Limpieza', 3, '#FBBF24', 3, TRUE),
+('Pintura', 3, '#FBBF24', 4, TRUE),
+('Escritorios y sillas', 4, '#34D399', 1, TRUE),
+('Estanterías', 4, '#34D399', 2, TRUE),
+('Iluminación', 4, '#34D399', 3, TRUE);
+
+-- ============================================================================
+-- 3. GENERACIÓN DE 150+ PROVEEDORES
+-- ============================================================================
+
+-- Proveedores de Papelería (20 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Distribuidora El Lápiz S.A.', 'El Lápiz', '30-10000000-0', 'responsable_inscripto', 1, 'Carlos Méndez', 'ventas@ellapiz.com.ar', '0341-4567890', 'Av. Pellegrini 1234', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Papelera del Centro SRL', 'Papelera Centro', '30-10000001-1', 'responsable_inscripto', 1, 'María García', 'pedidos@papeleracentro.com', '0341-4321098', 'San Martín 567', 'Rosario', 'Santa Fe', 'Contado', 4, TRUE, 1),
+('Librería Ateneo', NULL, '20-10000002-2', 'monotributista', 1, 'Juan Pérez', 'ateneo.libreria@gmail.com', '0341-156789012', 'Córdoba 890', 'Rosario', 'Santa Fe', 'Contado', 4, TRUE, 1),
+('Office Depot Argentina S.A.', 'Office Depot', '30-10000003-3', 'responsable_inscripto', 1, 'Laura Martínez', 'comercial@officedepot.com.ar', '0341-4445678', 'Av. Francia 2222', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Papelería San Martín', NULL, '20-10000004-4', 'monotributista', 1, 'Roberto Sosa', 'papelesanmartin@hotmail.com', '0341-155667788', 'San Martín 1100', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Suministros Escolares del Litoral', 'SEL', '30-10000005-5', 'responsable_inscripto', 1, 'Patricia Díaz', 'ventas@sel.com.ar', '0341-4556789', 'Rioja 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Librería Técnica Rosario', NULL, '30-10000006-6', 'responsable_inscripto', 1, 'Gustavo López', 'info@libreriatecnica.com', '0341-4667890', 'Mitre 345', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Papelería Express', NULL, '20-10000007-7', 'monotributista', 1, 'Ana Fernández', 'papelexpress@gmail.com', '0341-155778899', 'Paraguay 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Distribuidora Rosarina de Papeles', 'DRP', '30-10000008-8', 'responsable_inscripto', 1, 'Martín Ruiz', 'drp@rosario.com', '0341-4778901', 'Salta 678', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Mayorista de Librería S.A.', 'Mayorista', '30-10000009-9', 'responsable_inscripto', 1, 'Claudia Vega', 'mayorista@libreria.com.ar', '0341-4889012', 'Urquiza 1234', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1),
+('Papelería del Sol', NULL, '20-10000010-0', 'monotributista', 1, 'Diego Torres', 'papeldelsol@hotmail.com', '0341-155889900', 'Corrientes 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Insumos de Oficina Premium', 'Premium Office', '30-10000011-1', 'responsable_inscripto', 1, 'Silvia Romero', 'premium@oficina.com', '0341-4990123', 'Italia 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Librería Universitaria', NULL, '30-10000012-2', 'responsable_inscripto', 1, 'Fernando Castro', 'libuni@universidad.com', '0341-4001234', 'Bv. Oroño 2345', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Papelera Mayorista del Paraná', 'PMP', '30-10000013-3', 'responsable_inscripto', 1, 'Miguel Herrera', 'pmp@parana.com.ar', '0341-4112345', 'Entre Ríos 456', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Suministros ABC', NULL, '20-10000014-4', 'monotributista', 1, 'Raúl Benítez', 'sumabc@gmail.com', '0341-155990011', 'Tucumán 789', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Librería y Papelería Central', 'Central', '30-10000015-5', 'responsable_inscripto', 1, 'Lucía Paz', 'central@libreria.com', '0341-4223456', 'San Lorenzo 1122', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Distribuidora de Artículos Escolares', 'DAE', '30-10000016-6', 'responsable_inscripto', 1, 'Oscar Giménez', 'dae@escolares.com.ar', '0341-4334567', 'Mendoza 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Papelería Moderna', NULL, '20-10000017-7', 'monotributista', 1, 'Beatriz Silva', 'papmoderna@hotmail.com', '0341-155001122', 'Av. Belgrano 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Librería del Norte S.A.', 'Del Norte', '30-10000018-8', 'responsable_inscripto', 1, 'Adriana Molina', 'delnorte@libreria.com', '0341-4445678', 'Corrientes 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Suministros de Oficina Integral', 'SOI', '30-10000019-9', 'responsable_inscripto', 1, 'Pablo Moreno', 'soi@integral.com.ar', '0341-4556789', 'Paraguay 1234', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1);
+
+-- Proveedores de Tecnología (25 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('TecnoSur Informática S.A.', 'TecnoSur', '30-10000020-0', 'responsable_inscripto', 2, 'Alejandro Ruiz', 'alejandro@tecnosur.com.ar', '0341-4445566', 'Rioja 456', 'Rosario', 'Santa Fe', '15 días', 5, TRUE, 1),
+('Sistemas del Litoral', NULL, '30-10000021-1', 'responsable_inscripto', 2, 'Laura Fernández', 'info@sistemasdelitoral.com', '0341-4778899', 'Entre Ríos 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('CompuMax', 'CompuMax Rosario', '20-10000022-2', 'monotributista', 2, 'Diego Torres', 'compumax.ros@gmail.com', '0341-155443322', 'Mendoza 1122', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Computación Rosario S.A.', 'Compu Rosario', '30-10000023-3', 'responsable_inscripto', 2, 'Jorge Ramírez', 'ventas@compurosario.com', '0341-4667788', 'San Martín 2345', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Insumos Informáticos del Litoral', 'IIL', '30-10000024-4', 'responsable_inscripto', 2, 'Sandra Castro', 'iil@informatica.com.ar', '0341-4778899', 'Av. Francia 1234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('PC Service Rosario', NULL, '20-10000025-5', 'monotributista', 2, 'Ricardo Paz', 'pcservice@gmail.com', '0341-155554433', 'Córdoba 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Soluciones IT S.A.', 'IT Solutions', '30-10000026-6', 'responsable_inscripto', 2, 'Mariana López', 'comercial@itsolutions.com.ar', '0341-4889900', 'Rioja 890', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Tecnología Avanzada', NULL, '30-10000027-7', 'responsable_inscripto', 2, 'Gabriel Sosa', 'tecavanzada@hotmail.com', '0341-4990011', 'Mitre 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Cyber Point Rosario', NULL, '20-10000028-8', 'monotributista', 2, 'Mónica Vega', 'cyberpoint@gmail.com', '0341-155665544', 'Salta 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Informática Integral S.R.L.', 'Info Integral', '30-10000029-9', 'responsable_inscripto', 2, 'Eduardo Romero', 'info@integral.com', '0341-4001122', 'Urquiza 678', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Hardware y Software del Sur', 'H&S Sur', '30-10000030-0', 'responsable_inscripto', 2, 'Valeria Díaz', 'hssur@tecnologia.com.ar', '0341-4112233', 'Italia 1234', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1),
+('TechStore Rosario', NULL, '20-10000031-1', 'monotributista', 2, 'Lucas Moreno', 'techstore@gmail.com', '0341-155776655', 'Paraguay 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Distribuidora Tecnológica', 'DisTech', '30-10000032-2', 'responsable_inscripto', 2, 'Carolina Ruiz', 'distech@rosario.com', '0341-4223344', 'Corrientes 2345', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Computadoras del Litoral', NULL, '30-10000033-3', 'responsable_inscripto', 2, 'Sebastián López', 'compulitoral@gmail.com', '0341-4334455', 'Mendoza 456', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('PC House', NULL, '20-10000034-4', 'monotributista', 2, 'Andrea Paz', 'pchouse@hotmail.com', '0341-155887766', 'San Lorenzo 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Sistemas y Tecnología S.A.', 'SyT', '30-10000035-5', 'responsable_inscripto', 2, 'Hernán Castro', 'syt@sistemas.com.ar', '0341-4445566', 'Av. Belgrano 1234', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Redes y Comunicaciones', NULL, '30-10000036-6', 'responsable_inscripto', 2, 'Daniela Molina', 'redes@comunicaciones.com', '0341-4556677', 'Tucumán 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Digital Solutions', NULL, '20-10000037-7', 'monotributista', 2, 'Maximiliano Silva', 'digital@solutions.com', '0341-155998877', 'Entre Ríos 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Insumos PC Rosario', NULL, '30-10000038-8', 'responsable_inscripto', 2, 'Romina Benítez', 'insumospc@rosario.com', '0341-4667788', 'Rioja 567', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Tech Center S.A.', 'Tech Center', '30-10000039-9', 'responsable_inscripto', 2, 'Federico Herrera', 'techcenter@sa.com.ar', '0341-4778899', 'San Martín 1122', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Servicios Informáticos', NULL, '20-10000040-0', 'monotributista', 2, 'Natalia Moreno', 'servinform@gmail.com', '0341-155009988', 'Córdoba 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Data Systems S.R.L.', 'DataSys', '30-10000041-1', 'responsable_inscripto', 2, 'Cristian Paz', 'datasys@srl.com', '0341-4889900', 'Mitre 456', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Electrónica y Computación', 'E&C', '30-10000042-2', 'responsable_inscripto', 2, 'Soledad López', 'eyc@electronica.com.ar', '0341-4990011', 'Salta 678', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Notebook Store', NULL, '20-10000043-3', 'monotributista', 2, 'Javier Romero', 'notebook@store.com', '0341-155110099', 'Paraguay 1234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Tecnología del Paraná S.A.', 'TecParaná', '30-10000044-4', 'responsable_inscripto', 2, 'Cecilia Díaz', 'tecparana@sa.com.ar', '0341-4001122', 'Urquiza 2345', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1);
+
+-- Proveedores de Mantenimiento (20 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Servicios Integrales del Sur', 'SI Sur', '30-10000045-5', 'responsable_inscripto', 3, 'Roberto Sánchez', 'contacto@sisur.com.ar', '0341-4112233', 'Oroño 789', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Electricidad Moderna SRL', NULL, '30-10000046-6', 'responsable_inscripto', 3, 'Martín López', 'electricidadmoderna@hotmail.com', '0341-4998877', 'Salta 345', 'Rosario', 'Santa Fe', 'Contado', 5, TRUE, 1),
+('Plomería Express', NULL, '20-10000047-7', 'monotributista', 3, 'Oscar Giménez', 'plomeriaexpress@gmail.com', '0341-156112233', 'Tucumán 678', 'Rosario', 'Santa Fe', 'Contado', 4, TRUE, 1),
+('Mantenimiento Edilicio Rosario', 'MER', '30-10000048-8', 'responsable_inscripto', 3, 'Graciela Vega', 'mer@rosario.com.ar', '0341-4223344', 'Av. Francia 1234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Limpieza Total S.A.', 'Limpieza Total', '30-10000049-9', 'responsable_inscripto', 3, 'Alberto Castro', 'limptotal@sa.com', '0341-4334455', 'Rioja 890', 'Rosario', 'Santa Fe', '15 días', 5, TRUE, 1),
+('Gas y Plomería del Litoral', NULL, '20-10000050-0', 'monotributista', 3, 'Ramiro Paz', 'gasplomeria@gmail.com', '0341-155221100', 'Córdoba 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Electricistas Asociados', NULL, '30-10000051-1', 'responsable_inscripto', 3, 'Silvia Romero', 'elecasoc@rosario.com', '0341-4445566', 'San Martín 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Servicios de Limpieza Integral', 'SLI', '30-10000052-2', 'responsable_inscripto', 3, 'Mario Díaz', 'sli@limpieza.com.ar', '0341-4556677', 'Mitre 456', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Pinturería del Centro', NULL, '20-10000053-3', 'monotributista', 3, 'Estela López', 'pintcentro@hotmail.com', '0341-155332211', 'Salta 678', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Refacciones y Mantenimiento S.R.L.', 'R&M', '30-10000054-4', 'responsable_inscripto', 3, 'Daniel Moreno', 'rym@srl.com', '0341-4667788', 'Urquiza 1234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Instalaciones Eléctricas', NULL, '30-10000055-5', 'responsable_inscripto', 3, 'Adriana Silva', 'instalelec@gmail.com', '0341-4778899', 'Italia 890', 'Rosario', 'Santa Fe', '15 días', 5, TRUE, 1),
+('Plomero a Domicilio', NULL, '20-10000056-6', 'monotributista', 3, 'Carlos Benítez', 'plomerodom@hotmail.com', '0341-155443322', 'Paraguay 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Higiene y Mantenimiento S.A.', 'H&M', '30-10000057-7', 'responsable_inscripto', 3, 'Mónica Herrera', 'hym@higiene.com.ar', '0341-4889900', 'Corrientes 567', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Aire Acondicionado del Sur', NULL, '30-10000058-8', 'responsable_inscripto', 3, 'Gustavo Paz', 'airedelsur@gmail.com', '0341-4990011', 'Mendoza 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Servicios de Gasista', NULL, '20-10000059-9', 'monotributista', 3, 'Laura Castro', 'servgasista@hotmail.com', '0341-155554433', 'San Lorenzo 1234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Mantenimiento Preventivo S.A.', 'MPS', '30-10000060-0', 'responsable_inscripto', 3, 'Fernando Molina', 'mps@preventivo.com', '0341-4001122', 'Av. Belgrano 567', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Reparaciones en General', NULL, '30-10000061-1', 'responsable_inscripto', 3, 'Patricia López', 'reparagen@gmail.com', '0341-4112233', 'Tucumán 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Pintores Profesionales', NULL, '20-10000062-2', 'monotributista', 3, 'Jorge Romero', 'pintprof@hotmail.com', '0341-155665544', 'Entre Ríos 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Construcciones y Refacciones', 'C&R', '30-10000063-3', 'responsable_inscripto', 3, 'Claudia Díaz', 'cyr@construcciones.com', '0341-4223344', 'Rioja 678', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Servicios Técnicos Rosario', NULL, '30-10000064-4', 'responsable_inscripto', 3, 'Ricardo Paz', 'servtec@rosario.com.ar', '0341-4334455', 'San Martín 1122', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1);
+
+-- Proveedores de Mobiliario (15 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Muebles Oficina Plus', 'Oficina Plus', '30-10000065-5', 'responsable_inscripto', 4, 'Patricia Molina', 'ventas@oficinaplus.com.ar', '0341-4556677', 'Av. Francia 2345', 'Rosario', 'Santa Fe', '60 días', 4, TRUE, 1),
+('Estanterías Metálicas Rosario', 'EMR', '30-10000066-6', 'responsable_inscripto', 4, 'Fernando Castro', 'emr.rosario@gmail.com', '0341-4889900', 'Av. Circunvalación 5678', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Mobiliario para Bibliotecas S.A.', 'MobiBiblio', '30-10000067-7', 'responsable_inscripto', 4, 'Silvia López', 'mobibiblio@sa.com.ar', '0341-4667788', 'Urquiza 1234', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1),
+('Fábrica de Muebles del Sur', NULL, '30-10000068-8', 'responsable_inscripto', 4, 'Alberto Romero', 'fabmuebles@sur.com', '0341-4778899', 'Rioja 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Sillas y Escritorios Rosario', NULL, '20-10000069-9', 'monotributista', 4, 'Mariana Díaz', 'sillasescrit@gmail.com', '0341-155776655', 'Córdoba 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Equipamiento de Oficina S.R.L.', 'Equip Oficina', '30-10000070-0', 'responsable_inscripto', 4, 'Gustavo Paz', 'equipofic@srl.com', '0341-4889900', 'San Martín 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Estanterías y Archivos', NULL, '30-10000071-1', 'responsable_inscripto', 4, 'Carolina Castro', 'estantarch@rosario.com', '0341-4990011', 'Mitre 456', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Mueblería Central', NULL, '20-10000072-2', 'monotributista', 4, 'Diego Molina', 'mueblecentral@hotmail.com', '0341-155887766', 'Salta 678', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Mobiliario Empresarial S.A.', 'Mobemp', '30-10000073-3', 'responsable_inscripto', 4, 'Valeria López', 'mobemp@empresarial.com', '0341-4001122', 'Urquiza 2345', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Fabricantes de Estanterías', NULL, '30-10000074-4', 'responsable_inscripto', 4, 'Roberto Romero', 'fabestant@gmail.com', '0341-4112233', 'Italia 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Muebles de Oficina Modernos', NULL, '20-10000075-5', 'monotributista', 4, 'Andrea Díaz', 'mueblemoderno@hotmail.com', '0341-155998877', 'Paraguay 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Equipamiento Integral', NULL, '30-10000076-6', 'responsable_inscripto', 4, 'Martín Paz', 'equipintegral@rosario.com', '0341-4223344', 'Corrientes 567', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Fábrica de Sillas del Litoral', NULL, '30-10000077-7', 'responsable_inscripto', 4, 'Cecilia Castro', 'fabsillas@litoral.com', '0341-4334455', 'Mendoza 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Muebles para Instituciones', NULL, '20-10000078-8', 'monotributista', 4, 'Lucas Molina', 'muebinst@gmail.com', '0341-155009988', 'San Lorenzo 1234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Equipamiento y Mobiliario S.A.', 'E&M', '30-10000079-9', 'responsable_inscripto', 4, 'Daniela López', 'eym@equipamiento.com.ar', '0341-4445566', 'Av. Belgrano 567', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1);
+
+-- Proveedores de Servicios Profesionales (15 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Estudio Contable Asociados', NULL, '30-10000080-0', 'responsable_inscripto', 5, 'Dra. Ana Martínez', 'estudio@contablesasociados.com', '0341-4223344', 'Mitre 123', 'Rosario', 'Santa Fe', '15 días', 5, TRUE, 1),
+('Estudio Jurídico Ríos & Asoc.', NULL, '30-10000081-1', 'responsable_inscripto', 5, 'Dr. Eduardo Ríos', 'info@estudiorios.com.ar', '0341-4334455', 'San Lorenzo 456', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Consultoría Empresarial S.A.', 'ConsulEmp', '30-10000082-2', 'responsable_inscripto', 5, 'Lic. Mariana López', 'consulemp@sa.com.ar', '0341-4445566', 'Urquiza 789', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Auditoría y Asesoramiento', NULL, '30-10000083-3', 'responsable_inscripto', 5, 'Cr. Roberto Castro', 'auditasessor@gmail.com', '0341-4556677', 'Rioja 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Estudio Contable del Sur', NULL, '20-10000084-4', 'monotributista', 5, 'Cont. Laura Paz', 'estudiosur@hotmail.com', '0341-155443322', 'Córdoba 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Abogados y Asociados', NULL, '30-10000085-5', 'responsable_inscripto', 5, 'Dr. Gustavo Romero', 'abogasoc@rosario.com', '0341-4667788', 'San Martín 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Asesoría Tributaria S.R.L.', 'AseTrib', '30-10000086-6', 'responsable_inscripto', 5, 'Cr. Patricia Díaz', 'asetrib@srl.com', '0341-4778899', 'Mitre 1234', 'Rosario', 'Santa Fe', '15 días', 5, TRUE, 1),
+('Consultores Asociados', NULL, '20-10000087-7', 'monotributista', 5, 'Lic. Diego Molina', 'consulasoc@gmail.com', '0341-155554433', 'Salta 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Servicios Legales Integrales', NULL, '30-10000088-8', 'responsable_inscripto', 5, 'Dra. Carolina López', 'servlegales@rosario.com', '0341-4889900', 'Urquiza 567', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Contadores Públicos del Litoral', 'CPL', '30-10000089-9', 'responsable_inscripto', 5, 'Cr. Fernando Paz', 'cpl@contadores.com.ar', '0341-4990011', 'Italia 678', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Asesoría Legal y Contable', NULL, '20-10000090-0', 'monotributista', 5, 'Cont. Mónica Castro', 'aselegcont@hotmail.com', '0341-155665544', 'Paraguay 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Estudio Jurídico Integral', NULL, '30-10000091-1', 'responsable_inscripto', 5, 'Dr. Martín Romero', 'estjurint@gmail.com', '0341-4001122', 'Corrientes 1234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Servicios Profesionales S.A.', 'ServProf', '30-10000092-2', 'responsable_inscripto', 5, 'Lic. Valeria Díaz', 'servprof@sa.com.ar', '0341-4112233', 'Mendoza 567', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Abogacía Empresarial', NULL, '20-10000093-3', 'monotributista', 5, 'Dr. Ricardo López', 'abogemp@hotmail.com', '0341-155776655', 'San Lorenzo 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Consultoría y Auditoría S.R.L.', 'C&A', '30-10000094-4', 'responsable_inscripto', 5, 'Cr. Cecilia Paz', 'cya@consultoria.com', '0341-4223344', 'Av. Belgrano 1234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1);
+
+-- Proveedores de Imprenta y Diseño (15 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Gráfica del Paraná', NULL, '30-10000095-5', 'responsable_inscripto', 6, 'Silvia Romero', 'graficaparana@gmail.com', '0341-4667788', 'Urquiza 789', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Imprenta Rápida SRL', 'La Rápida', '30-10000096-6', 'responsable_inscripto', 6, 'Miguel Herrera', 'larapida@imprenta.com', '0341-4778800', 'Corrientes 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Diseño e Impresión S.A.', 'DiseñoPrint', '30-10000097-7', 'responsable_inscripto', 6, 'Andrea Castro', 'disenioprint@sa.com.ar', '0341-4556677', 'San Martín 567', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Gráfica Rosarina', NULL, '30-10000098-8', 'responsable_inscripto', 6, 'Carlos López', 'grafrosarina@gmail.com', '0341-4667788', 'Rioja 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Imprenta Digital del Sur', NULL, '20-10000099-9', 'monotributista', 6, 'Laura Paz', 'impdelsur@hotmail.com', '0341-155443322', 'Córdoba 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Diseño Gráfico Integral', 'DGI', '30-10000100-0', 'responsable_inscripto', 6, 'Gustavo Romero', 'dgi@diseno.com.ar', '0341-4778899', 'Mitre 456', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Impresiones y Cartelería', NULL, '30-10000101-1', 'responsable_inscripto', 6, 'Patricia Díaz', 'impycartel@gmail.com', '0341-4889900', 'Salta 678', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Taller Gráfico Rosario', NULL, '20-10000102-2', 'monotributista', 6, 'Diego Molina', 'tallergraf@hotmail.com', '0341-155554433', 'Urquiza 1234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Publicidad y Diseño S.A.', 'Pub&Diseño', '30-10000103-3', 'responsable_inscripto', 6, 'Carolina López', 'pubydiseno@sa.com.ar', '0341-4990011', 'Italia 890', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Imprenta Offset del Litoral', NULL, '30-10000104-4', 'responsable_inscripto', 6, 'Fernando Paz', 'offsetlitoral@gmail.com', '0341-4001122', 'Paraguay 567', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Diseño y Comunicación', NULL, '20-10000105-5', 'monotributista', 6, 'Mónica Castro', 'diseniocom@hotmail.com', '0341-155665544', 'Corrientes 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Gráfica Moderna S.R.L.', 'Graf Moderna', '30-10000106-6', 'responsable_inscripto', 6, 'Martín Romero', 'grafmoderna@srl.com', '0341-4112233', 'Mendoza 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Impresiones Digitales', NULL, '30-10000107-7', 'responsable_inscripto', 6, 'Valeria Díaz', 'impdigitales@rosario.com', '0341-4223344', 'San Lorenzo 456', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Arte Gráfico', NULL, '20-10000108-8', 'monotributista', 6, 'Ricardo López', 'artegrafico@gmail.com', '0341-155776655', 'Av. Belgrano 678', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Servicios Gráficos S.A.', 'ServGraf', '30-10000109-9', 'responsable_inscripto', 6, 'Cecilia Paz', 'servgraf@sa.com.ar', '0341-4334455', 'Tucumán 890', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1);
+
+-- Proveedores de Alimentos y Bebidas (10 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Catering Eventos del Sur', NULL, '30-10000110-0', 'responsable_inscripto', 7, 'Claudia Vega', 'eventos@cateringsur.com', '0341-4889911', 'Paraguay 567', 'Rosario', 'Santa Fe', 'Seña 50%', 4, TRUE, 1),
+('Distribuidora de Bebidas Roma', 'Roma Bebidas', '30-10000111-1', 'responsable_inscripto', 7, 'Raúl Benítez', 'romabebidas@hotmail.com', '0341-4990022', 'Italia 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Catering Premium S.A.', 'Premium Catering', '30-10000112-2', 'responsable_inscripto', 7, 'Silvia Castro', 'premium@catering.com.ar', '0341-4556677', 'Urquiza 1234', 'Rosario', 'Santa Fe', '50% seña', 5, TRUE, 1),
+('Servicios de Lunch', NULL, '20-10000113-3', 'monotributista', 7, 'Alberto López', 'servlunch@gmail.com', '0341-155443322', 'Córdoba 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Eventos y Catering del Litoral', 'ECL', '30-10000114-4', 'responsable_inscripto', 7, 'Mariana Paz', 'ecl@eventos.com', '0341-4667788', 'San Martín 890', 'Rosario', 'Santa Fe', 'Seña 50%', 4, TRUE, 1),
+('Distribuidora de Alimentos', NULL, '30-10000115-5', 'responsable_inscripto', 7, 'Gustavo Romero', 'distalimentos@rosario.com', '0341-4778899', 'Rioja 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Catering Express', NULL, '20-10000116-6', 'monotributista', 7, 'Patricia Díaz', 'cateringexp@hotmail.com', '0341-155554433', 'Mitre 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Bebidas y Snacks del Sur', NULL, '30-10000117-7', 'responsable_inscripto', 7, 'Diego Molina', 'bebidasnacks@gmail.com', '0341-4889900', 'Salta 678', 'Rosario', 'Santa Fe', '15 días', 3, TRUE, 1),
+('Eventos Gastronómicos S.A.', 'EventGastro', '30-10000118-8', 'responsable_inscripto', 7, 'Carolina López', 'eventgastro@sa.com.ar', '0341-4990011', 'Urquiza 2345', 'Rosario', 'Santa Fe', 'Seña 50%', 5, TRUE, 1),
+('Cafetería Institucional', NULL, '20-10000119-9', 'monotributista', 7, 'Fernando Paz', 'cafeinst@hotmail.com', '0341-155665544', 'Paraguay 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1);
+
+-- Proveedores de Seguridad (10 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Seguridad Integral S.A.', 'SEG-INT', '30-10000120-0', 'responsable_inscripto', 8, 'Gustavo Paz', 'comercial@segint.com.ar', '0341-4001122', 'Av. Belgrano 1234', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Vigilancia y Monitoreo del Sur', 'V&M Sur', '30-10000121-1', 'responsable_inscripto', 8, 'Roberto Castro', 'vymsur@seguridad.com', '0341-4112233', 'Rioja 567', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Sistemas de Alarmas', NULL, '30-10000122-2', 'responsable_inscripto', 8, 'Silvia López', 'sistalarmas@rosario.com', '0341-4223344', 'Córdoba 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Seguridad Privada Rosario', NULL, '20-10000123-3', 'monotributista', 8, 'Alberto Romero', 'segprivros@gmail.com', '0341-155443322', 'San Martín 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Monitoreo y Custodia S.A.', 'M&C', '30-10000124-4', 'responsable_inscripto', 8, 'Mariana Díaz', 'myc@monitoreo.com.ar', '0341-4334455', 'Mitre 456', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Servicios de Vigilancia', NULL, '30-10000125-5', 'responsable_inscripto', 8, 'Gustavo Paz', 'servvigilancia@gmail.com', '0341-4445566', 'Salta 678', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Alarmas y Seguridad del Litoral', NULL, '20-10000126-6', 'monotributista', 8, 'Patricia Molina', 'alarmlitoral@hotmail.com', '0341-155554433', 'Urquiza 1234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Tecnología en Seguridad S.R.L.', 'TecSeg', '30-10000127-7', 'responsable_inscripto', 8, 'Diego López', 'tecseg@srl.com', '0341-4556677', 'Italia 890', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Custodios y Vigiladores', NULL, '30-10000128-8', 'responsable_inscripto', 8, 'Carolina Paz', 'custvigilad@rosario.com', '0341-4667788', 'Paraguay 567', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Seguridad Electrónica', NULL, '20-10000129-9', 'monotributista', 8, 'Fernando Castro', 'segelec@gmail.com', '0341-155665544', 'Corrientes 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1);
+
+-- Proveedores de Editorial y Libros (20 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Editorial Sudamericana S.A.', 'Sudamericana', '30-10000130-0', 'responsable_inscripto', 9, 'Mónica Romero', 'comercial@edsudamericana.com', '0341-4667788', 'Urquiza 1234', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Distribuidora de Libros del Litoral', 'DLL', '30-10000131-1', 'responsable_inscripto', 9, 'Martín Díaz', 'dll@libros.com.ar', '0341-4778899', 'San Martín 567', 'Rosario', 'Santa Fe', '45 días', 4, TRUE, 1),
+('Editorial Planeta Argentina', 'Planeta', '30-10000132-2', 'responsable_inscripto', 9, 'Valeria López', 'planeta@editorial.com', '0341-4889900', 'Rioja 890', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Libros Universitarios S.A.', 'LibUni', '30-10000133-3', 'responsable_inscripto', 9, 'Ricardo Paz', 'libuni@universitarios.com', '0341-4990011', 'Córdoba 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Distribuidora Bertran', NULL, '30-10000134-4', 'responsable_inscripto', 9, 'Cecilia Castro', 'bertran@distribuye.com.ar', '0341-4001122', 'Mitre 456', 'Rosario', 'Santa Fe', '45 días', 5, TRUE, 1),
+('Editorial Kapelusz', NULL, '30-10000135-5', 'responsable_inscripto', 9, 'Lucas Molina', 'kapelusz@editorial.com', '0341-4112233', 'Salta 678', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Libros del Sur', NULL, '20-10000136-6', 'monotributista', 9, 'Daniela López', 'librosdelsur@gmail.com', '0341-155443322', 'Urquiza 2345', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Editorial Santillana', NULL, '30-10000137-7', 'responsable_inscripto', 9, 'Natalia Romero', 'santillana@editorial.com', '0341-4223344', 'Italia 890', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Distribuidora Cúspide', 'Cúspide', '30-10000138-8', 'responsable_inscripto', 9, 'Javier Díaz', 'cuspide@libros.com.ar', '0341-4334455', 'Paraguay 567', 'Rosario', 'Santa Fe', '45 días', 4, TRUE, 1),
+('Editorial Siglo XXI', NULL, '30-10000139-9', 'responsable_inscripto', 9, 'Soledad Paz', 'siglo21@editorial.com', '0341-4445566', 'Corrientes 890', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Libros Técnicos y Científicos', NULL, '20-10000140-0', 'monotributista', 9, 'Cristian Castro', 'librostec@hotmail.com', '0341-155554433', 'Mendoza 234', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Editorial Estrada', NULL, '30-10000141-1', 'responsable_inscripto', 9, 'Andrea Molina', 'estrada@editorial.com.ar', '0341-4556677', 'San Lorenzo 456', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Distribuidora Yenny', 'Yenny', '30-10000142-2', 'responsable_inscripto', 9, 'Pablo López', 'yenny@libros.com', '0341-4667788', 'Av. Belgrano 678', 'Rosario', 'Santa Fe', '45 días', 4, TRUE, 1),
+('Editorial Aique', NULL, '30-10000143-3', 'responsable_inscripto', 9, 'Romina Romero', 'aique@editorial.com', '0341-4778899', 'Tucumán 890', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Libros Infantiles S.A.', 'LibInf', '30-10000144-4', 'responsable_inscripto', 9, 'Federico Díaz', 'libinf@infantiles.com.ar', '0341-4889900', 'Entre Ríos 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Editorial Norma', NULL, '20-10000145-5', 'monotributista', 9, 'Maximiliano Paz', 'norma@editorial.com', '0341-155665544', 'Rioja 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Distribuidora de Literatura', NULL, '30-10000146-6', 'responsable_inscripto', 9, 'Sebastián Castro', 'distliteratura@gmail.com', '0341-4990011', 'San Martín 1122', 'Rosario', 'Santa Fe', '45 días', 4, TRUE, 1),
+('Editorial Alfaguara', NULL, '30-10000147-7', 'responsable_inscripto', 9, 'Hernán Molina', 'alfaguara@editorial.com', '0341-4001122', 'Córdoba 890', 'Rosario', 'Santa Fe', '60 días', 5, TRUE, 1),
+('Libros de Texto S.A.', 'LibTexto', '30-10000148-8', 'responsable_inscripto', 9, 'Adriana López', 'libtexto@sa.com.ar', '0341-4112233', 'Mitre 234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Editorial del Sur', NULL, '20-10000149-9', 'monotributista', 9, 'Gabriel Romero', 'edelsur@hotmail.com', '0341-155776655', 'Salta 456', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1);
+
+-- Proveedores de Construcción (10 proveedores)
+INSERT INTO suppliers (business_name, trade_name, cuit, tax_condition, category_id, contact_name, email, phone, address, city, province, payment_terms, rating, is_active, created_by) VALUES
+('Materiales de Construcción del Sur', 'MatSur', '30-10000150-0', 'responsable_inscripto', 10, 'Roberto Díaz', 'matsur@construccion.com', '0341-4223344', 'Urquiza 1234', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Corralón El Constructor', NULL, '30-10000151-1', 'responsable_inscripto', 10, 'Silvia Paz', 'constructor@corralon.com.ar', '0341-4334455', 'Av. Circunvalación 2345', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Hierros y Materiales S.A.', 'H&M', '30-10000152-2', 'responsable_inscripto', 10, 'Alberto Castro', 'hierrosmat@sa.com.ar', '0341-4445566', 'Rioja 567', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Construcción y Refacciones', NULL, '20-10000153-3', 'monotributista', 10, 'Mariana Molina', 'constrefacc@gmail.com', '0341-155443322', 'San Martín 890', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Pinturería del Centro', NULL, '30-10000154-4', 'responsable_inscripto', 10, 'Gustavo López', 'pintcentro@rosario.com', '0341-4556677', 'Córdoba 234', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Materiales para Obra', NULL, '30-10000155-5', 'responsable_inscripto', 10, 'Patricia Romero', 'matobra@construccion.com', '0341-4667788', 'Mitre 456', 'Rosario', 'Santa Fe', '30 días', 4, TRUE, 1),
+('Corralón del Litoral', NULL, '20-10000156-6', 'monotributista', 10, 'Diego Díaz', 'corralonlit@hotmail.com', '0341-155554433', 'Salta 678', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1),
+('Cemento y Ladrillos S.A.', 'C&L', '30-10000157-7', 'responsable_inscripto', 10, 'Carolina Paz', 'cylsa@cemento.com.ar', '0341-4778899', 'Urquiza 2345', 'Rosario', 'Santa Fe', '30 días', 5, TRUE, 1),
+('Aberturas y Vidrios', NULL, '30-10000158-8', 'responsable_inscripto', 10, 'Fernando Castro', 'abertvidrios@rosario.com', '0341-4889900', 'Italia 890', 'Rosario', 'Santa Fe', '15 días', 4, TRUE, 1),
+('Materiales de Obra Express', NULL, '20-10000159-9', 'monotributista', 10, 'Mónica Molina', 'matobraexp@gmail.com', '0341-155665544', 'Paraguay 567', 'Rosario', 'Santa Fe', 'Contado', 3, TRUE, 1);
+
+-- ============================================================================
+-- 4. GENERACIÓN DE 1500 SOLICITUDES DE COMPRA (usando procedimiento)
+-- ============================================================================
+
+DELIMITER //
+
+DROP PROCEDURE IF EXISTS GeneratePurchaseRequests//
+
+CREATE PROCEDURE GeneratePurchaseRequests()
+BEGIN
+    -- Declaraciones para generación de solicitudes
+    DECLARE i INT DEFAULT 1;
+    DECLARE request_date DATE;
+    DECLARE day_of_week INT;
+    DECLARE requests_per_day INT;
+    DECLARE status_val VARCHAR(50);
+    DECLARE priority_val VARCHAR(20);
+    DECLARE category_val INT;
+    DECLARE supplier_val INT;
+    DECLARE amount_val DECIMAL(10,2);
+    DECLARE req_id INT;
+    DECLARE random_val FLOAT;
+    DECLARE start_date DATE DEFAULT DATE_SUB(CURDATE(), INTERVAL 2 YEAR);
+
+    -- Declaraciones para generación de cotizaciones
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE current_req_id INT;
+    DECLARE current_amount DECIMAL(10,2);
+    DECLARE num_quotations INT;
+    DECLARE quot_idx INT;
+    DECLARE quot_supplier_id INT;
+    DECLARE quot_amount DECIMAL(10,2);
+    DECLARE quot_id INT;
+
+    -- Declaraciones para generación de órdenes de compra
+    DECLARE done_orders INT DEFAULT FALSE;
+    DECLARE current_quot_id INT;
+    DECLARE current_quot_request_id INT;
+    DECLARE current_quot_supplier_id INT;
+    DECLARE current_quot_subtotal DECIMAL(15,2);
+    DECLARE current_quot_tax DECIMAL(15,2);
+    DECLARE current_quot_total DECIMAL(15,2);
+    DECLARE current_quot_payment_terms VARCHAR(255);
+    DECLARE current_quot_delivery_time VARCHAR(100);
+    DECLARE order_id INT;
+    DECLARE order_number_val VARCHAR(20);
+    DECLARE order_status_val VARCHAR(50);
+
+    -- Cursor para iterar sobre solicitudes
+    DECLARE req_cursor CURSOR FOR
+        SELECT id, estimated_amount
+        FROM purchase_requests
+        WHERE status IN ('in_quotation', 'quotation_received', 'in_evaluation', 'order_created', 'completed')
+        ORDER BY id;
+
+    -- Cursor para generar órdenes de compra
+    DECLARE order_cursor CURSOR FOR
+        SELECT
+            q.id,
+            q.purchase_request_id,
+            q.supplier_id,
+            q.subtotal,
+            q.tax_amount,
+            q.total_amount,
+            q.payment_terms,
+            q.delivery_time
+        FROM quotations q
+        WHERE q.status = 'selected'
+        ORDER BY q.id;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND
+    BEGIN
+        IF NOT done THEN
+            SET done = TRUE;
+        ELSE
+            SET done_orders = TRUE;
+        END IF;
+    END;
+
+    -- Limpiar datos existentes del módulo de compras
+    SET FOREIGN_KEY_CHECKS = 0;
+    TRUNCATE TABLE purchase_order_items;
+    TRUNCATE TABLE purchase_orders;
+    TRUNCATE TABLE quotation_items;
+    TRUNCATE TABLE quotations;
+    TRUNCATE TABLE purchase_request_history;
+    TRUNCATE TABLE purchase_request_items;
+    TRUNCATE TABLE purchase_requests;
+    SET FOREIGN_KEY_CHECKS = 1;
+
+    WHILE i <= 1500 DO
+        -- Generar fecha aleatoria en los últimos 2 años
+        SET request_date = DATE_ADD(start_date, INTERVAL FLOOR(RAND() * 730) DAY);
+        SET day_of_week = DAYOFWEEK(request_date); -- 1=Domingo, 7=Sábado
+
+        -- Saltar domingos
+        IF day_of_week = 1 THEN
+            SET request_date = DATE_ADD(request_date, INTERVAL 1 DAY);
+            SET day_of_week = 2; -- Lunes
+        END IF;
+
+        -- Para sábados, limitar cantidad (trabajamos medio día)
+        IF day_of_week = 7 THEN
+            SET requests_per_day = FLOOR(1 + RAND() * 5); -- Máximo 5 solicitudes
+        ELSE
+            -- Entre semana, variabilidad: 0-20 solicitudes
+            SET random_val = RAND();
+            IF random_val < 0.15 THEN
+                SET requests_per_day = 0; -- 15% de días sin compras
+            ELSEIF random_val < 0.30 THEN
+                SET requests_per_day = FLOOR(1 + RAND() * 3); -- 15% días con pocas (1-3)
+            ELSEIF random_val < 0.75 THEN
+                SET requests_per_day = FLOOR(4 + RAND() * 8); -- 45% días normales (4-12)
+            ELSE
+                SET requests_per_day = FLOOR(13 + RAND() * 8); -- 25% días con muchas (13-20)
+            END IF;
+        END IF;
+
+        -- Si el día tiene solicitudes
+        IF requests_per_day > 0 AND i <= 1500 THEN
+            -- Generar solicitud
+            SET category_val = 8 + FLOOR(RAND() * 14); -- Categorías 8-21 (subcategorías)
+            SET supplier_val = 1 + FLOOR(RAND() * 150); -- Proveedor aleatorio
+            SET amount_val = ROUND(5000 + RAND() * 495000, 2); -- Monto entre $5.000 y $500.000
+
+            -- Estado aleatorio con distribución realista
+            SET random_val = RAND();
+            IF random_val < 0.05 THEN
+                SET status_val = 'draft';
+            ELSEIF random_val < 0.10 THEN
+                SET status_val = 'pending_approval';
+            ELSEIF random_val < 0.15 THEN
+                SET status_val = 'rejected';
+            ELSEIF random_val < 0.20 THEN
+                SET status_val = 'cancelled';
+            ELSEIF random_val < 0.30 THEN
+                SET status_val = 'approved';
+            ELSEIF random_val < 0.40 THEN
+                SET status_val = 'in_quotation';
+            ELSEIF random_val < 0.50 THEN
+                SET status_val = 'quotation_received';
+            ELSEIF random_val < 0.60 THEN
+                SET status_val = 'in_evaluation';
+            ELSEIF random_val < 0.75 THEN
+                SET status_val = 'order_created';
+            ELSE
+                SET status_val = 'completed';
+            END IF;
+
+            -- Prioridad aleatoria
+            SET random_val = RAND();
+            IF random_val < 0.15 THEN
+                SET priority_val = 'urgent';
+            ELSEIF random_val < 0.35 THEN
+                SET priority_val = 'high';
+            ELSEIF random_val < 0.85 THEN
+                SET priority_val = 'normal';
+            ELSE
+                SET priority_val = 'low';
+            END IF;
+
+            -- Insertar solicitud
+            INSERT INTO purchase_requests
+            (request_number, title, description, category_id, estimated_amount, currency,
+             purchase_type, priority, status, preferred_supplier_id, requested_by,
+             approved_by, approved_at, created_at, updated_at)
+            VALUES
+            (CONCAT('SOL-', YEAR(request_date), '-', LPAD(i, 4, '0')),
+             CONCAT('Compra ', i, ' - ', (SELECT name FROM purchase_categories WHERE id = category_val LIMIT 1)),
+             CONCAT('Solicitud de compra generada automáticamente para ', (SELECT name FROM purchase_categories WHERE id = category_val LIMIT 1)),
+             category_val,
+             amount_val,
+             'ARS',
+             IF(amount_val > 100000, 'price_competition', 'direct'),
+             priority_val,
+             status_val,
+             supplier_val,
+             1,
+             IF(status_val IN ('approved', 'in_quotation', 'quotation_received', 'in_evaluation', 'order_created', 'completed'), 1, NULL),
+             IF(status_val IN ('approved', 'in_quotation', 'quotation_received', 'in_evaluation', 'order_created', 'completed'), request_date, NULL),
+             request_date,
+             request_date);
+
+            SET req_id = LAST_INSERT_ID();
+
+            -- Agregar 1-5 items a la solicitud
+            INSERT INTO purchase_request_items (request_id, description, quantity, unit, estimated_unit_price, order_index)
+            VALUES
+            (req_id, CONCAT('Item 1 - ', i), FLOOR(1 + RAND() * 50), 'unidad', ROUND(amount_val * 0.4, 2), 1),
+            (req_id, CONCAT('Item 2 - ', i), FLOOR(1 + RAND() * 30), 'unidad', ROUND(amount_val * 0.3, 2), 2),
+            (req_id, CONCAT('Item 3 - ', i), FLOOR(1 + RAND() * 20), 'unidad', ROUND(amount_val * 0.2, 2), 3);
+
+            -- Agregar historial
+            INSERT INTO purchase_request_history (purchase_request_id, action, from_status, to_status, user_id, created_at)
+            VALUES (req_id, 'created', NULL, 'draft', 1, request_date);
+
+            IF status_val != 'draft' THEN
+                INSERT INTO purchase_request_history (purchase_request_id, action, from_status, to_status, user_id, created_at)
+                VALUES (req_id, 'submitted', 'draft', 'pending_approval', 1, DATE_ADD(request_date, INTERVAL 1 DAY));
+            END IF;
+
+            IF status_val IN ('approved', 'in_quotation', 'quotation_received', 'in_evaluation', 'order_created', 'completed') THEN
+                INSERT INTO purchase_request_history (purchase_request_id, action, from_status, to_status, user_id, created_at)
+                VALUES (req_id, 'approved', 'pending_approval', 'approved', 1, DATE_ADD(request_date, INTERVAL 2 DAY));
+            END IF;
+
+            SET i = i + 1;
+        END IF;
+    END WHILE;
+
+    -- ========================================================================
+    -- CERRAR COMPRAS DE MÁS DE 1 MES
+    -- ========================================================================
+    UPDATE purchase_requests
+    SET status = IF(RAND() < 0.85, 'completed', 'cancelled'),
+        updated_at = DATE_ADD(created_at, INTERVAL FLOOR(5 + RAND() * 20) DAY)
+    WHERE created_at < DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+      AND status NOT IN ('completed', 'cancelled');
+
+    -- ========================================================================
+    -- GENERAR COTIZACIONES
+    -- ========================================================================
+    -- Para solicitudes aprobadas, generar cotizaciones
+    OPEN req_cursor;
+
+    read_loop: LOOP
+        FETCH req_cursor INTO current_req_id, current_amount;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Determinar número de cotizaciones según el monto
+        IF current_amount > 100000 THEN
+            -- Compras grandes: 2-5 cotizaciones (mayor probabilidad de más cotizaciones)
+            SET num_quotations = 2 + FLOOR(RAND() * 4);
+        ELSE
+            -- Compras pequeñas: 30-40% tienen cotizaciones
+            IF RAND() < 0.35 THEN
+                SET num_quotations = 1 + FLOOR(RAND() * 2); -- 1-2 cotizaciones
+            ELSE
+                SET num_quotations = 0; -- No hay cotizaciones
+            END IF;
+        END IF;
+
+        -- Generar las cotizaciones
+        SET quot_idx = 1;
+        WHILE quot_idx <= num_quotations DO
+            -- Seleccionar proveedor aleatorio (asegurar que no se repita para la misma solicitud)
+            SET quot_supplier_id = 1 + FLOOR(RAND() * 150);
+
+            -- Generar monto con variación del ±15% respecto al estimado
+            SET quot_amount = ROUND(current_amount * (0.85 + RAND() * 0.30), 2);
+
+            -- Insertar cotización
+            INSERT INTO quotations
+            (purchase_request_id, supplier_id, quotation_number, received_at,
+             valid_until, currency, subtotal, tax_amount, total_amount,
+             payment_terms, delivery_time, status, received_by, created_at, updated_at)
+            VALUES
+            (current_req_id,
+             quot_supplier_id,
+             CONCAT('COT-', current_req_id, '-', quot_idx),
+             DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_req_id), INTERVAL (2 + quot_idx) DAY),
+             DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_req_id), INTERVAL (17 + quot_idx) DAY),
+             'ARS',
+             quot_amount,
+             ROUND(quot_amount * 0.21, 2), -- IVA 21%
+             ROUND(quot_amount * 1.21, 2), -- Total con IVA
+             (SELECT payment_terms FROM suppliers WHERE id = quot_supplier_id),
+             CONCAT(FLOOR(5 + RAND() * 20), ' días hábiles'),
+             IF(quot_idx = 1 AND RAND() < 0.6, 'selected', IF(RAND() < 0.7, 'under_review', 'received')),
+             1,
+             DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_req_id), INTERVAL (2 + quot_idx) DAY),
+             DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_req_id), INTERVAL (2 + quot_idx) DAY));
+
+            SET quot_id = LAST_INSERT_ID();
+
+            -- Generar items de la cotización (copiar de purchase_request_items con precios ajustados)
+            INSERT INTO quotation_items
+            (quotation_id, description, quantity, unit, unit_price, order_index)
+            SELECT
+                quot_id,
+                pri.description,
+                pri.quantity,
+                pri.unit,
+                ROUND(pri.estimated_unit_price * (0.85 + RAND() * 0.30), 2),
+                pri.order_index
+            FROM purchase_request_items pri
+            WHERE pri.request_id = current_req_id;
+
+            SET quot_idx = quot_idx + 1;
+        END WHILE;
+
+    END LOOP;
+
+    CLOSE req_cursor;
+
+    -- ========================================================================
+    -- GENERAR ÓRDENES DE COMPRA
+    -- ========================================================================
+    -- Generar órdenes de compra para las cotizaciones seleccionadas
+    SET done_orders = FALSE;
+    OPEN order_cursor;
+
+    order_loop: LOOP
+        FETCH order_cursor INTO
+            current_quot_id,
+            current_quot_request_id,
+            current_quot_supplier_id,
+            current_quot_subtotal,
+            current_quot_tax,
+            current_quot_total,
+            current_quot_payment_terms,
+            current_quot_delivery_time;
+
+        IF done_orders THEN
+            LEAVE order_loop;
+        END IF;
+
+        -- Generar número de orden
+        SET order_number_val = CONCAT('ORD-', YEAR(CURDATE()), '-', LPAD(current_quot_id, 4, '0'));
+
+        -- Determinar estado de la orden (según cuánto tiempo pasó)
+        IF RAND() < 0.70 THEN
+            SET order_status_val = 'received'; -- 70% recibidas
+        ELSEIF RAND() < 0.85 THEN
+            SET order_status_val = 'confirmed'; -- 15% confirmadas
+        ELSEIF RAND() < 0.95 THEN
+            SET order_status_val = 'partially_received'; -- 10% parcialmente recibidas
+        ELSE
+            SET order_status_val = 'sent'; -- 5% enviadas
+        END IF;
+
+        -- Insertar orden de compra
+        INSERT INTO purchase_orders
+        (order_number, purchase_request_id, quotation_id, supplier_id,
+         subtotal, tax_amount, total_amount, currency, payment_terms,
+         status, expected_delivery_date, delivery_address,
+         created_by, created_at, updated_at)
+        VALUES
+        (order_number_val,
+         current_quot_request_id,
+         current_quot_id,
+         current_quot_supplier_id,
+         current_quot_subtotal,
+         current_quot_tax,
+         current_quot_total,
+         'ARS',
+         current_quot_payment_terms,
+         order_status_val,
+         DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_quot_request_id),
+                  INTERVAL (30 + FLOOR(RAND() * 30)) DAY),
+         'Biblioteca Asociación Bernardino Rivadavia, Rosario, Santa Fe',
+         1,
+         DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_quot_request_id),
+                  INTERVAL (5 + FLOOR(RAND() * 10)) DAY),
+         DATE_ADD((SELECT created_at FROM purchase_requests WHERE id = current_quot_request_id),
+                  INTERVAL (5 + FLOOR(RAND() * 10)) DAY));
+
+        SET order_id = LAST_INSERT_ID();
+
+        -- Copiar items de la cotización a la orden
+        INSERT INTO purchase_order_items
+        (order_id, quotation_item_id, description, quantity, unit, unit_price, received_quantity, order_index)
+        SELECT
+            order_id,
+            qi.id,
+            qi.description,
+            qi.quantity,
+            qi.unit,
+            qi.unit_price,
+            IF(order_status_val = 'received', qi.quantity,
+               IF(order_status_val = 'partially_received', ROUND(qi.quantity * (0.3 + RAND() * 0.6), 2), 0)),
+            qi.order_index
+        FROM quotation_items qi
+        WHERE qi.quotation_id = current_quot_id;
+
+    END LOOP;
+
+    CLOSE order_cursor;
+
+END//
+
+DELIMITER ;
+
+-- Ejecutar procedimiento
+CALL GeneratePurchaseRequests();
+
+-- Eliminar procedimiento
+DROP PROCEDURE IF EXISTS GeneratePurchaseRequests;
+
+-- ============================================================================
+-- 5. CONFIGURACIÓN
+-- ============================================================================
+UPDATE purchase_settings SET setting_value = '100000' WHERE setting_key = 'direct_purchase_limit';
+UPDATE purchase_settings SET setting_value = '3' WHERE setting_key = 'min_quotations_required';
+UPDATE purchase_settings SET setting_value = '15' WHERE setting_key = 'quotation_validity_days';
+UPDATE purchase_settings SET setting_value = '500000' WHERE setting_key = 'require_board_approval_above';
+
+-- ============================================================================
+-- RESUMEN
+-- ============================================================================
+SELECT
+    'RESUMEN DE DATOS GENERADOS' AS '',
+    '' AS '';
+
+SELECT
+    'Categorías de proveedores' AS Item,
+    COUNT(*) AS Cantidad
+FROM supplier_categories
+UNION ALL
+SELECT
+    'Proveedores' AS Item,
+    COUNT(*) AS Cantidad
+FROM suppliers
+UNION ALL
+SELECT
+    'Categorías de compras' AS Item,
+    COUNT(*) AS Cantidad
+FROM purchase_categories
+UNION ALL
+SELECT
+    'Solicitudes de compra' AS Item,
+    COUNT(*) AS Cantidad
+FROM purchase_requests
+UNION ALL
+SELECT
+    'Items de solicitudes' AS Item,
+    COUNT(*) AS Cantidad
+FROM purchase_request_items
+UNION ALL
+SELECT
+    'Cotizaciones generadas' AS Item,
+    COUNT(*) AS Cantidad
+FROM quotations
+UNION ALL
+SELECT
+    'Items de cotizaciones' AS Item,
+    COUNT(*) AS Cantidad
+FROM quotation_items
+UNION ALL
+SELECT
+    'Órdenes de compra' AS Item,
+    COUNT(*) AS Cantidad
+FROM purchase_orders
+UNION ALL
+SELECT
+    'Items de órdenes' AS Item,
+    COUNT(*) AS Cantidad
+FROM purchase_order_items;
+
+SELECT
+    'Compras cerradas (> 1 mes)' AS Estadística,
+    COUNT(*) AS Cantidad
+FROM purchase_requests
+WHERE status IN ('completed', 'cancelled')
+  AND created_at < DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+UNION ALL
+SELECT
+    'Compras con múltiples cotizaciones' AS Estadística,
+    COUNT(DISTINCT purchase_request_id) AS Cantidad
+FROM quotations
+WHERE purchase_request_id IN (
+    SELECT purchase_request_id
+    FROM quotations
+    GROUP BY purchase_request_id
+    HAVING COUNT(*) > 1
+)
+UNION ALL
+SELECT
+    'Compras grandes (>$100k) con cotizaciones' AS Estadística,
+    COUNT(DISTINCT pr.id) AS Cantidad
+FROM purchase_requests pr
+INNER JOIN quotations q ON pr.id = q.purchase_request_id
+WHERE pr.estimated_amount > 100000;
+
+SELECT 'Datos sintéticos cargados exitosamente!' AS Resultado;

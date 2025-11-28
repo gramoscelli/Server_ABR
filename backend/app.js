@@ -30,6 +30,15 @@ var accountingTransfersRouter = require('./routes/accounting/transfers');
 var accountingCashReconciliationsRouter = require('./routes/accounting/cashReconciliations');
 var accountingDashboardRouter = require('./routes/accounting/dashboard');
 
+// Purchase module routes
+var purchaseSuppliersRouter = require('./routes/purchases/suppliers');
+var purchaseSupplierCategoriesRouter = require('./routes/purchases/supplierCategories');
+var purchaseCategoriesRouter = require('./routes/purchases/purchaseCategories');
+var purchaseSettingsRouter = require('./routes/purchases/settings');
+var purchaseRequestsRouter = require('./routes/purchases/requests');
+var purchaseQuotationsRouter = require('./routes/purchases/quotations');
+var purchaseOrdersRouter = require('./routes/purchases/orders');
+
 var { authenticateToken } = require('./middleware/auth');
 var { generateToken: generateCsrfToken, validateToken: validateCsrfToken } = require('./middleware/csrf');
 var passport = require('./config/passport');
@@ -117,10 +126,26 @@ app.use('/js', express.static(__dirname + '/node_modules/jquery/dist'));
 app.use('/js', express.static(__dirname + '/node_modules/popper.js/dist'));
 app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js'));
 
-// CSRF token endpoint (public - needed before login)
-// The middleware will optionally capture user ID if authenticated
+// CSRF token endpoint (optionally authenticated)
+// The middleware will capture user ID if authenticated
 // More permissive rate limit as it's needed for every protected request
-app.get('/api/csrf-token', csrfLimiter, generateCsrfToken);
+const optionalAuth = async (req, res, next) => {
+  const token = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.substring(7)
+    : null;
+
+  if (token) {
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+    } catch (error) {
+      // Token invalid or expired, continue without user
+    }
+  }
+  next();
+};
+app.get('/api/csrf-token', csrfLimiter, optionalAuth, generateCsrfToken);
 
 // CAPTCHA routes (public, no CSRF needed)
 app.use('/api/captcha', captchaRouter);
@@ -156,6 +181,15 @@ app.use('/api/accounting/incomes', authenticateToken, authenticatedAwareApiLimit
 app.use('/api/accounting/transfers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransfersRouter);
 app.use('/api/accounting/cash-reconciliations', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingCashReconciliationsRouter);
 app.use('/api/accounting/dashboard', authenticateToken, authenticatedAwareApiLimiter, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
+
+// Purchase module routes (protected, state-changing routes need CSRF)
+app.use('/api/purchases/suppliers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseSuppliersRouter);
+app.use('/api/purchases/supplier-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseSupplierCategoriesRouter);
+app.use('/api/purchases/categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseCategoriesRouter);
+app.use('/api/purchases/settings', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseSettingsRouter);
+app.use('/api/purchases/requests', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseRequestsRouter);
+app.use('/api/purchases/quotations', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseQuotationsRouter);
+app.use('/api/purchases/orders', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseOrdersRouter);
 
 
 // catch 404 and forward to error handler
