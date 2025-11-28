@@ -75,8 +75,19 @@ export default function SociosReportsPage() {
     setLoadingGrupo(true)
     setGrupoError(null)
     try {
+      console.log('[ReportsPage] Fetching grupo report from /api/socios/report/por-grupo')
       const response = await fetchWithAuth('/api/socios/report/por-grupo')
+      console.log('[ReportsPage] Response status:', response.status, response.statusText)
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('[ReportsPage] API error:', response.status, errorData)
+        setGrupoError(`Error del servidor: ${response.status}`)
+        return
+      }
+
       const data = await response.json()
+      console.log('[ReportsPage] Parsed response data:', data)
 
       if (data.success) {
         setGrupoReport(data.data)
@@ -85,8 +96,9 @@ export default function SociosReportsPage() {
         setGrupoError(data.message || 'Error al obtener datos')
       }
     } catch (err) {
-      setGrupoError('Error al conectar con el servidor')
-      console.error('Error fetching grupo report:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      console.error('[ReportsPage] Error fetching grupo report:', errorMessage, err)
+      setGrupoError(`Error al conectar con el servidor: ${errorMessage}`)
     } finally {
       setLoadingGrupo(false)
     }
