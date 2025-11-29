@@ -150,15 +150,24 @@ app.get('/api/csrf-token', csrfLimiter, optionalAuth, generateCsrfToken);
 // CAPTCHA routes (public, no CSRF needed)
 app.use('/api/captcha', captchaRouter);
 
-// OAuth routes (public, no CSRF needed as OAuth uses state parameter)
-// Must come BEFORE /api/auth routes to match longer paths first
-app.use('/api/auth/oauth', oauthRouter);
+// Middleware to skip CSRF validation for OAuth routes
+const skipOAuthCsrf = (req, res, next) => {
+  if (req.path.startsWith('/oauth')) {
+    return next(); // Skip CSRF validation for OAuth
+  }
+  return validateCsrfToken(req, res, next); // Apply CSRF validation for other routes
+};
 
 // Authentication routes (public, with specific rate limiting per endpoint)
 // CSRF validation enabled for POST/PUT/DELETE operations
 // Each route in authRouter has its own specific rate limiter applied
 // See middleware/rateLimiters.js and routes/auth.js for specific limits
-app.use('/api/auth', validateCsrfToken, authRouter);
+// OAuth routes are excluded from CSRF validation via skipOAuthCsrf middleware
+app.use('/api/auth', skipOAuthCsrf, authRouter);
+
+// OAuth routes (public, no CSRF needed as OAuth uses state parameter)
+// Also mounted directly under /api/auth/oauth for clarity
+app.use('/api/auth/oauth', oauthRouter);
 
 // Protected API routes (require authentication + rate limiting + CSRF validation)
 const authenticateEither = require('./middleware/authenticateEither');
