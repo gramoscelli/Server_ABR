@@ -106,15 +106,28 @@ docker compose run --rm --entrypoint "\
     -d $DOMAIN" \
   "$CERTBOT_CONTAINER"
 
-if [ $? -eq 0 ]; then
+CERT_EXIT_CODE=$?
+
+if [ $CERT_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}✓ Certificate obtained successfully${NC}"
+elif echo "$CERT_EXIT_CODE" | grep -q "rate.*limit"; then
+    echo -e "${YELLOW}⚠️  Let's Encrypt rate limiting applied${NC}"
+    echo -e "${YELLOW}This is temporary - try again after 1 hour${NC}"
+    echo -e "${YELLOW}For testing, use the staging environment instead:${NC}"
+    echo -e "${YELLOW}  certbot certonly --staging ...${NC}"
+    exit 1
 else
     echo -e "${RED}✗ Failed to obtain certificate${NC}"
     echo -e "${YELLOW}Troubleshooting tips:${NC}"
     echo -e "${YELLOW}1. Ensure your domain is pointing to this server's IP address${NC}"
+    echo -e "${YELLOW}   Test: nslookup $DOMAIN${NC}"
     echo -e "${YELLOW}2. Ensure port 80 is accessible from the internet${NC}"
-    echo -e "${YELLOW}3. Check Nginx logs: docker compose logs nginx${NC}"
-    echo -e "${YELLOW}4. Check Certbot logs: docker compose logs certbot${NC}"
+    echo -e "${YELLOW}   Test: curl -v http://$DOMAIN${NC}"
+    echo -e "${YELLOW}3. Check Nginx is serving ACME files correctly:${NC}"
+    echo -e "${YELLOW}   docker compose exec -T web touch /var/www/certbot/test${NC}"
+    echo -e "${YELLOW}4. Check Nginx logs: docker compose logs web${NC}"
+    echo -e "${YELLOW}5. Check Certbot logs: docker compose logs certbot${NC}"
+    echo -e "${YELLOW}6. Check full certbot output: docker compose logs certbot --tail 50${NC}"
     exit 1
 fi
 
