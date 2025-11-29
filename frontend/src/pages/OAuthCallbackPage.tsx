@@ -61,9 +61,9 @@ export default function OAuthCallbackPage() {
           return;
         }
 
-        // Redirect based on role - only root goes to dashboard
+        // Redirect based on role - root goes to admin dashboard
         const isRoot = userData.user?.role === 'root';
-        const defaultRoute = isRoot ? '/dashboard' : '/profile';
+        const defaultRoute = isRoot ? '/admin/dashboard' : '/profile';
         navigate(defaultRoute, { replace: true });
 
       } catch (error) {
