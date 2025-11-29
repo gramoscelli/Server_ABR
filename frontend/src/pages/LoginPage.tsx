@@ -33,13 +33,26 @@ export default function LoginPage() {
 
   const loadOAuthProviders = async () => {
     try {
-      const response = await fetch('/api/auth/oauth/providers');
-      if (response.ok) {
-        const data = await response.json();
-        setOauthProviders(data.providers || []);
+      const response = await fetch('/api/auth/oauth/providers', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.error(`OAuth providers endpoint returned ${response.status}:`, response.statusText);
+        setOauthProviders([]);
+        return;
       }
+
+      const data = await response.json();
+      console.log('[LoginPage] OAuth providers loaded:', data.providers);
+      setOauthProviders(data.providers || []);
     } catch (error) {
-      console.error('Failed to load OAuth providers:', error);
+      console.error('[LoginPage] Failed to load OAuth providers:', error);
+      setOauthProviders([]);
     }
   };
 
