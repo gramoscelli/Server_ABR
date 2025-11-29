@@ -61,10 +61,8 @@ export default function OAuthCallbackPage() {
           return;
         }
 
-        // Redirect based on role - root goes to admin dashboard
-        const isRoot = userData.user?.role === 'root';
-        const defaultRoute = isRoot ? '/admin/dashboard' : '/profile';
-        navigate(defaultRoute, { replace: true });
+        // Redirect to home page to select module
+        navigate('/', { replace: true });
 
       } catch (error) {
         console.error('OAuth callback error:', error);

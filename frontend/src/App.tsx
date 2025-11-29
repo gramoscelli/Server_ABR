@@ -120,11 +120,13 @@ function App() {
             errorElement={<RouteErrorBoundary />}
           />
 
-          {/* Home/Dashboard - Default redirect to login or module based on auth */}
+          {/* Home/Dashboard - Show module selection page for authenticated users */}
           <Route
             path="/"
             element={
-              <Navigate to="/login" replace />
+              <ProtectedRoute requireApprovedUser>
+                <HomePage />
+              </ProtectedRoute>
             }
             errorElement={<RouteErrorBoundary />}
           />
