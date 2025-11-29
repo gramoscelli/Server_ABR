@@ -14,10 +14,11 @@ MEGA_PASSWORD = os.environ.get('MEGA_PASSWORD') # "Secret20130"
 
 # Datos de la base de datos MySQL
 host = os.environ.get('MYSQL_HOST')
-port = os.environ.get('MYSQL_PORT') 
+port = os.environ.get('MYSQL_PORT')
 user = os.environ.get('MYSQL_USER')
 password = os.environ.get('MYSQL_PASSWORD')
 database = os.environ.get('MYSQL_DATABASE')
+accounting_database = os.environ.get('ACCOUNTING_DATABASE', 'accounting')
 
 print("Mega Credentials")
 print()
@@ -65,20 +66,22 @@ if __name__ == '__main__':
     # Obtener la fecha y hora actual
     timestamp = datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
 
-    # Nombre del archivo de backup con fecha y hora
-    backup_file = f'backup_{timestamp}.sql'
-
+    # Nombre del archivo de backup con fecha y hora (incluye todas las bases de datos)
+    backup_file = f'backup_complete_{timestamp}.sql'
 
     # Ruta completa del archivo de backup
     backup_dir = "/app/backup"
     backup_path = os.path.join(backup_dir, backup_file)
     bz2_path = f'{backup_path}.bz2'
-    
-    # Realizar el backup de la base de datos
-    print("Iniciando backup de la base mysql en ", backup_path)
-    backup_command = f'mysqldump -B --skip-set-charset --host={host} --user={user} --port={port} --password={password} --order-by-primary {database} > {backup_path}'
-    print("Iniciando compresion de la base mysql en ", bz2_path)
+
+    # Realizar el backup de todas las bases de datos del sistema
+    print("Iniciando backup de las bases de datos en ", backup_path)
+    print(f"Bases de datos a respaldar: {database}, {accounting_database}")
+    backup_command = f'mysqldump --skip-set-charset --host={host} --user={user} --port={port} --password={password} --order-by-primary --databases {database} {accounting_database} > {backup_path}'
+    print("Ejecutando: ", backup_command)
     subprocess.run(backup_command, shell=True)
+
+    print("Iniciando compresion de la base mysql en ", bz2_path)
     bz2_command = f'bzip2 -z "{backup_path}" '
     subprocess.run(bz2_command, shell=True)
     

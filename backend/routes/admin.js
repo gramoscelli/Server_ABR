@@ -959,24 +959,29 @@ router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, re
     const dbPort = process.env.MYSQL_PORT || '3306';
     const dbUser = process.env.MYSQL_USER;
     const dbPassword = process.env.MYSQL_PASSWORD;
-    const dbName = process.env.MYSQL_DATABASE;
+    const mainDatabase = process.env.MYSQL_DATABASE;
+    const accountingDatabase = process.env.ACCOUNTING_DATABASE || 'accounting';
 
-    if (!dbUser || !dbPassword || !dbName) {
+    if (!dbUser || !dbPassword || !mainDatabase) {
       return res.status(500).json({
         error: 'Configuración incompleta',
         message: 'Faltan credenciales de base de datos en la configuración'
       });
     }
 
+    // List of databases to backup
+    const databasesToBackup = [mainDatabase, accountingDatabase];
+
     // Generate backup filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const backupFilename = `backup_${timestamp}.sql`;
+    const backupFilename = `backup_complete_${timestamp}.sql`;
     const backupPath = path.join(BACKUP_DIR, backupFilename);
 
-    // Build mysqldump command
-    const mysqldumpCmd = `mysqldump --host=${dbHost} --port=${dbPort} --user=${dbUser} --password=${dbPassword} --single-transaction --quick ${dbName} > "${backupPath}"`;
+    // Build mysqldump command for multiple databases
+    const mysqldumpCmd = `mysqldump --host=${dbHost} --port=${dbPort} --user=${dbUser} --password=${dbPassword} --single-transaction --quick --databases ${databasesToBackup.join(' ')} > "${backupPath}"`;
 
     console.log(`[Backup] Starting backup to ${backupPath}`);
+    console.log(`[Backup] Databases to backup: ${databasesToBackup.join(', ')}`);
     console.log(`[Backup] Initiated by ${req.user.username} (ID: ${req.user.id})`);
 
     // Execute mysqldump
@@ -990,6 +995,7 @@ router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, re
     const stats = fs.statSync(backupPath);
 
     console.log(`[Backup] Completed successfully: ${backupFilename} (${formatBytes(stats.size)})`);
+    console.log(`[Backup] Databases included: ${databasesToBackup.join(', ')}`);
 
     // Clean up old backups, keeping only the last 5
     const cleanupResult = cleanupOldBackups(5);
@@ -1004,6 +1010,7 @@ router.post('/backup', authenticateToken, authorizeRoles('root'), async (req, re
         filename: backupFilename,
         size: stats.size,
         sizeFormatted: formatBytes(stats.size),
+        databases: databasesToBackup,
         createdAt: new Date().toISOString(),
         createdAtFormatted: new Date().toLocaleString('es-AR', {
           year: 'numeric',
