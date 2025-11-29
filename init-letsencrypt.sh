@@ -133,9 +133,24 @@ fi
 
 echo ""
 
+# Update Nginx configuration with the new certificate path (for non-localhost domains)
+if [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "127.0.0.1" ]; then
+    echo -e "${BLUE}Updating Nginx configuration with new certificate path...${NC}"
+
+    # Update the SSL certificate paths in the nginx configuration
+    sed -i "s|/etc/letsencrypt/live/localhost/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" \
+        ./nginx/conf.d/default.conf
+    sed -i "s|/etc/letsencrypt/live/localhost/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" \
+        ./nginx/conf.d/default.conf
+
+    echo -e "${GREEN}✓ Configuration updated${NC}"
+fi
+
 # Reload Nginx with new certificate
 echo -e "${BLUE}Reloading Nginx with new certificate...${NC}"
-docker compose exec -T "$NGINX_CONTAINER" nginx -s reload || echo -e "${YELLOW}⚠️  Could not reload Nginx${NC}"
+docker compose restart "$NGINX_CONTAINER" || docker compose exec -T "$NGINX_CONTAINER" nginx -s reload || echo -e "${YELLOW}⚠️  Could not reload Nginx${NC}"
+
+sleep 3
 
 echo ""
 echo -e "${GREEN}================================${NC}"
@@ -150,5 +165,9 @@ echo ""
 echo -e "${BLUE}Next steps:${NC}"
 echo -e "${BLUE}1. Update your firewall to allow HTTP (80) and HTTPS (443)${NC}"
 echo -e "${BLUE}2. Access your application at: ${YELLOW}https://$DOMAIN${NC}"
-echo -e "${BLUE}3. Monitor certificate renewal: ${YELLOW}docker compose logs certbot${NC}"
+echo -e "${BLUE}3. Verify certificate: ${YELLOW}curl -I https://$DOMAIN${NC}"
+echo -e "${BLUE}4. Monitor certificate renewal: ${YELLOW}docker compose logs certbot${NC}"
+echo ""
+echo -e "${BLUE}Certificate expiration dates:${NC}"
+docker compose exec -T "$CERTBOT_CONTAINER" certbot certificates 2>/dev/null || echo -e "${YELLOW}(Run after certificates are obtained)${NC}"
 echo ""
