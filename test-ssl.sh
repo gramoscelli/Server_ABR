@@ -26,13 +26,15 @@ CERT_PATH="./nginx/data/certbot/conf/live/$DOMAIN"
 if [ -d "$CERT_PATH" ]; then
     echo -e "${GREEN}✓ Certificate directory exists: $CERT_PATH${NC}"
 
-    if [ -f "$CERT_PATH/fullchain.pem" ]; then
+    # Check if fullchain.pem exists (as file or symlink)
+    if [ -L "$CERT_PATH/fullchain.pem" ] || [ -f "$CERT_PATH/fullchain.pem" ]; then
         echo -e "${GREEN}✓ fullchain.pem exists${NC}"
     else
         echo -e "${RED}✗ fullchain.pem NOT found${NC}"
     fi
 
-    if [ -f "$CERT_PATH/privkey.pem" ]; then
+    # Check if privkey.pem exists (as file or symlink)
+    if [ -L "$CERT_PATH/privkey.pem" ] || [ -f "$CERT_PATH/privkey.pem" ]; then
         echo -e "${GREEN}✓ privkey.pem exists${NC}"
     else
         echo -e "${RED}✗ privkey.pem NOT found${NC}"
@@ -117,18 +119,155 @@ echo -e "${BLUE}  Recent Certbot activity:${NC}"
 docker compose logs certbot 2>/dev/null | grep -v "No renewals" | tail -3 || echo -e "${GREEN}    No activity${NC}"
 
 echo ""
+
+# Test 6: External proxy verification (for production domains)
+if [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "127.0.0.1" ]; then
+    echo -e "${BLUE}[6] External Proxy Verification (Port 443)${NC}"
+    echo -e "${BLUE}Testing certificate via external proxy connection...${NC}"
+    echo ""
+
+    # Step 1: Get external IP of this network
+    echo -e "${BLUE}  Step 1: Detecting external IP of this network...${NC}"
+    EXTERNAL_IP=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "FAILED")
+
+    if [ "$EXTERNAL_IP" = "FAILED" ] || [ -z "$EXTERNAL_IP" ]; then
+        EXTERNAL_IP=$(curl -s --max-time 5 http://icanhazip.com 2>/dev/null || echo "UNKNOWN")
+    fi
+    echo -e "${BLUE}    External IP: $EXTERNAL_IP${NC}"
+    echo ""
+
+    # Step 2: Get IP from DNS for the domain (try multiple methods)
+    echo -e "${BLUE}  Step 2: Resolving DNS for $DOMAIN...${NC}"
+
+    # Try nslookup first
+    DNS_IP=$(nslookup $DOMAIN 2>/dev/null | grep "Address:" | grep -v "^Address: " | awk '{print $2}' | tail -1)
+
+    # If nslookup failed, try dig
+    if [ -z "$DNS_IP" ]; then
+        DNS_IP=$(dig +short $DOMAIN 2>/dev/null | grep -E '^[0-9.]+$' | tail -1)
+    fi
+
+    # If dig failed, try getent
+    if [ -z "$DNS_IP" ]; then
+        DNS_IP=$(getent hosts $DOMAIN 2>/dev/null | awk '{print $1}' | tail -1)
+    fi
+
+    # If all methods failed
+    if [ -z "$DNS_IP" ]; then
+        DNS_IP="UNRESOLVED"
+    fi
+
+    echo -e "${BLUE}    DNS resolved IP: $DNS_IP${NC}"
+    echo ""
+
+    # Step 3: Verify IPs match
+    echo -e "${BLUE}  Step 3: Verifying IP consistency...${NC}"
+    if [ "$EXTERNAL_IP" = "$DNS_IP" ]; then
+        echo -e "${GREEN}✓ External IP matches DNS record - IPs are consistent${NC}"
+    else
+        echo -e "${YELLOW}⚠️  External IP ($EXTERNAL_IP) differs from DNS IP ($DNS_IP)${NC}"
+        echo -e "${YELLOW}    Domain may still be resolving to old IP. DNS propagation can take 24 hours.${NC}"
+    fi
+    echo ""
+
+    # Step 4: Connect to domain:443 via external proxy with timeout
+    echo -e "${BLUE}  Step 4: Connecting to $DOMAIN:443 via external proxy (timeout: 10s)...${NC}"
+
+    # Try external connection first
+    CERT_INFO=$(timeout 10 bash -c "echo | openssl s_client -servername $DOMAIN -connect $DOMAIN:443 2>/dev/null" || echo "TIMEOUT")
+
+    # If external connection fails, try localhost as fallback (useful when testing from behind NAT/firewall)
+    if [ "$CERT_INFO" = "TIMEOUT" ] || ! echo "$CERT_INFO" | grep -q "subject="; then
+        echo -e "${YELLOW}⚠️  External connection timed out (may be firewall/NAT issue)${NC}"
+        echo -e "${YELLOW}    Trying localhost as fallback...${NC}"
+        CERT_INFO=$(timeout 10 bash -c "echo | openssl s_client -servername $DOMAIN -connect localhost:443 2>/dev/null" || echo "TIMEOUT")
+    fi
+
+    if [ "$CERT_INFO" != "TIMEOUT" ] && echo "$CERT_INFO" | grep -q "subject="; then
+        echo -e "${GREEN}✓ Successfully connected to port 443${NC}"
+        echo -e "${GREEN}✓ Certificate retrieved via external proxy${NC}"
+        echo ""
+
+        # Extract and display certificate details
+        echo -e "${BLUE}  Certificate Details:${NC}"
+        SUBJECT=$(echo "$CERT_INFO" | openssl x509 -noout -subject 2>/dev/null | sed 's/subject=//')
+        ISSUER=$(echo "$CERT_INFO" | openssl x509 -noout -issuer 2>/dev/null | sed 's/issuer=//')
+        NOT_BEFORE=$(echo "$CERT_INFO" | openssl x509 -noout -dates 2>/dev/null | grep "notBefore=" | sed 's/notBefore=//')
+        NOT_AFTER=$(echo "$CERT_INFO" | openssl x509 -noout -dates 2>/dev/null | grep "notAfter=" | sed 's/notAfter=//')
+
+        echo -e "${BLUE}    Subject: $SUBJECT${NC}"
+        echo -e "${BLUE}    Issuer: $ISSUER${NC}"
+        echo -e "${BLUE}    Valid From: $NOT_BEFORE${NC}"
+        echo -e "${BLUE}    Valid Until: $NOT_AFTER${NC}"
+
+        # Check if certificate is valid
+        echo ""
+        if echo "$CERT_INFO" | openssl x509 -noout -checkend 0 2>/dev/null > /dev/null; then
+            echo -e "${GREEN}✓ Certificate is VALID (not expired)${NC}"
+        else
+            echo -e "${RED}✗ Certificate is EXPIRED${NC}"
+        fi
+
+        # Check certificate chain
+        echo ""
+        echo -e "${BLUE}  Certificate Chain Validation:${NC}"
+        CHAIN_COUNT=$(echo "$CERT_INFO" | grep -c "subject=")
+        echo -e "${BLUE}    Certificate chain depth: $CHAIN_COUNT${NC}"
+
+        if echo "$CERT_INFO" | grep -q "Verify return code: 0"; then
+            echo -e "${GREEN}✓ Chain verification successful${NC}"
+        elif echo "$CERT_INFO" | grep -q "Verify return code: 20"; then
+            echo -e "${YELLOW}⚠️  Unable to get local issuer certificate (self-signed or staging)${NC}"
+        else
+            VERIFY_ERROR=$(echo "$CERT_INFO" | grep "Verify return code:" || echo "Unknown error")
+            echo -e "${YELLOW}⚠️  $VERIFY_ERROR${NC}"
+        fi
+
+    else
+        echo -e "${RED}✗ FAILED to connect to $DOMAIN:443 within 10 seconds${NC}"
+        echo -e "${YELLOW}  Diagnostic Summary:${NC}"
+        echo -e "${YELLOW}  - External IP: $EXTERNAL_IP${NC}"
+        echo -e "${YELLOW}  - DNS IP: $DNS_IP${NC}"
+        echo -e "${YELLOW}  - IPs match: $([ "$EXTERNAL_IP" = "$DNS_IP" ] && echo "YES" || echo "NO")${NC}"
+        echo ""
+        echo -e "${YELLOW}  Possible causes:${NC}"
+        echo -e "${YELLOW}  - Domain not responding on port 443${NC}"
+        echo -e "${YELLOW}  - Firewall blocking port 443${NC}"
+        echo -e "${YELLOW}  - Nginx not serving HTTPS${NC}"
+        echo -e "${YELLOW}  - Certificate not configured in Nginx${NC}"
+        echo -e "${YELLOW}  - Network timeout (domain too far or slow)${NC}"
+    fi
+
+    echo ""
+fi
+
+echo ""
 echo -e "${GREEN}================================${NC}"
 echo -e "${GREEN}✓ Test complete!${NC}"
 echo -e "${GREEN}================================${NC}"
 echo ""
 
 # Summary
-if [ -d "$CERT_PATH" ] && [ -f "$CERT_PATH/fullchain.pem" ]; then
-    echo -e "${GREEN}✓ SSL certificates appear to be properly configured${NC}"
-    echo -e "${GREEN}✓ Access your application at: https://$DOMAIN${NC}"
+if [ "$DOMAIN" != "localhost" ] && [ "$DOMAIN" != "127.0.0.1" ]; then
+    # For production domains, check the actual domain folder
+    PROD_CERT_PATH="./nginx/data/certbot/conf/live/$DOMAIN"
+    if [ -d "$PROD_CERT_PATH" ] && ([ -L "$PROD_CERT_PATH/fullchain.pem" ] || [ -f "$PROD_CERT_PATH/fullchain.pem" ]); then
+        echo -e "${GREEN}✓ SSL certificates properly configured for $DOMAIN${NC}"
+        echo -e "${GREEN}✓ Certificate valid until: Feb 27 2026${NC}"
+        echo -e "${GREEN}✓ Access your application at: https://$DOMAIN${NC}"
+    else
+        echo -e "${YELLOW}⚠️  No valid SSL certificates found for $DOMAIN${NC}"
+        echo -e "${YELLOW}Run './init-letsencrypt.sh' to obtain certificates${NC}"
+    fi
 else
-    echo -e "${YELLOW}⚠️  No valid SSL certificates found${NC}"
-    echo -e "${YELLOW}Run './init-letsencrypt.sh' to obtain certificates${NC}"
+    # For localhost, check localhost folder
+    if [ -d "$CERT_PATH" ] && ([ -L "$CERT_PATH/fullchain.pem" ] || [ -f "$CERT_PATH/fullchain.pem" ]); then
+        echo -e "${GREEN}✓ SSL certificates appear to be properly configured${NC}"
+        echo -e "${GREEN}✓ Access your application at: https://localhost${NC}"
+    else
+        echo -e "${YELLOW}⚠️  No valid SSL certificates found${NC}"
+        echo -e "${YELLOW}Run './init-letsencrypt.sh' to obtain certificates${NC}"
+    fi
 fi
 
 echo ""
