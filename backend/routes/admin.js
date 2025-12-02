@@ -789,6 +789,7 @@ router.post('/users/:userId/approve', authenticateToken, authorizeRoles('admin',
     }
 
     // Approve the account: change role and ensure is_active
+    // Note: Email verification is a separate action handled by /verify-email endpoint
     user.role_id = libraryEmployeeRole.id;
     user.is_active = true;
     await user.save();
@@ -801,6 +802,7 @@ router.post('/users/:userId/approve', authenticateToken, authorizeRoles('admin',
         id: user.id,
         username: user.username,
         email: user.email,
+        email_verified: user.email_verified,
         role: libraryEmployeeRole.name,
         is_active: true
       }

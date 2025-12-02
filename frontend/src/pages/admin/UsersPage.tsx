@@ -451,7 +451,7 @@ export default function UsersPage() {
       if (response.ok) {
         toast({
           title: 'Cuenta aprobada',
-          description: 'La cuenta ha sido activada exitosamente'
+          description: 'La cuenta ha sido activada. Verifica el email del usuario por separado si es necesario.'
         })
         fetchUsers()
       } else {

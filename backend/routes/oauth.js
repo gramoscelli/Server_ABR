@@ -13,13 +13,19 @@ const { RefreshToken } = require('../models');
  * Helper function to generate tokens for OAuth users
  */
 async function generateOAuthTokens(user) {
+  // Check if user account is active before generating token
+  if (user.is_active === false) {
+    throw new Error('ACCOUNT_INACTIVE');
+  }
+
   // Generate JWT access token
   const accessToken = jwt.sign(
     {
       id: user.id,
       username: user.username,
       role: user.role ? user.role.name : 'user',
-      oauth: true
+      oauth: true,
+      is_active: user.is_active  // Include active status in OAuth token
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
@@ -93,6 +99,9 @@ router.get('/google/callback',
       res.redirect(`${redirectUrl}?${queryParams.toString()}`);
     } catch (error) {
       console.error('Google OAuth callback error:', error);
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        return res.redirect('/login?error=account_inactive');
+      }
       res.redirect('/login?error=token_generation_failed');
     }
   }
@@ -135,6 +144,9 @@ router.get('/github/callback',
       res.redirect(`${redirectUrl}?${queryParams.toString()}`);
     } catch (error) {
       console.error('GitHub OAuth callback error:', error);
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        return res.redirect('/login?error=account_inactive');
+      }
       res.redirect('/login?error=token_generation_failed');
     }
   }
@@ -177,6 +189,9 @@ router.get('/facebook/callback',
       res.redirect(`${redirectUrl}?${queryParams.toString()}`);
     } catch (error) {
       console.error('Facebook OAuth callback error:', error);
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        return res.redirect('/login?error=account_inactive');
+      }
       res.redirect('/login?error=token_generation_failed');
     }
   }
@@ -219,6 +234,9 @@ router.get('/microsoft/callback',
       res.redirect(`${redirectUrl}?${queryParams.toString()}`);
     } catch (error) {
       console.error('Microsoft OAuth callback error:', error);
+      if (error.message === 'ACCOUNT_INACTIVE') {
+        return res.redirect('/login?error=account_inactive');
+      }
       res.redirect('/login?error=token_generation_failed');
     }
   }

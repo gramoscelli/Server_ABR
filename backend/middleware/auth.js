@@ -29,6 +29,7 @@ if (JWT_SECRET.length < 32) {
  * Middleware to authenticate JWT token from Authorization header
  * Expects header: Authorization: Bearer <token>
  * Adds user object to req.user on success
+ * IMPORTANT: Also validates user's active status in real-time from database
  */
 function authenticateToken(req, res, next) {
   console.log('[authenticateToken] Request URL:', req.url);
@@ -47,7 +48,7 @@ function authenticateToken(req, res, next) {
 
   console.log('[authenticateToken] Token found:', token.substring(0, 20) + '...');
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
+  jwt.verify(token, JWT_SECRET, async (err, user) => {
     if (err) {
       console.log('[authenticateToken] JWT verification error:', err.name, err.message);
       if (err.name === 'TokenExpiredError') {
@@ -63,9 +64,52 @@ function authenticateToken(req, res, next) {
     }
 
     console.log('[authenticateToken] Token verified successfully. User:', user.username, 'Role:', user.role);
-    // Attach user info to request object
-    req.user = user;
-    next();
+
+    // Check if user is active - validate from token first for quick reject
+    if (user.is_active === false) {
+      console.log('[authenticateToken] BLOCKED - User account is inactive (from token):', user.username);
+      return res.status(403).json({
+        error: 'Cuenta deshabilitada',
+        message: 'Esta cuenta ha sido desactivada. Por favor contacta a un administrador.'
+      });
+    }
+
+    // IMPORTANT: Also check active status in database in real-time
+    // This prevents users who were deactivated AFTER getting their token from accessing the system
+    try {
+      const { User } = require('../models');
+      const dbUser = await User.findByPk(user.id);
+
+      console.log('[authenticateToken] Checking user in DB:', user.id, 'is_active:', dbUser ? dbUser.is_active : 'USER_NOT_FOUND');
+
+      if (!dbUser) {
+        console.log('[authenticateToken] BLOCKED - User not found in database:', user.id);
+        return res.status(403).json({
+          error: 'Usuario no encontrado',
+          message: 'El usuario asociado a este token no existe'
+        });
+      }
+
+      if (dbUser.is_active === false) {
+        console.log('[authenticateToken] BLOCKED - User account is inactive (from database):', user.username);
+        return res.status(403).json({
+          error: 'Cuenta deshabilitada',
+          message: 'Esta cuenta ha sido desactivada. Por favor contacta a un administrador.'
+        });
+      }
+
+      console.log('[authenticateToken] User is active - allowing access:', user.username);
+
+      // Attach user info to request object
+      req.user = user;
+      next();
+    } catch (dbError) {
+      console.error('[authenticateToken] Database error checking user status:', dbError);
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'Ocurrió un error al validar tu sesión'
+      });
+    }
   });
 }
 
@@ -142,10 +186,37 @@ async function authenticateTokenOrApiKey(req, res, next) {
   if (authHeader) {
     const token = authHeader.split(' ')[1];
     if (token) {
-      return jwt.verify(token, JWT_SECRET, (err, user) => {
+      return jwt.verify(token, JWT_SECRET, async (err, user) => {
         if (!err) {
-          req.user = user;
-          return next();
+          // Check if user is active - validate from token first for quick reject
+          if (user.is_active === false) {
+            return res.status(403).json({
+              error: 'Cuenta deshabilitada',
+              message: 'Esta cuenta ha sido desactivada. Por favor contacta a un administrador.'
+            });
+          }
+
+          // Also check active status in database in real-time
+          try {
+            const { User } = require('../models');
+            const dbUser = await User.findByPk(user.id);
+
+            if (!dbUser || dbUser.is_active === false) {
+              return res.status(403).json({
+                error: 'Cuenta deshabilitada',
+                message: 'Esta cuenta ha sido desactivada. Por favor contacta a un administrador.'
+              });
+            }
+
+            req.user = user;
+            return next();
+          } catch (dbError) {
+            console.error('[authenticateTokenOrApiKey] Database error:', dbError);
+            return res.status(500).json({
+              error: 'Error interno del servidor',
+              message: 'Ocurrió un error al validar tu sesión'
+            });
+          }
         }
         // JWT failed, try API key if available
         if (apiKey) {

@@ -118,7 +118,8 @@ router.post('/login', loginLimiter, sanitizeBody(loginSchema), async (req, res) 
     const tokenPayload = {
       id: user.id,
       username: user.username,
-      role: user.role.name  // Get role name from associated Role model
+      role: user.role.name,  // Get role name from associated Role model
+      is_active: user.is_active  // Include active status in token
     };
 
     const accessToken = generateAccessToken(tokenPayload);

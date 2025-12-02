@@ -31,6 +31,35 @@ export default function LoginPage() {
     loadOAuthProviders();
   }, []);
 
+  // Check for error messages in URL query parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const errorParam = searchParams.get('error');
+
+    console.log('[LoginPage] Checking URL for error parameter:', errorParam);
+
+    if (errorParam) {
+      let errorMessage = '';
+
+      switch (errorParam) {
+        case 'account_inactive':
+          errorMessage = 'Esta cuenta ha sido desactivada. Por favor contacta a un administrador.';
+          break;
+        case 'oauth_failed':
+          errorMessage = 'Error al autenticar con el proveedor OAuth. Por favor intenta nuevamente.';
+          break;
+        case 'token_generation_failed':
+          errorMessage = 'Error al generar el token de autenticación. Por favor intenta nuevamente.';
+          break;
+        default:
+          errorMessage = `Error: ${errorParam}`;
+      }
+
+      console.log('[LoginPage] Setting error:', errorMessage);
+      setError(errorMessage);
+    }
+  }, [location.search]);
+
   const loadOAuthProviders = async () => {
     try {
       const response = await fetch('/api/auth/oauth/providers', {
