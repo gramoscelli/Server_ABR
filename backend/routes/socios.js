@@ -313,6 +313,7 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
 
     socios.forEach(socio => {
       const json = socio.toJSON();
@@ -334,13 +335,21 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
 
       if (fixed.cuotas && fixed.cuotas.length > 0) {
         const ultimaCuota = fixed.cuotas[0];
-        const monthsDiff = (currentYear - ultimaCuota.CC_Anio) * 12 + (currentMonth - ultimaCuota.CC_Mes);
-        mesesAtraso = monthsDiff;
+        let monthsDiff = (currentYear - ultimaCuota.CC_Anio) * 12 + (currentMonth - ultimaCuota.CC_Mes);
 
-        if (monthsDiff === 0) {
+        // Only consider moroso after day 25 of the month
+        // If before day 25, don't count current month as delayed
+        if (currentDay < 25) {
+          monthsDiff = monthsDiff - 1;
+        }
+
+        // Ensure we don't have negative values
+        mesesAtraso = Math.max(0, monthsDiff);
+
+        if (mesesAtraso === 0) {
           estadoPago = 'Al día';
-        } else if (monthsDiff > 0) {
-          estadoPago = `${monthsDiff} mes(es) atraso`;
+        } else if (mesesAtraso > 0) {
+          estadoPago = `${mesesAtraso} mes(es) atraso`;
         }
 
         fixed.UltimaCuota_Anio = ultimaCuota.CC_Anio;
@@ -502,6 +511,7 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth() + 1; // 0-indexed, so add 1
+    const currentDay = now.getDate();
 
     // Get all socios with their latest payment
     const socios = await Socio.findAll({
@@ -554,7 +564,16 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
         const lastPaymentMonth = ultimaCuota.CC_Mes;
 
         // Calculate months difference
-        const monthsDiff = (currentYear - lastPaymentYear) * 12 + (currentMonth - lastPaymentMonth);
+        let monthsDiff = (currentYear - lastPaymentYear) * 12 + (currentMonth - lastPaymentMonth);
+
+        // Only consider moroso after day 25 of the month
+        // If before day 25, don't count current month as delayed
+        if (currentDay < 25) {
+          monthsDiff = monthsDiff - 1;
+        }
+
+        // Ensure we don't have negative values
+        monthsDiff = Math.max(0, monthsDiff);
 
         fixed.UltimaCuota_Anio = lastPaymentYear;
         fixed.UltimaCuota_Mes = lastPaymentMonth;
