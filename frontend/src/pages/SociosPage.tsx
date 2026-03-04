@@ -327,9 +327,19 @@ export default function SociosPage() {
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className="p-2 bg-blue-100 rounded-full">
-                            <User className="h-4 w-4 text-blue-600" />
-                          </div>
+                          {socio.So_Foto_Base64 ? (
+                            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-200 flex-shrink-0">
+                              <img
+                                src={socio.So_Foto_Base64}
+                                alt={`${socio.So_Apellido}, ${socio.So_Nombre}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-blue-100 rounded-full flex-shrink-0">
+                              <User className="h-4 w-4 text-blue-600" />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-gray-900 truncate">
                               {socio.So_Apellido}, {socio.So_Nombre}
