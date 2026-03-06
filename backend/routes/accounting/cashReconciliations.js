@@ -6,6 +6,7 @@ const router = express.Router();
 const { CashReconciliation, Account, Expense, Income, Transfer } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { buildDateFilter } = require('../../utils/dateFilter');
 
 // GET all reconciliations
 router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
@@ -13,11 +14,8 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     const { account_id, start_date, end_date } = req.query;
     const where = {};
     if (account_id) where.account_id = account_id;
-    if (start_date || end_date) {
-      where.date = {};
-      if (start_date) where.date[Op.gte] = start_date;
-      if (end_date) where.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) where.date = dateFilter;
 
     const reconciliations = await CashReconciliation.findAll({
       where,

@@ -8,6 +8,7 @@ const router = express.Router();
 const { Account, Expense, Income, Transfer, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { buildDateFilter } = require('../../utils/dateFilter');
 const { fixModelEncoding, fixArrayEncoding } = require('../../utils/encoding');
 
 // Fields that may have encoding issues
@@ -365,11 +366,8 @@ router.get('/:id/balance-history', authenticateToken, authorizeRoles('root', 'ad
     }
 
     const where = { account_id: req.params.id };
-    if (start_date || end_date) {
-      where.date = {};
-      if (start_date) where.date[Op.gte] = start_date;
-      if (end_date) where.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) where.date = dateFilter;
 
     const [expenses, incomes, outgoingTransfers, incomingTransfers] = await Promise.all([
       Expense.findAll({ where, order: [['date', 'ASC']] }),

@@ -5,19 +5,19 @@
 
 const request = require('supertest');
 const express = require('express');
-const { User, RefreshToken } = require('../../models');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { User, Role, RefreshToken } = require('../../models');
 const { sequelize } = require('../../config/database');
 const { accountingDb } = require('../../config/database');
 const { Expense, Income, Transfer, Account, ExpenseCategory, IncomeCategory, TransferType } = require('../../models/accounting');
 const expensesRouter = require('../../routes/accounting/expenses');
 const incomesRouter = require('../../routes/accounting/incomes');
 const transfersRouter = require('../../routes/accounting/transfers');
-const authRouter = require('../../routes/auth');
 
 // Create test app
 const app = express();
 app.use(express.json());
-app.use('/api/auth', authRouter);
 app.use('/api/accounting/expenses', expensesRouter);
 app.use('/api/accounting/incomes', incomesRouter);
 app.use('/api/accounting/transfers', transfersRouter);
@@ -30,6 +30,9 @@ describe('Accounting Routes - Date Filtering', () => {
   let testTransferType;
   let testAccount2;
 
+  let testUser;
+  let rootRole;
+
   beforeAll(async () => {
     await sequelize.authenticate();
     await accountingDb.authenticate();
@@ -37,6 +40,13 @@ describe('Accounting Routes - Date Filtering', () => {
     // Sync databases
     await sequelize.sync({ force: true });
     await accountingDb.sync({ force: true });
+
+    // Create root role
+    rootRole = await Role.create({
+      name: 'root',
+      description: 'Super administrator',
+      is_system: true
+    });
   });
 
   afterAll(async () => {
@@ -56,29 +66,23 @@ describe('Accounting Routes - Date Filtering', () => {
     await RefreshToken.destroy({ where: {}, force: true });
     await User.destroy({ where: {}, force: true });
 
-    // Create test user with root role (required for accounting endpoints)
-    const registerResponse = await request(app)
-      .post('/api/auth/register')
-      .send({
-        username: 'accountingtest',
-        password: 'TestP@ss99',
-        email: 'accounting@test.com'
-      });
+    // Create test user with root role
+    const passwordHash = await bcrypt.hash('TestP@ss99', 10);
+    testUser = await User.create({
+      username: 'accountingtest',
+      password_hash: passwordHash,
+      email: 'accounting@test.com',
+      role_id: rootRole.id,
+      is_active: true,
+      email_verified: true
+    });
 
-    // Update user role to root for testing
-    const user = await User.findByPk(registerResponse.body.userId);
-    user.role = 'root';
-    await user.save();
-
-    // Login to get access token
-    const loginResponse = await request(app)
-      .post('/api/auth/login')
-      .send({
-        username: 'accountingtest',
-        password: 'TestP@ss99'
-      });
-
-    accessToken = loginResponse.body.accessToken;
+    // Generate JWT token (must match payload structure from routes/auth.js)
+    accessToken = jwt.sign(
+      { id: testUser.id, username: testUser.username, role: 'root', is_active: true },
+      process.env.JWT_SECRET || 'test-secret',
+      { expiresIn: '1h' }
+    );
 
     // Create test account
     testAccount = await Account.create({
@@ -119,7 +123,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
   describe('GET /api/accounting/expenses - Date Filtering', () => {
     beforeEach(async () => {
-      const user = await User.findOne({ where: { username: 'accountingtest' } });
+      const user = testUser;
 
       // Create expenses with different dates
       await Expense.create({
@@ -215,7 +219,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
   describe('GET /api/accounting/incomes - Date Filtering', () => {
     beforeEach(async () => {
-      const user = await User.findOne({ where: { username: 'accountingtest' } });
+      const user = testUser;
 
       // Create incomes with different dates
       await Income.create({
@@ -251,7 +255,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
   describe('GET /api/accounting/transfers - Date Filtering', () => {
     beforeEach(async () => {
-      const user = await User.findOne({ where: { username: 'accountingtest' } });
+      const user = testUser;
 
       // Create transfers with different dates
       await Transfer.create({

@@ -7,6 +7,7 @@ const router = express.Router();
 const { Account, Expense, Income, Transfer, ExpenseCategory, IncomeCategory, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { buildDateFilter } = require('../../utils/dateFilter');
 
 /**
  * @route   GET /api/accounting/dashboard
@@ -34,11 +35,8 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 
     // Build date filter for period statistics
     const dateWhere = {};
-    if (start_date || end_date) {
-      dateWhere.date = {};
-      if (start_date) dateWhere.date[Op.gte] = start_date;
-      if (end_date) dateWhere.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) dateWhere.date = dateFilter;
 
     // Get period statistics
     const [totalExpenses, totalIncomes, expensesByCategory, incomesByCategory, recentExpenses, recentIncomes, recentTransfers] = await Promise.all([
@@ -194,11 +192,8 @@ router.get('/monthly', authenticateToken, authorizeRoles('root', 'admin_employee
     const { start_date, end_date } = req.query;
 
     const dateWhere = {};
-    if (start_date || end_date) {
-      dateWhere.date = {};
-      if (start_date) dateWhere.date[Op.gte] = start_date;
-      if (end_date) dateWhere.date[Op.lte] = end_date;
-    }
+    const monthlyDateFilter = buildDateFilter(start_date, end_date);
+    if (monthlyDateFilter) dateWhere.date = monthlyDateFilter;
 
     const [expenses, incomes] = await Promise.all([
       Expense.findAll({

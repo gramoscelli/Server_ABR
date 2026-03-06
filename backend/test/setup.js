@@ -11,13 +11,15 @@ process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-key-for-testing-purposes-only-do-not-use-in-production';
 
 // For tests running outside Docker, convert 'mysql' hostname to 'localhost'
-const dbHost = process.env.TEST_MYSQL_HOST || process.env.MYSQL_HOST || 'localhost';
-process.env.MYSQL_HOST = dbHost === 'mysql' ? 'localhost' : dbHost;
+// If TEST_MYSQL_HOST is explicitly set, use it as-is (allows running tests inside Docker)
+const dbHost = process.env.TEST_MYSQL_HOST || (process.env.MYSQL_HOST === 'mysql' ? 'localhost' : process.env.MYSQL_HOST) || 'localhost';
+process.env.MYSQL_HOST = dbHost;
 
 process.env.MYSQL_PORT = process.env.TEST_MYSQL_PORT || process.env.MYSQL_PORT || '3306';
 process.env.MYSQL_USER = process.env.TEST_MYSQL_USER || process.env.MYSQL_USER || 'root';
 process.env.MYSQL_PASSWORD = process.env.TEST_MYSQL_PASSWORD || process.env.MYSQL_PASSWORD || 'password';
-process.env.MYSQL_DATABASE = process.env.TEST_MYSQL_DATABASE || process.env.MYSQL_DATABASE || 'biblio_test';
+process.env.MYSQL_DATABASE = process.env.TEST_MYSQL_DATABASE || 'abr_test';
+process.env.ACCOUNTING_DATABASE = process.env.TEST_ACCOUNTING_DATABASE || 'accounting_test';
 process.env.ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost';
 
 // Increase timeout for database operations
