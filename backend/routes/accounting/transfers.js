@@ -6,17 +6,15 @@ const router = express.Router();
 const { Transfer, TransferType, Account, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { buildDateFilter } = require('../../utils/dateFilter');
 
 // GET all transfers
 router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
     const { start_date, end_date, account_id, page = 1, limit = 50 } = req.query;
     const where = {};
-    if (start_date || end_date) {
-      where.date = {};
-      if (start_date) where.date[Op.gte] = start_date;
-      if (end_date) where.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) where.date = dateFilter;
     if (account_id) {
       where[Op.or] = [{ from_account_id: account_id }, { to_account_id: account_id }];
     }

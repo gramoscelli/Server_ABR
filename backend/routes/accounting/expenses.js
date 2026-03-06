@@ -9,6 +9,7 @@ const { Expense, ExpenseCategory, Account, accountingDb } = require('../../model
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
+const { buildDateFilter } = require('../../utils/dateFilter');
 
 // Fix encoding for expense data (description, notes, and related category/account names)
 function fixExpenseEncoding(expense) {
@@ -41,11 +42,8 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 
     const where = {};
 
-    if (start_date || end_date) {
-      where.date = {};
-      if (start_date) where.date[Op.gte] = start_date;
-      if (end_date) where.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) where.date = dateFilter;
 
     if (category_id) where.category_id = category_id;
     if (account_id) where.account_id = account_id;
@@ -366,11 +364,8 @@ router.get('/stats/by-category', authenticateToken, authorizeRoles('root', 'admi
     const { start_date, end_date } = req.query;
 
     const where = {};
-    if (start_date || end_date) {
-      where.date = {};
-      if (start_date) where.date[Op.gte] = start_date;
-      if (end_date) where.date[Op.lte] = end_date;
-    }
+    const dateFilter = buildDateFilter(start_date, end_date);
+    if (dateFilter) where.date = dateFilter;
 
     const expenses = await Expense.findAll({
       where,
