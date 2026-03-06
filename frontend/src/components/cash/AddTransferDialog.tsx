@@ -115,7 +115,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Agregar Transferencia</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Agregar Otra Operación</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -185,7 +185,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
           {/* Transfer Type */}
           <div className="space-y-2">
             <Label htmlFor="transferType" className="text-sm font-medium text-gray-700">
-              Tipo de Transferencia (Opcional)
+              Tipo de Operación (Opcional)
             </Label>
             <Select
               value={formData.transfer_type_id ? String(formData.transfer_type_id) : 'none'}
@@ -230,7 +230,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
             </Label>
             <textarea
               id="description"
-              placeholder="Descripción de la transferencia"
+              placeholder="Descripción de la operación"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="flex min-h-[80px] w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -244,7 +244,7 @@ export function AddTransferDialog({ open, onOpenChange, onSubmit }: AddTransferD
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold h-12 text-base"
             disabled={loading || accounts.length < 2}
           >
-            {loading ? 'Guardando...' : 'Agregar Transferencia'}
+            {loading ? 'Guardando...' : 'Agregar Operación'}
           </Button>
         </form>
       </DialogContent>

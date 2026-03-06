@@ -61,7 +61,7 @@ export function AddTransferTypeDialog({ open, onOpenChange, onSubmit, transferTy
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {transferType ? 'Editar' : 'Nuevo'} Tipo de Transferencia
+            {transferType ? 'Editar' : 'Nuevo'} Tipo de Operación
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,7 +73,7 @@ export function AddTransferTypeDialog({ open, onOpenChange, onSubmit, transferTy
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
               disabled={loading}
-              placeholder="Ej: Depósito, Extracción, Transferencia interna"
+              placeholder="Ej: Depósito, Extracción, Transferencia"
             />
           </div>
 
@@ -84,7 +84,7 @@ export function AddTransferTypeDialog({ open, onOpenChange, onSubmit, transferTy
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               disabled={loading}
-              placeholder="Descripción opcional del tipo de transferencia..."
+              placeholder="Descripción opcional del tipo de operación..."
               rows={3}
             />
           </div>

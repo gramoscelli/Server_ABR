@@ -70,7 +70,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
  */
 router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const { name, color, description, order_index } = req.body;
+    const { name, color, description, order_index, is_active } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -90,7 +90,8 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       name,
       color: color || '#3B82F6',
       description: description || null,
-      order_index: order_index || 0
+      order_index: order_index || 0,
+      is_active: is_active !== undefined ? is_active : true
     });
 
     res.status(201).json({
@@ -124,7 +125,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       });
     }
 
-    const { name, color, description, order_index } = req.body;
+    const { name, color, description, order_index, is_active } = req.body;
 
     if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
       return res.status(400).json({
@@ -137,6 +138,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     if (color !== undefined) type.color = color;
     if (description !== undefined) type.description = description;
     if (order_index !== undefined) type.order_index = order_index;
+    if (is_active !== undefined) type.is_active = is_active;
 
     await type.save();
 

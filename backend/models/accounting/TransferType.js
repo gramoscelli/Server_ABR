@@ -36,6 +36,11 @@ const TransferType = accountingDb.define('transfer_types', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
+  is_active: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

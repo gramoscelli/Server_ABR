@@ -214,7 +214,7 @@ export default function OperationsPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Transferencia registrada correctamente',
+        description: 'Operación registrada correctamente',
       })
 
       fetchOperations()
@@ -222,7 +222,7 @@ export default function OperationsPage() {
       console.error('Error creating transfer:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo registrar la transferencia',
+        description: 'No se pudo registrar la operación',
         variant: 'destructive',
       })
     }
@@ -248,7 +248,7 @@ export default function OperationsPage() {
       case 'expense':
         return 'Egreso'
       case 'transfer':
-        return 'Transferencia'
+        return 'Otra operación'
       default:
         return ''
     }
@@ -308,7 +308,7 @@ export default function OperationsPage() {
             onClick={() => setIsAddTransferOpen(true)}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Transferencia
+            Otra operación
           </Button>
         </div>
         <div className="flex gap-2">
@@ -320,7 +320,7 @@ export default function OperationsPage() {
               <SelectItem value="all">Todas las operaciones</SelectItem>
               <SelectItem value="income">Solo ingresos</SelectItem>
               <SelectItem value="expense">Solo egresos</SelectItem>
-              <SelectItem value="transfer">Solo transferencias</SelectItem>
+              <SelectItem value="transfer">Solo otras operaciones</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -363,7 +363,7 @@ export default function OperationsPage() {
         <Card className="border-blue-200 dark:border-blue-800">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Total Transferencias
+              Total Otras Operaciones
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -394,7 +394,7 @@ export default function OperationsPage() {
                 No hay operaciones registradas en este período
               </p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
-                Comienza registrando un ingreso, egreso o transferencia
+                Comienza registrando un ingreso, egreso u otra operación
               </p>
             </div>
           ) : (

@@ -43,7 +43,7 @@ export default function TransferTypesPage() {
       console.error('Error fetching transfer types:', error)
       toast({
         title: 'Error',
-        description: 'No se pudieron cargar los tipos de transferencias',
+        description: 'No se pudieron cargar los tipos de operaciones',
         variant: 'destructive',
       })
     } finally {
@@ -61,7 +61,7 @@ export default function TransferTypesPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Tipo de transferencia creado correctamente',
+        description: 'Tipo de operación creado correctamente',
       })
 
       fetchTransferTypes()
@@ -69,7 +69,7 @@ export default function TransferTypesPage() {
       console.error('Error creating transfer type:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear el tipo de transferencia',
+        description: 'No se pudo crear el tipo de operación',
         variant: 'destructive',
       })
       throw error
@@ -88,7 +88,7 @@ export default function TransferTypesPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Tipo de transferencia actualizado correctamente',
+        description: 'Tipo de operación actualizado correctamente',
       })
 
       setEditingTransferType(null)
@@ -97,7 +97,7 @@ export default function TransferTypesPage() {
       console.error('Error updating transfer type:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo actualizar el tipo de transferencia',
+        description: 'No se pudo actualizar el tipo de operación',
         variant: 'destructive',
       })
       throw error
@@ -105,20 +105,20 @@ export default function TransferTypesPage() {
   }
 
   const handleDeleteTransferType = async (id: number) => {
-    if (!confirm('¿Está seguro de eliminar este tipo de transferencia? Esta acción no se puede deshacer.')) return
+    if (!confirm('¿Está seguro de eliminar este tipo de operación? Esta acción no se puede deshacer.')) return
 
     try {
       await accountingService.deleteTransferType(id)
       toast({
         title: 'Éxito',
-        description: 'Tipo de transferencia eliminado correctamente',
+        description: 'Tipo de operación eliminado correctamente',
       })
       fetchTransferTypes()
     } catch (error) {
       console.error('Error deleting transfer type:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo eliminar el tipo de transferencia',
+        description: 'No se pudo eliminar el tipo de operación',
         variant: 'destructive',
       })
     }
@@ -129,9 +129,9 @@ export default function TransferTypesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Tipos de Transferencias</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Tipos de Operaciones</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Gestiona los tipos de transferencias entre cuentas
+              Gestiona los tipos de operaciones entre cuentas
             </p>
           </div>
           <Button
@@ -146,7 +146,7 @@ export default function TransferTypesPage() {
         {/* Transfer Types List */}
         <Card>
           <CardHeader>
-            <CardTitle>Tipos de Transferencias</CardTitle>
+            <CardTitle>Tipos de Operaciones</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -158,7 +158,7 @@ export default function TransferTypesPage() {
                 <div className="w-20 h-20 rounded-2xl bg-gray-200 flex items-center justify-center mb-4">
                   <ArrowLeftRight className="h-10 w-10 text-gray-400" />
                 </div>
-                <p className="text-gray-500 mb-4">No hay tipos de transferencias</p>
+                <p className="text-gray-500 mb-4">No hay tipos de operaciones</p>
                 <Button
                   className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
                   onClick={() => setIsAddTransferTypeOpen(true)}

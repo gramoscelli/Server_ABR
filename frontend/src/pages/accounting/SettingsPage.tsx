@@ -28,8 +28,8 @@ export default function SettingsPage() {
       route: '/accounting/categories',
     },
     {
-      title: 'Tipos de Transferencias',
-      description: 'Define los tipos de transferencias entre cuentas',
+      title: 'Tipos de Operaciones',
+      description: 'Define los tipos de operaciones entre cuentas',
       icon: ArrowLeftRight,
       color: 'bg-blue-500',
       route: '/accounting/transfer-types',
@@ -91,7 +91,7 @@ export default function SettingsPage() {
             para facilitar el análisis financiero.
           </p>
           <p>
-            • <strong>Tipos de Transferencias:</strong> Define diferentes tipos de movimientos entre
+            • <strong>Tipos de Operaciones:</strong> Define diferentes tipos de movimientos entre
             cuentas (retiros, depósitos, etc.).
           </p>
           <p className="pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-500">
