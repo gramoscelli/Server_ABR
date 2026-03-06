@@ -167,7 +167,7 @@ export default function ExpensesPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Transferencia creada correctamente',
+        description: 'Operación registrada correctamente',
       })
 
       fetchData()
@@ -175,7 +175,7 @@ export default function ExpensesPage() {
       console.error('Error creating transfer:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear la transferencia',
+        description: 'No se pudo registrar la operación',
         variant: 'destructive',
       })
     }
@@ -235,7 +235,7 @@ export default function ExpensesPage() {
               onClick={() => setIsAddTransferOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Transferencia
+              Otra operación
             </Button>
           </div>
         </div>

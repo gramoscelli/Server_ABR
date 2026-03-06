@@ -350,11 +350,11 @@ export default function DashboardPage() {
         date: data.date,
         description: data.description || undefined,
       })
-      toast({ title: 'Éxito', description: 'Transferencia registrada correctamente' })
+      toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
       fetchStats()
     } catch (error) {
       console.error('Error creating transfer:', error)
-      toast({ title: 'Error', description: 'No se pudo registrar la transferencia', variant: 'destructive' })
+      toast({ title: 'Error', description: 'No se pudo registrar la operación', variant: 'destructive' })
     }
   }
 
@@ -421,7 +421,7 @@ export default function DashboardPage() {
           onClick={() => setIsAddTransferOpen(true)}
         >
           <Repeat className="h-5 w-5 mr-2" />
-          <span className="font-semibold">Transferencia</span>
+          <span className="font-semibold">Otra operación</span>
         </Button>
       </div>
 

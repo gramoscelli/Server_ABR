@@ -188,7 +188,7 @@ export function MovementsCalendar({ selectedDate, onDateSelect }: MovementsCalen
           <div className="w-1.5 h-1.5 rounded-full bg-red-500" title={`Egresos: ${formatCurrency(summary.expenses)}`} />
         )}
         {summary.transfers > 0 && (
-          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title={`Transferencias: ${formatCurrency(summary.transfers)}`} />
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title={`Otras op.: ${formatCurrency(summary.transfers)}`} />
         )}
       </div>
     )
@@ -235,7 +235,7 @@ export function MovementsCalendar({ selectedDate, onDateSelect }: MovementsCalen
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-blue-500" />
-            <span>Transferencias</span>
+            <span>Otras op.</span>
           </div>
         </div>
 
@@ -347,7 +347,7 @@ export function MovementsCalendar({ selectedDate, onDateSelect }: MovementsCalen
               )}
               {hoveredDay.transfers > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-blue-600">Transferencias ({hoveredDay.transferCount})</span>
+                  <span className="text-blue-600">Otras op. ({hoveredDay.transferCount})</span>
                   <span className="font-medium text-blue-700">{formatCurrency(hoveredDay.transfers)}</span>
                 </div>
               )}

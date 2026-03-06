@@ -111,7 +111,7 @@ export default function TransfersPage() {
 
       toast({
         title: 'Éxito',
-        description: 'Transferencia creada correctamente',
+        description: 'Operación registrada correctamente',
       })
 
       fetchData()
@@ -119,7 +119,7 @@ export default function TransfersPage() {
       console.error('Error creating transfer:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo crear la transferencia',
+        description: 'No se pudo registrar la operación',
         variant: 'destructive',
       })
     }
@@ -178,20 +178,20 @@ export default function TransfersPage() {
   }
 
   const handleDeleteTransfer = async (id: number) => {
-    if (!confirm('¿Está seguro de eliminar esta transferencia?')) return
+    if (!confirm('¿Está seguro de eliminar esta operación?')) return
 
     try {
       await accountingService.deleteTransfer(id)
       toast({
         title: 'Éxito',
-        description: 'Transferencia eliminada correctamente',
+        description: 'Operación eliminada correctamente',
       })
       fetchData()
     } catch (error) {
       console.error('Error deleting transfer:', error)
       toast({
         title: 'Error',
-        description: 'No se pudo eliminar la transferencia',
+        description: 'No se pudo eliminar la operación',
         variant: 'destructive',
       })
     }
@@ -203,7 +203,7 @@ export default function TransfersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Transferencias</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Otras Operaciones</h1>
               <p className="mt-1 text-sm text-gray-500">{periodLabel}</p>
             </div>
             <PeriodFilter
@@ -231,7 +231,7 @@ export default function TransfersPage() {
               onClick={() => setIsAddTransferOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Transferencia
+              Otra operación
             </Button>
           </div>
         </div>
@@ -244,7 +244,7 @@ export default function TransfersPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Transferencias</CardTitle>
+                  <CardTitle className="text-xl">Otras Operaciones</CardTitle>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm">
                       <Filter className="h-4 w-4 mr-2" />
@@ -267,13 +267,13 @@ export default function TransfersPage() {
                     <div className="w-20 h-20 rounded-2xl bg-gray-200 flex items-center justify-center mb-4">
                       <ArrowLeftRight className="h-10 w-10 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4">No hay transferencias disponibles para el periodo seleccionado</p>
+                    <p className="text-gray-500 mb-4">No hay operaciones disponibles para el periodo seleccionado</p>
                     <Button
                       className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
                       onClick={() => setIsAddTransferOpen(true)}
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Agregar Transferencia
+                      Agregar Operación
                     </Button>
                   </div>
                 ) : (
