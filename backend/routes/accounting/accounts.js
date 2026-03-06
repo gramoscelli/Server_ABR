@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Account, Expense, Income, Transfer } = require('../../models/accounting');
+const { Account, Expense, Income, Transfer, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixModelEncoding, fixArrayEncoding } = require('../../utils/encoding');
@@ -28,6 +28,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 
     const accounts = await Account.findAll({
       where,
+      include: [{ model: PlanDeCuentas, as: 'planCta', attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] }],
       order: [
         ['type', 'ASC'],
         ['name', 'ASC']
@@ -72,7 +73,9 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
  */
 router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const account = await Account.findByPk(req.params.id);
+    const account = await Account.findByPk(req.params.id, {
+      include: [{ model: PlanDeCuentas, as: 'planCta', attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] }]
+    });
 
     if (!account) {
       return res.status(404).json({
@@ -137,7 +140,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
  */
 router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const { name, type, account_number, bank_name, currency, initial_balance, notes } = req.body;
+    const { name, type, account_number, bank_name, currency, initial_balance, notes, plan_cta_id } = req.body;
 
     if (!name) {
       return res.status(400).json({
@@ -162,7 +165,8 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       initial_balance: initial_balance || 0,
       current_balance: initial_balance || 0,
       is_active: true,
-      notes: notes || null
+      notes: notes || null,
+      plan_cta_id: plan_cta_id || null
     });
 
     res.status(201).json({
@@ -196,7 +200,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       });
     }
 
-    const { name, type, account_number, bank_name, currency, is_active, notes } = req.body;
+    const { name, type, account_number, bank_name, currency, is_active, notes, plan_cta_id } = req.body;
 
     if (type && !['cash', 'bank', 'other'].includes(type)) {
       return res.status(400).json({
@@ -212,6 +216,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     if (currency !== undefined) account.currency = currency;
     if (is_active !== undefined) account.is_active = is_active;
     if (notes !== undefined) account.notes = notes;
+    if (plan_cta_id !== undefined) account.plan_cta_id = plan_cta_id;
 
     await account.save();
 

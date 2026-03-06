@@ -34,6 +34,9 @@ interface Operation {
   type: 'income' | 'expense' | 'transfer'
   amount: number
   categoryId?: number | null
+  plan_cta_id?: number | null
+  planCtaCodigo?: number | null
+  planCtaNombre?: string | null
   accountId?: number
   fromAccountId?: number
   toAccountId?: number
@@ -99,6 +102,9 @@ export default function OperationsPage() {
           type: 'income' as const,
           amount: Number(income.amount),
           categoryId: income.category_id,
+          plan_cta_id: income.plan_cta_id,
+          planCtaCodigo: income.planCta?.codigo || null,
+          planCtaNombre: income.planCta?.nombre || null,
           accountId: income.account_id,
           description: income.description || null,
         })),
@@ -108,6 +114,9 @@ export default function OperationsPage() {
           type: 'expense' as const,
           amount: Number(expense.amount),
           categoryId: expense.category_id,
+          plan_cta_id: expense.plan_cta_id,
+          planCtaCodigo: expense.planCta?.codigo || null,
+          planCtaNombre: expense.planCta?.nombre || null,
           accountId: expense.account_id,
           description: expense.description || null,
         })),
@@ -145,7 +154,7 @@ export default function OperationsPage() {
       await accountingService.createIncome({
         amount: Number(data.amount),
         account_id: data.account_id,
-        category_id: data.category_id,
+        plan_cta_id: data.plan_cta_id,
         date: data.date,
         description: data.description || undefined,
       })
@@ -171,7 +180,7 @@ export default function OperationsPage() {
       await accountingService.createExpense({
         amount: Number(data.amount),
         account_id: data.account_id,
-        category_id: data.category_id,
+        plan_cta_id: data.plan_cta_id,
         date: data.date,
         description: data.description || undefined,
       })
@@ -404,10 +413,15 @@ export default function OperationsPage() {
                         </span>
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {operation.planCtaCodigo && (
+                          <span className="font-mono text-xs bg-gray-100 dark:bg-gray-900 px-2 py-1 rounded mr-2">
+                            {operation.planCtaCodigo} - {operation.planCtaNombre}
+                          </span>
+                        )}
                         {operation.description && (
                           <span>{operation.description}</span>
                         )}
-                        {!operation.description && (
+                        {!operation.description && !operation.planCtaCodigo && (
                           <span className="text-gray-400 italic">Sin descripción</span>
                         )}
                       </div>

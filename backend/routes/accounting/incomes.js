@@ -3,7 +3,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const { Income, IncomeCategory, Account, accountingDb } = require('../../models/accounting');
+const { Income, IncomeCategory, Account, PlanDeCuentas, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
@@ -22,7 +22,7 @@ function fixIncomeEncoding(income) {
 // GET all incomes
 router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const { start_date, end_date, category_id, account_id, page = 1, limit = 50 } = req.query;
+    const { start_date, end_date, category_id, plan_cta_id, account_id, page = 1, limit = 50 } = req.query;
     const where = {};
     if (start_date || end_date) {
       where.date = {};
@@ -30,6 +30,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       if (end_date) where.date[Op.lte] = end_date;
     }
     if (category_id) where.category_id = category_id;
+    if (plan_cta_id) where.plan_cta_id = plan_cta_id;
     if (account_id) where.account_id = account_id;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -37,6 +38,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       where,
       include: [
         { model: IncomeCategory, as: 'category', required: false },
+        { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
         { model: Account, as: 'account', attributes: ['id', 'name', 'type'] }
       ],
       order: [['date', 'DESC'], ['created_at', 'DESC']],
@@ -62,7 +64,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
     const income = await Income.findByPk(req.params.id, {
-      include: [{ model: IncomeCategory, as: 'category' }, { model: Account, as: 'account' }]
+      include: [{ model: IncomeCategory, as: 'category' }, { model: PlanDeCuentas, as: 'planCta', attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] }, { model: Account, as: 'account' }]
     });
     if (!income) return res.status(404).json({ success: false, error: 'Ingreso no encontrado' });
     res.json({ success: true, data: fixIncomeEncoding(income) });
@@ -75,7 +77,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   const transaction = await accountingDb.transaction();
   try {
-    const { amount, category_id, account_id, date, description, attachment_url } = req.body;
+    const { amount, category_id, plan_cta_id, account_id, date, description, attachment_url } = req.body;
     if (!amount || amount <= 0) {
       await transaction.rollback();
       return res.status(400).json({ success: false, error: 'El monto debe ser mayor a cero' });
@@ -92,7 +94,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     }
 
     const income = await Income.create({
-      amount, category_id: category_id || null, account_id, date: date || new Date(),
+      amount, category_id: category_id || null, plan_cta_id: plan_cta_id || null, account_id, date: date || new Date(),
       description: description || null, attachment_url: attachment_url || null, user_id: req.user.id
     }, { transaction });
 
@@ -100,7 +102,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     await transaction.commit();
 
     const createdIncome = await Income.findByPk(income.id, {
-      include: [{ model: IncomeCategory, as: 'category' }, { model: Account, as: 'account' }]
+      include: [{ model: IncomeCategory, as: 'category' }, { model: PlanDeCuentas, as: 'planCta', attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] }, { model: Account, as: 'account' }]
     });
     res.status(201).json({ success: true, message: 'Ingreso creado exitosamente', data: createdIncome });
   } catch (error) {
@@ -120,7 +122,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       return res.status(404).json({ success: false, error: 'Ingreso no encontrado' });
     }
 
-    const { amount, category_id, account_id, date, description, attachment_url } = req.body;
+    const { amount, category_id, plan_cta_id, account_id, date, description, attachment_url } = req.body;
     
     if (amount !== undefined || account_id !== undefined) {
       const oldAccount = await Account.findByPk(income.account_id);
@@ -135,6 +137,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 
     if (amount !== undefined) income.amount = amount;
     if (category_id !== undefined) income.category_id = category_id;
+    if (plan_cta_id !== undefined) income.plan_cta_id = plan_cta_id;
     if (account_id !== undefined) income.account_id = account_id;
     if (date !== undefined) income.date = date;
     if (description !== undefined) income.description = description;
@@ -144,7 +147,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     await transaction.commit();
 
     const updatedIncome = await Income.findByPk(income.id, {
-      include: [{ model: IncomeCategory, as: 'category' }, { model: Account, as: 'account' }]
+      include: [{ model: IncomeCategory, as: 'category' }, { model: PlanDeCuentas, as: 'planCta', attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] }, { model: Account, as: 'account' }]
     });
     res.json({ success: true, message: 'Ingreso actualizado exitosamente', data: updatedIncome });
   } catch (error) {

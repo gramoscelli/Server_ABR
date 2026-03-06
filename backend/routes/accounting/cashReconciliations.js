@@ -102,6 +102,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     if (notes !== undefined) reconciliation.notes = notes;
 
     await reconciliation.save();
+    await reconciliation.reload();
 
     const updated = await CashReconciliation.findByPk(reconciliation.id, {
       include: [{ model: Account, as: 'account' }]
@@ -154,16 +155,21 @@ router.get('/calculate/:account_id/:date', authenticateToken, authorizeRoles('ro
       Transfer.sum('amount', { where: { from_account_id: account_id, date } }) || 0
     ]);
 
-    const expectedBalance = openingBalance + incomes - expenses + incomingTransfers - outgoingTransfers;
+    const totalIncomes = parseFloat(incomes || 0);
+    const totalExpenses = parseFloat(expenses || 0);
+    const totalIncomingTransfers = parseFloat(incomingTransfers || 0);
+    const totalOutgoingTransfers = parseFloat(outgoingTransfers || 0);
+
+    const expectedBalance = openingBalance + totalIncomes - totalExpenses + totalIncomingTransfers - totalOutgoingTransfers;
 
     res.json({
       success: true,
       data: {
         opening_balance: openingBalance.toFixed(2),
-        incomes: incomes.toFixed(2),
-        expenses: expenses.toFixed(2),
-        incoming_transfers: incomingTransfers.toFixed(2),
-        outgoing_transfers: outgoingTransfers.toFixed(2),
+        incomes: totalIncomes.toFixed(2),
+        expenses: totalExpenses.toFixed(2),
+        incoming_transfers: totalIncomingTransfers.toFixed(2),
+        outgoing_transfers: totalOutgoingTransfers.toFixed(2),
         expected_balance: expectedBalance.toFixed(2)
       }
     });

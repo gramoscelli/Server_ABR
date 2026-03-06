@@ -2,7 +2,6 @@ import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
 import {
   LayoutDashboard,
   BookOpenText,
-  Building2,
   FileText,
   Settings,
   DollarSign,
@@ -24,11 +23,6 @@ const navigation: NavigationItem[] = [
     name: 'Arqueos de Caja',
     href: '/accounting/reconciliations',
     icon: Calculator,
-  },
-  {
-    name: 'Cuentas',
-    href: '/accounting/accounts',
-    icon: Building2,
   },
   {
     name: 'Reportes',

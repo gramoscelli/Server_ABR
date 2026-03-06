@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Settings as SettingsIcon,
   Plus,
+  Building2,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -13,8 +14,15 @@ export default function SettingsPage() {
 
   const settingsSections = [
     {
+      title: 'Cuentas',
+      description: 'Gestiona cuentas de efectivo y bancarias',
+      icon: Building2,
+      color: 'bg-green-500',
+      route: '/accounting/accounts',
+    },
+    {
       title: 'Categorías',
-      description: 'Gestiona las categorías para clasificar ingresos y egresos',
+      description: 'Gestiona el plan de cuentas para clasificar ingresos y egresos',
       icon: Tag,
       color: 'bg-purple-500',
       route: '/accounting/categories',

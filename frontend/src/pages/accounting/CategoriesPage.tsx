@@ -12,19 +12,20 @@ import { authService } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
 import { AddCategoryDialog, CategoryFormData } from '@/components/cash/AddCategoryDialog'
 import { accountingService } from '@/lib/accountingService'
-import type { ExpenseCategory, IncomeCategory } from '@/types/accounting'
+import type { ExpenseCategory, IncomeCategory, PlanDeCuentas } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
 
 export default function CategoriesPage() {
   const navigate = useNavigate()
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+  const [planDeCuentas, setPlanDeCuentas] = useState<{ egreso: PlanDeCuentas[]; ingreso: PlanDeCuentas[] }>({ egreso: [], ingreso: [] })
   const [loading, setLoading] = useState(true)
   const [isAddExpenseCategoryOpen, setIsAddExpenseCategoryOpen] = useState(false)
   const [isAddIncomeCategoryOpen, setIsAddIncomeCategoryOpen] = useState(false)
   const [editingExpenseCategory, setEditingExpenseCategory] = useState<ExpenseCategory | null>(null)
   const [editingIncomeCategory, setEditingIncomeCategory] = useState<IncomeCategory | null>(null)
-  const [activeTab, setActiveTab] = useState('expenses')
+  const [activeTab, setActiveTab] = useState('plan-de-cuentas')
 
   useEffect(() => {
     // Check if user has access (root or admin_employee)
@@ -42,12 +43,15 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true)
-      const [expenseResponse, incomeResponse] = await Promise.all([
+      const [expenseResponse, incomeResponse, egresoResponse, ingresoResponse] = await Promise.all([
         accountingService.getExpenseCategories(),
         accountingService.getIncomeCategories(),
+        accountingService.getPlanDeCuentas({ tipo: 'egreso' }),
+        accountingService.getPlanDeCuentas({ tipo: 'ingreso' }),
       ])
       setExpenseCategories(expenseResponse || [])
       setIncomeCategories(incomeResponse || [])
+      setPlanDeCuentas({ egreso: egresoResponse || [], ingreso: ingresoResponse || [] })
     } catch (error) {
       console.error('Error fetching categories:', error)
       toast({
@@ -215,18 +219,69 @@ export default function CategoriesPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Categorías</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Plan de Cuentas & Categorías</h1>
             <p className="mt-1 text-sm text-gray-500">
-              Gestiona las categorías de ingresos y egresos
+              Visualiza el plan de cuentas y gestiona categorías
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsTrigger value="plan-de-cuentas">Plan de Cuentas</TabsTrigger>
             <TabsTrigger value="expenses">Egresos</TabsTrigger>
             <TabsTrigger value="incomes">Ingresos</TabsTrigger>
           </TabsList>
+
+          {/* Plan de Cuentas Tab */}
+          <TabsContent value="plan-de-cuentas" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Plan de Cuentas</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Egresos Section */}
+                <div>
+                  <h3 className="font-semibold text-lg text-red-600 mb-3">Egresos (5xxx)</h3>
+                  {loading ? (
+                    <p className="text-gray-500">Cargando...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {planDeCuentas.egreso.map((cuenta) => (
+                        <div key={cuenta.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                          <div>
+                            <span className="font-mono font-semibold text-red-600">{cuenta.codigo}</span>
+                            <span className="ml-2 text-gray-900">{cuenta.nombre}</span>
+                          </div>
+                          <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">{cuenta.grupo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Ingresos Section */}
+                <div className="pt-6 border-t">
+                  <h3 className="font-semibold text-lg text-green-600 mb-3">Ingresos (4xxx)</h3>
+                  {loading ? (
+                    <p className="text-gray-500">Cargando...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {planDeCuentas.ingreso.map((cuenta) => (
+                        <div key={cuenta.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50">
+                          <div>
+                            <span className="font-mono font-semibold text-green-600">{cuenta.codigo}</span>
+                            <span className="ml-2 text-gray-900">{cuenta.nombre}</span>
+                          </div>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">{cuenta.grupo}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Expense Categories Tab */}
           <TabsContent value="expenses" className="space-y-4">

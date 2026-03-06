@@ -97,6 +97,15 @@ export const API_ENDPOINTS = {
     CASH_RECONCILIATION_BY_DATE: (date: string) => `/api/accounting/cash-reconciliations/date/${date}`,
     CASH_RECONCILIATION_CALCULATE: (accountId: number, date: string) =>
       `/api/accounting/cash-reconciliations/calculate/${accountId}/${date}`,
+
+    // Plan de Cuentas
+    PLAN_DE_CUENTAS: '/api/accounting/plan-de-cuentas',
+
+    // Reports
+    REPORTS: {
+      ESTADO_RESULTADOS: '/api/accounting/reports/estado-resultados',
+      BALANCE_GENERAL: '/api/accounting/reports/balance-general',
+    },
   },
 
   // Purchases module endpoints

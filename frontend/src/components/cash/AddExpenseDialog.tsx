@@ -18,7 +18,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Upload } from 'lucide-react'
 import { accountingService } from '@/lib/accountingService'
-import type { Account, ExpenseCategory } from '@/types/accounting'
+import type { Account, PlanDeCuentas } from '@/types/accounting'
 
 interface AddExpenseDialogProps {
   open: boolean
@@ -30,7 +30,7 @@ export interface ExpenseFormData {
   amount: string
   account_id: number
   date: string
-  category_id: number | null
+  plan_cta_id: number | null
   description: string
   attachment_url?: string
 }
@@ -40,11 +40,11 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
     amount: '',
     account_id: 0,
     date: new Date().toISOString().slice(0, 16),
-    category_id: null,
+    plan_cta_id: null,
     description: '',
   })
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [categories, setCategories] = useState<ExpenseCategory[]>([])
+  const [planDeCuentas, setPlanDeCuentas] = useState<PlanDeCuentas[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -56,12 +56,12 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
   const loadData = async () => {
     try {
       setLoading(true)
-      const [accountsResponse, categoriesData] = await Promise.all([
+      const [accountsResponse, planDeCuentasData] = await Promise.all([
         accountingService.getAccounts({ is_active: true }),
-        accountingService.getExpenseCategories(),
+        accountingService.getPlanDeCuentas({ tipo: 'egreso' }),
       ])
       setAccounts(accountsResponse.data)
-      setCategories(categoriesData)
+      setPlanDeCuentas(planDeCuentasData)
 
       // Set default account if available
       if (accountsResponse.data.length > 0 && !formData.account_id) {
@@ -74,18 +74,6 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
     }
   }
 
-  const flattenCategories = (cats: ExpenseCategory[]): ExpenseCategory[] => {
-    let result: ExpenseCategory[] = []
-    for (const cat of cats) {
-      result.push(cat)
-      if (cat.subcategories && cat.subcategories.length > 0) {
-        result = result.concat(flattenCategories(cat.subcategories))
-      }
-    }
-    return result
-  }
-
-  const allCategories = flattenCategories(categories)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,7 +90,7 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
         amount: '',
         account_id: accounts.length > 0 ? accounts[0].id : 0,
         date: new Date().toISOString().slice(0, 16),
-        category_id: null,
+        plan_cta_id: null,
         description: '',
       })
       onOpenChange(false)
@@ -177,26 +165,26 @@ export function AddExpenseDialog({ open, onOpenChange, onSubmit }: AddExpenseDia
             </div>
           </div>
 
-          {/* Category */}
+          {/* Plan de Cuentas */}
           <div className="space-y-2">
-            <Label htmlFor="category" className="text-sm font-medium text-gray-700">
-              Categoría (Opcional)
+            <Label htmlFor="plan_cta" className="text-sm font-medium text-gray-700">
+              Cuenta Contable
             </Label>
             <Select
-              value={formData.category_id ? String(formData.category_id) : 'none'}
+              value={formData.plan_cta_id ? String(formData.plan_cta_id) : 'none'}
               onValueChange={(value) =>
-                setFormData({ ...formData, category_id: value === 'none' ? null : parseInt(value) })
+                setFormData({ ...formData, plan_cta_id: value === 'none' ? null : parseInt(value) })
               }
               disabled={loading}
             >
-              <SelectTrigger id="category">
+              <SelectTrigger id="plan_cta">
                 <SelectValue placeholder="Sin Categoría" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sin Categoría</SelectItem>
-                {allCategories.map((category) => (
-                  <SelectItem key={category.id} value={String(category.id)}>
-                    {category.parent_id ? `  ${category.name}` : category.name}
+                {planDeCuentas.map((cuenta) => (
+                  <SelectItem key={cuenta.id} value={String(cuenta.id)}>
+                    {cuenta.codigo} - {cuenta.nombre}
                   </SelectItem>
                 ))}
               </SelectContent>

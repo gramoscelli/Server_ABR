@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   Menu,
   X,
   ChevronLeft,
   ChevronRight,
+  Home,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -38,6 +39,7 @@ export function ModuleLayout({
     return stored === 'true'
   })
   const location = useLocation()
+  const navigate = useNavigate()
   const { effectiveTheme } = useTheme()
 
   // Persist sidebar state
@@ -126,6 +128,18 @@ export function ModuleLayout({
               )
             })}
           </nav>
+
+          {/* Mobile Exit Button */}
+          <div className="border-t border-white/10 px-4 py-4">
+            <Button
+              onClick={() => navigate('/')}
+              className="w-full flex items-center gap-4 bg-white/10 hover:bg-white/20 text-white rounded-xl py-3.5 text-sm font-semibold transition-all duration-200"
+              variant="ghost"
+            >
+              <Home className="h-5 w-5" />
+              <span>Salir</span>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -186,6 +200,23 @@ export function ModuleLayout({
             )
           })}
         </nav>
+
+        {/* Desktop Exit Button */}
+        <div className="border-t border-white/10 px-4 py-4">
+          <Button
+            onClick={() => navigate('/')}
+            title={desktopSidebarCollapsed ? 'Salir' : ''}
+            className={cn(
+              "w-full flex items-center rounded-xl py-3.5 text-sm font-semibold transition-all duration-200",
+              "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white hover:scale-105",
+              desktopSidebarCollapsed ? "justify-center px-2" : "gap-4 px-4"
+            )}
+            variant="ghost"
+          >
+            <Home className="h-5 w-5" />
+            {!desktopSidebarCollapsed && <span>Salir</span>}
+          </Button>
+        </div>
       </div>
 
       {/* Main content area */}

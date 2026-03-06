@@ -29,6 +29,15 @@ const Expense = accountingDb.define('expenses', {
       key: 'id'
     }
   },
+  plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Links to chart of accounts (plan de cuentas)'
+  },
   account_id: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -23,12 +23,14 @@ var whatsappRouter = require('./routes/whatsapp');
 var accountingExpenseCategoriesRouter = require('./routes/accounting/expenseCategories');
 var accountingIncomeCategoriesRouter = require('./routes/accounting/incomeCategories');
 var accountingTransferTypesRouter = require('./routes/accounting/transferTypes');
+var accountingPlanDeCuentasRouter = require('./routes/accounting/planDeCuentas');
 var accountingAccountsRouter = require('./routes/accounting/accounts');
 var accountingExpensesRouter = require('./routes/accounting/expenses');
 var accountingIncomesRouter = require('./routes/accounting/incomes');
 var accountingTransfersRouter = require('./routes/accounting/transfers');
 var accountingCashReconciliationsRouter = require('./routes/accounting/cashReconciliations');
 var accountingDashboardRouter = require('./routes/accounting/dashboard');
+var accountingReportsRouter = require('./routes/accounting/reports');
 
 // Purchase module routes
 var purchaseSuppliersRouter = require('./routes/purchases/suppliers');
@@ -185,12 +187,14 @@ app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // What
 app.use('/api/accounting/expense-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingExpenseCategoriesRouter);
 app.use('/api/accounting/income-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingIncomeCategoriesRouter);
 app.use('/api/accounting/transfer-types', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransferTypesRouter);
+app.use('/api/accounting/plan-de-cuentas', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingPlanDeCuentasRouter);
 app.use('/api/accounting/accounts', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingAccountsRouter);
 app.use('/api/accounting/expenses', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingExpensesRouter);
 app.use('/api/accounting/incomes', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingIncomesRouter);
 app.use('/api/accounting/transfers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransfersRouter);
 app.use('/api/accounting/cash-reconciliations', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingCashReconciliationsRouter);
 app.use('/api/accounting/dashboard', authenticateToken, authenticatedAwareApiLimiter, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
+app.use('/api/accounting/reports', authenticateToken, authenticatedAwareApiLimiter, accountingReportsRouter); // Reports are read-only, no CSRF needed
 
 // Purchase module routes (protected, state-changing routes need CSRF)
 app.use('/api/purchases/suppliers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseSuppliersRouter);

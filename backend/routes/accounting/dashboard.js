@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const { Account, Expense, Income, Transfer, ExpenseCategory, IncomeCategory } = require('../../models/accounting');
+const { Account, Expense, Income, Transfer, ExpenseCategory, IncomeCategory, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 
@@ -73,6 +73,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
         order: [['date', 'DESC'], ['created_at', 'DESC']],
         include: [
           { model: ExpenseCategory, as: 'category', required: false },
+          { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
           { model: Account, as: 'account', attributes: ['id', 'name'] }
         ]
       }),
@@ -82,6 +83,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
         order: [['date', 'DESC'], ['created_at', 'DESC']],
         include: [
           { model: IncomeCategory, as: 'category', required: false },
+          { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
           { model: Account, as: 'account', attributes: ['id', 'name'] }
         ]
       }),

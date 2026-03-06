@@ -107,7 +107,7 @@ export default function ExpensesPage() {
       await accountingService.createExpense({
         amount: Number(data.amount),
         account_id: data.account_id,
-        category_id: data.category_id,
+        plan_cta_id: data.plan_cta_id || undefined,
         date: data.date,
         description: data.description || undefined,
       })
@@ -133,7 +133,7 @@ export default function ExpensesPage() {
       await accountingService.createIncome({
         amount: Number(data.amount),
         account_id: data.account_id,
-        category_id: data.category_id,
+        plan_cta_id: data.plan_cta_id || undefined,
         date: data.date,
         description: data.description || undefined,
       })

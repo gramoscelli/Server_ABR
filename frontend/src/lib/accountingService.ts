@@ -28,6 +28,7 @@ import type {
   IncomeQueryParams,
   MonthlyData,
   PaginatedResponse,
+  PlanDeCuentas,
   ReorderCategoriesData,
   StatsQueryParams,
   Transfer,
@@ -398,6 +399,26 @@ class AccountingService {
     })
   }
 
+  // Plan de Cuentas (Chart of Accounts)
+  async getPlanDeCuentas(params?: { tipo?: string }): Promise<PlanDeCuentas[]> {
+    const queryParams = new URLSearchParams()
+    if (params?.tipo) queryParams.append('tipo', params.tipo)
+
+    const url = `${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    const response = await fetchWithAuth(url)
+    const data: ApiResponse<PlanDeCuentas[]> = await response.json()
+    return data.data
+  }
+
+  async updatePlanDeCuentas(id: number, updateData: { nombre?: string; is_active?: boolean }): Promise<PlanDeCuentas> {
+    const response = await fetchWithAuth(`${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+    })
+    const result: ApiResponse<PlanDeCuentas> = await response.json()
+    return result.data
+  }
+
   // Cash Reconciliations
   async getCashReconciliations(
     params?: CashReconciliationQueryParams
@@ -464,6 +485,24 @@ class AccountingService {
     )
     const data: ApiResponse<CalculatedBalance> = await response.json()
     return data.data
+  }
+
+  // Reports
+  async getEstadoResultados(params?: { start_date?: string; end_date?: string }): Promise<any> {
+    const queryParams = new URLSearchParams()
+    if (params?.start_date) queryParams.append('start_date', params.start_date)
+    if (params?.end_date) queryParams.append('end_date', params.end_date)
+
+    const url = `${API_ENDPOINTS.ACCOUNTING.REPORTS.ESTADO_RESULTADOS}${
+      queryParams.toString() ? `?${queryParams.toString()}` : ''
+    }`
+    const response = await fetchWithAuth(url)
+    return await response.json()
+  }
+
+  async getBalanceGeneral(): Promise<any> {
+    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.REPORTS.BALANCE_GENERAL)
+    return await response.json()
   }
 }
 

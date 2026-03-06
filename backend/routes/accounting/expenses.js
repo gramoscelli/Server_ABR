@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Expense, ExpenseCategory, Account, accountingDb } = require('../../models/accounting');
+const { Expense, ExpenseCategory, Account, PlanDeCuentas, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
@@ -32,6 +32,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       start_date,
       end_date,
       category_id,
+      plan_cta_id,
       account_id,
       min_amount,
       max_amount,
@@ -48,6 +49,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     }
 
     if (category_id) where.category_id = category_id;
+    if (plan_cta_id) where.plan_cta_id = plan_cta_id;
     if (account_id) where.account_id = account_id;
 
     if (min_amount || max_amount) {
@@ -65,6 +67,12 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
           model: ExpenseCategory,
           as: 'category',
           required: false
+        },
+        {
+          model: PlanDeCuentas,
+          as: 'planCta',
+          required: false,
+          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
         },
         {
           model: Account,
@@ -125,6 +133,11 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
           }]
         },
         {
+          model: PlanDeCuentas,
+          as: 'planCta',
+          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
+        },
+        {
           model: Account,
           as: 'account'
         }
@@ -161,7 +174,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
   const transaction = await accountingDb.transaction();
 
   try {
-    const { amount, category_id, account_id, date, description, attachment_url } = req.body;
+    const { amount, category_id, plan_cta_id, account_id, date, description, attachment_url } = req.body;
 
     // Validations
     if (!amount || amount <= 0) {
@@ -206,6 +219,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     const expense = await Expense.create({
       amount,
       category_id: category_id || null,
+      plan_cta_id: plan_cta_id || null,
       account_id,
       date: date || new Date(),
       description: description || null,

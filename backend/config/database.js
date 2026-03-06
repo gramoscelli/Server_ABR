@@ -39,7 +39,7 @@ const sequelize = new Sequelize(
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
 
     // Timezone configuration
-    timezone: '+00:00',
+    timezone: '-03:00',
 
     // Define options
     define: {
@@ -113,7 +113,7 @@ const accountingDb = new Sequelize(
       idle: 10000
     },
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    timezone: '+00:00',
+    timezone: '-03:00',
     define: {
       timestamps: true,
       underscored: false,

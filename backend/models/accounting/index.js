@@ -7,6 +7,7 @@ const { accountingDb } = require('../../config/database');
 const ExpenseCategory = require('./ExpenseCategory');
 const IncomeCategory = require('./IncomeCategory');
 const TransferType = require('./TransferType');
+const PlanDeCuentas = require('./PlanDeCuentas');
 const Account = require('./Account');
 const Expense = require('./Expense');
 const Income = require('./Income');
@@ -17,6 +18,15 @@ const CashReconciliation = require('./CashReconciliation');
 ExpenseCategory.hasMany(Expense, { as: 'expenses', foreignKey: 'category_id' });
 IncomeCategory.hasMany(Income, { as: 'incomes', foreignKey: 'category_id' });
 TransferType.hasMany(Transfer, { as: 'transfers', foreignKey: 'transfer_type_id' });
+
+// Plan de Cuentas associations
+PlanDeCuentas.hasMany(Expense, { as: 'expenses', foreignKey: 'plan_cta_id' });
+PlanDeCuentas.hasMany(Income, { as: 'incomes', foreignKey: 'plan_cta_id' });
+PlanDeCuentas.hasMany(Account, { as: 'accounts', foreignKey: 'plan_cta_id' });
+
+Expense.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
+Income.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
+Account.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
 
 Account.hasMany(Expense, { as: 'expenses', foreignKey: 'account_id' });
 Account.hasMany(Income, { as: 'incomes', foreignKey: 'account_id' });
@@ -29,6 +39,7 @@ module.exports = {
   ExpenseCategory,
   IncomeCategory,
   TransferType,
+  PlanDeCuentas,
   Account,
   Expense,
   Income,

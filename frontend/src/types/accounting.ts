@@ -37,6 +37,17 @@ export interface TransferType {
   updated_at: string
 }
 
+export interface PlanDeCuentas {
+  id: number
+  codigo: number
+  nombre: string
+  tipo: 'activo' | 'pasivo' | 'ingreso' | 'egreso'
+  grupo: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Account {
   id: number
   name: string
@@ -48,6 +59,8 @@ export interface Account {
   current_balance: string | number  // Backend may return as string
   is_active: boolean
   notes: string | null
+  plan_cta_id?: number | null
+  planCta?: PlanDeCuentas
   created_at: string
   updated_at: string
 }
@@ -56,6 +69,7 @@ export interface Expense {
   id: number
   amount: string | number  // Backend may return as string
   category_id: number | null
+  plan_cta_id: number | null
   account_id: number
   date: string
   description: string | null
@@ -64,6 +78,7 @@ export interface Expense {
   created_at: string
   updated_at: string
   category?: ExpenseCategory
+  planCta?: PlanDeCuentas
   account?: Account
 }
 
@@ -71,6 +86,7 @@ export interface Income {
   id: number
   amount: string | number  // Backend may return as string
   category_id: number | null
+  plan_cta_id: number | null
   account_id: number
   date: string
   description: string | null
@@ -79,6 +95,7 @@ export interface Income {
   created_at: string
   updated_at: string
   category?: IncomeCategory
+  planCta?: PlanDeCuentas
   account?: Account
 }
 
@@ -274,6 +291,7 @@ export interface StatsQueryParams {
 export interface CreateExpenseData {
   amount: number
   category_id?: number | null
+  plan_cta_id?: number | null
   account_id: number
   date?: string
   description?: string
@@ -283,6 +301,7 @@ export interface CreateExpenseData {
 export interface UpdateExpenseData {
   amount?: number
   category_id?: number | null
+  plan_cta_id?: number | null
   account_id?: number
   date?: string
   description?: string
@@ -292,6 +311,7 @@ export interface UpdateExpenseData {
 export interface CreateIncomeData {
   amount: number
   category_id?: number | null
+  plan_cta_id?: number | null
   account_id: number
   date?: string
   description?: string
@@ -301,6 +321,7 @@ export interface CreateIncomeData {
 export interface UpdateIncomeData {
   amount?: number
   category_id?: number | null
+  plan_cta_id?: number | null
   account_id?: number
   date?: string
   description?: string
@@ -325,6 +346,7 @@ export interface CreateAccountData {
   initial_balance?: number
   is_active?: boolean
   notes?: string
+  plan_cta_id?: number | null
 }
 
 export interface UpdateAccountData {
@@ -335,6 +357,7 @@ export interface UpdateAccountData {
   currency?: string
   is_active?: boolean
   notes?: string
+  plan_cta_id?: number | null
 }
 
 export interface UpdateAccountBalanceData {

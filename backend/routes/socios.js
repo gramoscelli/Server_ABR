@@ -311,8 +311,11 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
 
     // Add socios to their respective grupos
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
+    // Convert to Argentina timezone (UTC-3)
+    const argNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const currentYear = argNow.getUTCFullYear();
+    const currentMonth = argNow.getUTCMonth() + 1;
+    const currentDay = argNow.getUTCDate();
 
     socios.forEach(socio => {
       const json = socio.toJSON();
@@ -334,10 +337,13 @@ router.get('/report/por-grupo', authenticateToken, authorizeRoles('root', 'admin
 
       if (fixed.cuotas && fixed.cuotas.length > 0) {
         const ultimaCuota = fixed.cuotas[0];
-        const monthsDiff = (currentYear - ultimaCuota.CC_Anio) * 12 + (currentMonth - ultimaCuota.CC_Mes);
-        mesesAtraso = monthsDiff;
+        const rawMonthsDiff = (currentYear - ultimaCuota.CC_Anio) * 12 + (currentMonth - ultimaCuota.CC_Mes);
+        // Apply day-25 grace period: not moroso until after 25th of the month
+        const gracePeriodActive = currentDay < 25;
+        const monthsDiff = gracePeriodActive ? rawMonthsDiff - 1 : rawMonthsDiff;
+        mesesAtraso = Math.max(0, monthsDiff);
 
-        if (monthsDiff === 0) {
+        if (monthsDiff <= 0) {
           estadoPago = 'Al día';
         } else if (monthsDiff > 0) {
           estadoPago = `${monthsDiff} mes(es) atraso`;
@@ -500,8 +506,11 @@ router.get('/morosos/:months', authenticateToken, authorizeRoles('root', 'admin_
 
     // Get current date
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1; // 0-indexed, so add 1
+    // Convert to Argentina timezone (UTC-3)
+    const argNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+    const currentYear = argNow.getUTCFullYear();
+    const currentMonth = argNow.getUTCMonth() + 1;
+    const currentDay = argNow.getUTCDate();
 
     // Get all socios with their latest payment
     const socios = await Socio.findAll({

@@ -278,6 +278,11 @@ export default function AccountsPage() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900">{account.name}</h3>
+                          {account.planCta && (
+                            <p className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded mt-1 inline-block">
+                              {account.planCta.codigo} - {account.planCta.nombre}
+                            </p>
+                          )}
                           <p className="text-xs text-gray-500">{getAccountTypeLabel(account.type)}</p>
                         </div>
                       </div>
