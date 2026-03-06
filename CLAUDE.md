@@ -17,17 +17,18 @@ The system consists of **7 Docker services** orchestrated via `docker-compose.ym
    - Modern UI with Zustand state management
    - Communicates with backend API via `NEXT_PUBLIC_API_URL`
 
-2. **app (Node.js)**: Express.js REST API (port 3000)
-   - Entry: `app/bin/www`
+2. **backend (Node.js)**: Express.js REST API (port 3000)
+   - Entry: `backend/bin/www`
    - JWT/OAuth2 authentication with 4 providers (Google, GitHub, Facebook, Microsoft)
    - Role-based access control (6 roles: root, admin_employee, library_employee, readonly, printer, new_user)
    - API routes: `/api/auth`, `/api/tirada`, `/api/socios`, `/api/admin`, `/api/accounting`, `/api/roles`, `/api/api-keys`
    - Security: Helmet, CORS, rate limiting, CSRF protection, bcrypt password hashing
 
 3. **db (MySQL 8.0)**: Database server (port 3306)
-   - Database: `abr` (configurable via `MYSQL_DATABASE`)
-   - Key tables: usuarios, socios, cobrocuotas, grupos, api_keys, refresh_tokens, accounting tables
-   - Sequelize ORM for data access
+   - Two databases:
+     - `abr` (main): usuarios, socios, cobrocuotas, grupos, api_keys, refresh_tokens, roles, settings
+     - `accounting` (separate): All accounting tables (plan_de_cuentas, accounts, expenses, incomes, transfers, cash_reconciliations, suppliers, purchase system, quotations)
+   - Sequelize ORM for data access (two connections: `sequelize` for abr, `accountingDb` for accounting)
    - Schema tracked in `estructura.sql`
 
 4. **web (Nginx)**: Reverse proxy and PHP frontend (ports 80/443)
@@ -64,10 +65,10 @@ docker-compose logs -f frontend    # Frontend logs
 docker-compose logs -f db          # MySQL logs
 ```
 
-### Backend Development (app/)
+### Backend Development (backend/)
 ```bash
 # Inside container or locally
-cd app
+cd backend
 
 # Install dependencies
 npm install
@@ -163,7 +164,7 @@ docker exec -it mysql bash
   - Permissions stored in 3NF normalized tables (roles → roles_permissions → resources)
   - New registrations get `new_user` role (no permissions) until root approves
 
-- **Security middleware** (app/middleware/):
+- **Security middleware** (backend/middleware/):
   - `auth.js`: JWT validation + role authorization
   - `apiKey.js`: API key authentication
   - `csrf.js`: CSRF token validation
@@ -173,10 +174,12 @@ docker exec -it mysql bash
 - **ORM**: Sequelize 6.37.7 with migrations in `/migrations/`
 - **Connection**: Configured via environment variables in `.env`
 - **Authentication**: MySQL 8.0 uses `mysql_native_password` (run `./fix_db_user.sh` if auth fails)
-- **Key models** (app/models/):
-  - User, Role, ApiKey, RefreshToken (authentication)
-  - Socio, Grupo, Cobrocuota (business domain)
-  - Accounting tables: accounts, expenses, incomes, transfers, cash_reconciliations
+- **Key models** (backend/models/):
+  - User, Role, ApiKey, RefreshToken (authentication) — in `abr` database
+  - Socio, Grupo, Cobrocuota (business domain) — in `abr` database
+  - Accounting models (backend/models/accounting/) — in `accounting` database:
+    - PlanDeCuentas, Account, Expense, Income, Transfer, CashReconciliation
+    - Supplier, SupplierCategory, PurchaseRequest, PurchaseOrder, Quotation, etc.
 
 ### API Structure
 - **RESTful design** with clear URL patterns:
@@ -188,7 +191,7 @@ docker exec -it mysql bash
   - `/api/api-keys/*` - API key CRUD (root only)
   - `/api/accounting/*` - Financial tracking
 
-- **Middleware chain** (app/app.js):
+- **Middleware chain** (backend/app.js):
   1. Helmet (security headers)
   2. CORS (origin validation)
   3. Rate limiting
@@ -267,14 +270,16 @@ MEGA_PASSWORD=...
 ## Important File Locations
 
 **Backend**:
-- `app/app.js` - Express application setup (middleware, routes, error handling)
-- `app/bin/www` - Server entry point
-- `app/routes/` - API endpoint handlers
-- `app/middleware/` - Auth, CSRF, rate limiting, sanitization
-- `app/models/` - Sequelize ORM models
-- `app/services/` - Business logic (email, captcha, WhatsApp)
-- `app/config/` - Database + Passport OAuth configuration
-- `app/test/` - Jest tests
+- `backend/app.js` - Express application setup (middleware, routes, error handling)
+- `backend/bin/www` - Server entry point
+- `backend/routes/` - API endpoint handlers
+- `backend/middleware/` - Auth, CSRF, rate limiting, sanitization
+- `backend/models/` - Sequelize ORM models (abr database)
+- `backend/models/accounting/` - Accounting models (accounting database)
+- `backend/config/database.js` - Database connections (sequelize + accountingDb)
+- `backend/config/passport.js` - Passport OAuth configuration
+- `backend/services/` - Business logic (email, captcha, WhatsApp)
+- `backend/test/` - Jest tests
 
 **Frontend**:
 - `frontend/src/main.tsx` - React entry point
@@ -284,7 +289,7 @@ MEGA_PASSWORD=...
 
 **Infrastructure**:
 - `docker-compose.yml` - Service orchestration
-- `migrations/` - Database migration SQL scripts (14 migrations)
+- `migrations/` - Database migration SQL scripts (20 migrations, including 017 for accounting database)
 - `estructura.sql` - Complete database schema snapshot
 - `.env` - Environment variables (gitignored)
 
@@ -310,8 +315,8 @@ MEGA_PASSWORD=...
 
 ## Default Credentials
 
-**Initial root user** (created by migration 001):
-- Username: `root`
+**Initial admin user** (created by migration 001):
+- Username: `admin`
 - Password: `admin123`
 - **⚠️ CHANGE IMMEDIATELY** after first login via `/api/auth/change-password`
 
@@ -325,7 +330,7 @@ MEGA_PASSWORD=...
 
 ## Key Constants
 
-- `FEE_BY_PAGE = 8`: Records per page in paginated tirada queries (app/routes/tiradascob.js:6)
+- `FEE_BY_PAGE = 8`: Records per page in paginated tirada queries (backend/routes/tiradascob.js:6)
 
 ## Adding New Routes
 
@@ -350,10 +355,10 @@ router.get('/flexible', allowBoth, handler);
 ## Testing
 
 **Backend (Jest)**:
-- Unit tests: `app/test/unit/`
-- Integration tests: `app/test/integration/`
+- Unit tests: `backend/test/unit/`
+- Integration tests: `backend/test/integration/`
 - Coverage threshold: 80%
-- Run: `npm test` (inside `app/`)
+- Run: `npm test` (inside `backend/`)
 
 **Frontend (Vitest)**:
 - Tests: `frontend/src/**/*.test.tsx`
