@@ -1,120 +1,105 @@
-// Accounting Types
+// Accounting Types - Double-Entry Bookkeeping System
 
-export interface TransferType {
-  id: number
-  name: string
-  color: string
-  description: string | null
-  order_index: number
-  is_active?: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface PlanDeCuentas {
+export interface CuentaContable {
   id: number
   codigo: number
-  nombre: string
-  tipo: 'activo' | 'pasivo' | 'ingreso' | 'egreso'
+  titulo: string
+  descripcion: string | null
+  tipo: 'activo' | 'pasivo' | 'patrimonio' | 'ingreso' | 'egreso'
+  subtipo: 'efectivo' | 'bancaria' | 'cobro_electronico' | 'credito_cobrar' | 'pasivo_liquidar' | null
+  requiere_detalle: boolean
   grupo: string
   is_active: boolean
   created_at: string
   updated_at: string
-  accounts?: Account[]  // Associated cash/bank account (0 or 1 via unique FK)
+  // Extended tables (loaded via includes)
+  efectivo?: CuentaEfectivo
+  bancaria?: CuentaBancaria
+  pagoElectronico?: CuentaPagoElectronico
+  // Computed at query time
+  saldo?: number
+  total_debe?: number
+  total_haber?: number
 }
 
-export interface Account {
-  id: number
-  name: string
-  type: 'cash' | 'bank' | 'other'
-  account_number: string | null
-  bank_name: string | null
-  currency: string
-  initial_balance: string | number  // Backend may return as string
-  current_balance: string | number  // Backend may return as string
-  is_active: boolean
-  notes: string | null
-  plan_cta_id: number
-  planCta?: PlanDeCuentas
-  created_at: string
-  updated_at: string
+export interface CuentaEfectivo {
+  id_cuenta: number
+  sucursal: string | null
+  responsable: string | null
+  moneda: string
+  permite_arqueo: boolean
 }
 
-export interface Expense {
-  id: number
-  amount: string | number
-  origin_plan_cta_id: number | null
-  destination_plan_cta_id: number | null
-  plan_cta_id: number | null       // legacy
-  account_id: number | null        // legacy
-  date: string
-  description: string | null
-  attachment_url: string | null
-  user_id: number
-  created_at: string
-  updated_at: string
-  originPlanCta?: PlanDeCuentas
-  destinationPlanCta?: PlanDeCuentas
-  planCta?: PlanDeCuentas           // legacy
-  account?: Account                 // legacy
+export interface CuentaBancaria {
+  id_cuenta: number
+  banco: string
+  nro_cuenta: string | null
+  cbu: string | null
+  alias: string | null
+  moneda: string
+  tipo_cuenta: 'caja_ahorro' | 'cuenta_corriente' | null
+  activa: boolean
 }
 
-export interface Income {
-  id: number
-  amount: string | number
-  origin_plan_cta_id: number | null
-  destination_plan_cta_id: number | null
-  plan_cta_id: number | null       // legacy
-  account_id: number | null        // legacy
-  date: string
-  description: string | null
-  attachment_url: string | null
-  user_id: number
-  created_at: string
-  updated_at: string
-  originPlanCta?: PlanDeCuentas
-  destinationPlanCta?: PlanDeCuentas
-  planCta?: PlanDeCuentas           // legacy
-  account?: Account                 // legacy
+export interface CuentaPagoElectronico {
+  id_cuenta: number
+  proveedor: string
+  tipo_medio: string | null
+  plazo_acreditacion: number
+  liquidacion_diferida: boolean
 }
 
-export interface Transfer {
-  id: number
-  amount: string | number
-  origin_plan_cta_id: number | null
-  destination_plan_cta_id: number | null
-  from_account_id: number | null   // legacy
-  to_account_id: number | null     // legacy
-  transfer_type_id: number | null
-  date: string
-  description: string | null
-  user_id: number
+export interface Asiento {
+  id_asiento: number
+  fecha: string
+  nro_comprobante: string
+  origen: 'manual' | 'ingreso' | 'egreso' | 'transferencia' | 'ajuste' | 'compra' | 'liquidacion'
+  concepto: string
+  estado: 'borrador' | 'confirmado' | 'anulado'
+  usuario_id: number
   created_at: string
   updated_at: string
-  originPlanCta?: PlanDeCuentas
-  destinationPlanCta?: PlanDeCuentas
-  fromAccount?: Account             // legacy
-  toAccount?: Account               // legacy
-  transferType?: TransferType
+  detalles?: AsientoDetalle[]
+}
+
+export interface AsientoDetalle {
+  id_detalle: number
+  id_asiento: number
+  id_cuenta: number
+  tipo_mov: 'debe' | 'haber'
+  importe: string | number
+  referencia_operativa: string | null
+  cuenta?: CuentaContable
+}
+
+export interface LiquidacionElectronica {
+  id_liquidacion: number
+  id_cuenta: number
+  fecha_operacion: string
+  fecha_acreditacion: string | null
+  estado: 'pendiente' | 'acreditada' | 'rechazada'
+  importe_bruto: string | number
+  comision: string | number
+  importe_neto: string | number
+  id_asiento_origen: number | null
+  id_asiento_acreditacion: number | null
+  referencia: string | null
+  cuentaPago?: CuentaPagoElectronico & { cuenta?: CuentaContable }
 }
 
 export interface CashReconciliation {
   id: number
-  account_id: number
+  id_cuenta: number
   date: string
-  opening_balance: string | number  // Balance al inicio del día
-  closing_balance: string | number  // Balance real contado (arqueo físico)
-  expected_balance: string | number // Balance esperado según sistema
-  difference?: number               // Campo virtual: closing_balance - expected_balance
+  opening_balance: string | number
+  closing_balance: string | number
+  expected_balance: string | number
+  difference?: number
   notes: string | null
   user_id: number
   created_at: string
   updated_at: string
-  account?: Account
-  user?: {
-    id: number
-    name: string
-  }
+  cuenta?: CuentaContable
 }
 
 // API Response types
@@ -128,7 +113,8 @@ export interface PaginatedResponse<T> {
     pages: number
   }
   summary?: {
-    totalAmount?: string
+    totalDebe?: string
+    totalHaber?: string
     count?: number
   }
 }
@@ -137,125 +123,98 @@ export interface ApiResponse<T> {
   success: boolean
   data: T
   message?: string
-}
-
-export interface AccountsSummary {
-  total: number
-  totalBalance: string
-  byType: {
-    cash: number
-    bank: number
-    other: number
-  }
+  error?: string
 }
 
 export interface DashboardData {
-  accounts: {
-    list: Account[]
-    summary: {
-      total: number
-      cash: number
-      bank: number
-      other: number
-    }
-  }
+  cuentas: (CuentaContable & { saldo: number })[]
   balances: {
     total: string
-    by_type: {
-      cash: string
-      bank: string
-      other: string
+    by_subtipo: {
+      efectivo: string
+      bancaria: string
+      cobro_electronico: string
     }
   }
   period: {
     start_date: string
     end_date: string
-    total_expenses: string
-    total_incomes: string
+    total_egresos: string
+    total_ingresos: string
     net_result: string
-    expenses_by_category: CategoryStat[]
-    incomes_by_category: CategoryStat[]
+    egresos_by_cuenta: CuentaStat[]
+    ingresos_by_cuenta: CuentaStat[]
   }
-  recent_transactions: {
-    expenses: Expense[]
-    incomes: Income[]
-    transfers: Transfer[]
-  }
+  recent_asientos: Asiento[]
 }
 
-export interface CategoryStat {
-  id: number
-  name: string
-  color: string
+export interface CuentaStat {
+  id_cuenta: number
   total: string
   count: number
+  cuenta: {
+    id: number
+    codigo: number
+    titulo: string
+  }
 }
 
 export interface MonthlyData {
   month: string
-  expenses: string
-  incomes: string
+  egresos: string
+  ingresos: string
   net: string
 }
 
-export interface BalanceHistoryEntry {
-  date: string
-  description: string
-  type: 'income' | 'expense' | 'transfer_in' | 'transfer_out'
-  amount: number
-  balance: number
+export interface BalanceSumasSaldosRow {
+  id: number
+  codigo: number
+  titulo: string
+  tipo: string
+  grupo: string
+  suma_debe: string
+  suma_haber: string
+  saldo_deudor: string
+  saldo_acreedor: string
 }
 
-export interface CalculatedBalance {
-  opening_balance: string
-  incomes: string
-  expenses: string
-  incoming_transfers: string
-  outgoing_transfers: string
-  expected_balance: string
+export interface MayorMovimiento {
+  id_detalle: number
+  id_asiento: number
+  id_cuenta: number
+  tipo_mov: 'debe' | 'haber'
+  importe: string | number
+  referencia_operativa: string | null
+  saldo_acumulado: string
+  asiento: {
+    id_asiento: number
+    fecha: string
+    nro_comprobante: string
+    concepto: string
+    origen: string
+  }
 }
 
 // Query params types
-export interface ExpenseQueryParams {
+export interface AsientoQueryParams {
   start_date?: string
   end_date?: string
-  plan_cta_id?: number
-  account_id?: number
-  min_amount?: number
-  max_amount?: number
+  estado?: 'borrador' | 'confirmado' | 'anulado'
+  origen?: string
+  cuenta_id?: number
   page?: number
   limit?: number
 }
 
-export interface IncomeQueryParams {
-  start_date?: string
-  end_date?: string
-  plan_cta_id?: number
-  account_id?: number
-  page?: number
-  limit?: number
-}
-
-export interface TransferQueryParams {
-  start_date?: string
-  end_date?: string
-  account_id?: number
-  page?: number
-  limit?: number
-}
-
-export interface AccountQueryParams {
-  type?: 'cash' | 'bank' | 'other'
+export interface CuentaQueryParams {
+  tipo?: 'activo' | 'pasivo' | 'patrimonio' | 'ingreso' | 'egreso'
+  subtipo?: string
   is_active?: boolean
+  grupo?: string
 }
 
 export interface CashReconciliationQueryParams {
-  account_id?: number
-  start_date?: string
-  end_date?: string
-}
-
-export interface BalanceHistoryQueryParams {
+  id_cuenta?: number
   start_date?: string
   end_date?: string
 }
@@ -265,115 +224,77 @@ export interface DashboardQueryParams {
   end_date?: string
 }
 
-export interface StatsQueryParams {
-  start_date?: string
-  end_date?: string
-}
-
 // Form data types
-export interface CreateExpenseData {
-  amount: number
-  origin_plan_cta_id?: number | null
-  destination_plan_cta_id?: number | null
-  account_id?: number              // legacy compat
-  date?: string
-  description?: string
-  attachment_url?: string
+export interface CreateAsientoData {
+  fecha: string
+  origen?: string
+  concepto: string
+  estado?: 'borrador' | 'confirmado'
+  detalles: CreateAsientoDetalleData[]
 }
 
-export interface UpdateExpenseData {
-  amount?: number
-  origin_plan_cta_id?: number | null
-  destination_plan_cta_id?: number | null
-  date?: string
-  description?: string
-  attachment_url?: string
+export interface CreateAsientoDetalleData {
+  id_cuenta: number
+  tipo_mov: 'debe' | 'haber'
+  importe: number
+  referencia_operativa?: string
 }
 
-export interface CreateIncomeData {
-  amount: number
-  origin_plan_cta_id?: number | null
-  destination_plan_cta_id?: number | null
-  account_id?: number              // legacy compat
-  date?: string
-  description?: string
-  attachment_url?: string
+export interface CreateCuentaContableData {
+  codigo: number
+  titulo: string
+  descripcion?: string
+  subtipo?: string | null
+  requiere_detalle?: boolean
+  // Extended fields
+  sucursal?: string
+  responsable?: string
+  moneda?: string
+  permite_arqueo?: boolean
+  banco?: string
+  nro_cuenta?: string
+  cbu?: string
+  alias?: string
+  tipo_cuenta?: string
+  proveedor?: string
+  tipo_medio?: string
+  plazo_acreditacion?: number
+  liquidacion_diferida?: boolean
 }
 
-export interface UpdateIncomeData {
-  amount?: number
-  origin_plan_cta_id?: number | null
-  destination_plan_cta_id?: number | null
-  date?: string
-  description?: string
-  attachment_url?: string
-}
-
-export interface CreateTransferData {
-  amount: number
-  origin_plan_cta_id?: number | null
-  destination_plan_cta_id?: number | null
-  from_account_id?: number         // legacy compat
-  to_account_id?: number           // legacy compat
-  transfer_type_id?: number | null
-  date?: string
-  description?: string
-}
-
-export interface CreateAccountData {
-  name: string
-  type?: 'cash' | 'bank' | 'other'
-  account_number?: string
-  bank_name?: string
-  currency?: string
-  initial_balance?: number
+export interface UpdateCuentaContableData {
+  titulo?: string
+  descripcion?: string
   is_active?: boolean
-  notes?: string
-  plan_cta_id: number
-}
-
-export interface UpdateAccountData {
-  name?: string
-  type?: 'cash' | 'bank' | 'other'
-  account_number?: string
-  bank_name?: string
-  currency?: string
-  is_active?: boolean
-  notes?: string
-  plan_cta_id?: number
-}
-
-export interface UpdateAccountBalanceData {
-  new_balance: number
-  notes?: string
-}
-
-export interface CreateTransferTypeData {
-  name: string
-  color?: string
-  description?: string | null
-  order_index?: number
-  is_active?: boolean
-}
-
-export interface UpdateTransferTypeData {
-  name?: string
-  color?: string
-  description?: string | null
-  order_index?: number
-  is_active?: boolean
+  subtipo?: string | null
+  requiere_detalle?: boolean
+  // Extended fields
+  sucursal?: string
+  responsable?: string
+  moneda?: string
+  permite_arqueo?: boolean
+  banco?: string
+  nro_cuenta?: string
+  cbu?: string
+  alias?: string
+  tipo_cuenta?: string
+  activa?: boolean
+  proveedor?: string
+  tipo_medio?: string
+  plazo_acreditacion?: number
+  liquidacion_diferida?: boolean
 }
 
 export interface CreateCashReconciliationData {
-  account_id: number
+  id_cuenta: number
   date: string
   opening_balance: number
-  closing_balance: number   // Balance real contado físicamente
-  expected_balance: number  // Balance esperado según cálculo del sistema
+  closing_balance: number
+  expected_balance: number
   notes?: string | null
 }
 
 export interface UpdateCashReconciliationData {
-  closing_balance?: number  // Solo se puede actualizar el balance real
+  closing_balance?: number
   notes?: string | null
 }

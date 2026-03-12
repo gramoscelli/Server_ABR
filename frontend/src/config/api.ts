@@ -53,47 +53,44 @@ export const API_ENDPOINTS = {
     STATUS: '/api/whatsapp/status',
   },
 
-  // Accounting endpoints
+  // Accounting endpoints (double-entry bookkeeping)
   ACCOUNTING: {
     // Dashboard
     DASHBOARD: '/api/accounting/dashboard',
     DASHBOARD_MONTHLY: '/api/accounting/dashboard/monthly',
 
-    // Accounts
-    ACCOUNTS: '/api/accounting/accounts',
-    ACCOUNT_BY_ID: (id: number) => `/api/accounting/accounts/${id}`,
-    ACCOUNT_BALANCE: (id: number) => `/api/accounting/accounts/${id}/balance`,
-    ACCOUNT_BALANCE_HISTORY: (id: number) => `/api/accounting/accounts/${id}/balance-history`,
+    // Cuentas Contables (chart of accounts)
+    CUENTAS: '/api/accounting/cuentas',
+    CUENTA_BY_ID: (id: number) => `/api/accounting/cuentas/${id}`,
+    CUENTA_BY_CODIGO: (codigo: number) => `/api/accounting/cuentas/by-codigo/${codigo}`,
 
-    // Expenses
-    EXPENSES: '/api/accounting/expenses',
-    EXPENSE_BY_ID: (id: number) => `/api/accounting/expenses/${id}`,
-    EXPENSES_STATS_BY_CATEGORY: '/api/accounting/expenses/stats/by-category',
+    // Asientos (journal entries)
+    ASIENTOS: '/api/accounting/asientos',
+    ASIENTO_BY_ID: (id: number) => `/api/accounting/asientos/${id}`,
+    ASIENTO_CONFIRMAR: (id: number) => `/api/accounting/asientos/${id}/confirmar`,
+    ASIENTO_ANULAR: (id: number) => `/api/accounting/asientos/${id}/anular`,
 
-    // Incomes
-    INCOMES: '/api/accounting/incomes',
-    INCOME_BY_ID: (id: number) => `/api/accounting/incomes/${id}`,
+    // Extended accounts
+    CUENTAS_EFECTIVO: '/api/accounting/cuentas-extendidas/efectivo',
+    CUENTAS_BANCARIAS: '/api/accounting/cuentas-extendidas/bancarias',
+    CUENTAS_PAGO_ELECTRONICO: '/api/accounting/cuentas-extendidas/pago-electronico',
 
-    // Transfers
-    TRANSFERS: '/api/accounting/transfers',
-    TRANSFER_BY_ID: (id: number) => `/api/accounting/transfers/${id}`,
-
-    // Transfer Types
-    TRANSFER_TYPES: '/api/accounting/transfer-types',
-    TRANSFER_TYPE_BY_ID: (id: number) => `/api/accounting/transfer-types/${id}`,
+    // Liquidaciones
+    LIQUIDACIONES: '/api/accounting/liquidaciones',
+    LIQUIDACION_ACREDITAR: (id: number) => `/api/accounting/liquidaciones/${id}/acreditar`,
 
     // Cash Reconciliations
     CASH_RECONCILIATIONS: '/api/accounting/cash-reconciliations',
     CASH_RECONCILIATION_BY_ID: (id: number) => `/api/accounting/cash-reconciliations/${id}`,
     CASH_RECONCILIATION_BY_DATE: (date: string) => `/api/accounting/cash-reconciliations/date/${date}`,
-    CASH_RECONCILIATION_CALCULATE: (accountId: number, date: string) =>
-      `/api/accounting/cash-reconciliations/calculate/${accountId}/${date}`,
-
-    // Plan de Cuentas
-    PLAN_DE_CUENTAS: '/api/accounting/plan-de-cuentas',
+    CASH_RECONCILIATION_CALCULATE: (cuentaId: number, date: string) =>
+      `/api/accounting/cash-reconciliations/calculate/${cuentaId}/${date}`,
 
     // Reports
     REPORTS: {
+      LIBRO_DIARIO: '/api/accounting/reports/libro-diario',
+      MAYOR: (cuentaId: number) => `/api/accounting/reports/mayor/${cuentaId}`,
+      BALANCE_SUMAS_SALDOS: '/api/accounting/reports/balance-sumas-saldos',
       ESTADO_RESULTADOS: '/api/accounting/reports/estado-resultados',
       BALANCE_GENERAL: '/api/accounting/reports/balance-general',
     },

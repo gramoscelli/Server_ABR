@@ -2,24 +2,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CompactDatePicker } from '@/components/ui/compact-date-picker'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
   Plus,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Repeat,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  XCircle,
+  Trash2,
   Calendar,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { authService } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
-import { AddOperationDialog, OperationFormData, OperationType } from '@/components/cash/AddOperationDialog'
-import { accountingService } from '@/lib/accountingService'
-import type { Income, Expense, Transfer, PlanDeCuentas } from '@/types/accounting'
+import { AddAsientoDialog } from '@/components/cash/AddAsientoDialog'
+import * as accountingService from '@/lib/accountingService'
+import type { Asiento, AsientoDetalle, CuentaContable } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
 import {
   Select,
@@ -29,29 +25,26 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-interface Operation {
-  id: number
-  date: string
-  type: 'income' | 'expense' | 'transfer'
-  amount: number
-  description?: string | null
-  originPlanCta?: PlanDeCuentas | null
-  destinationPlanCta?: PlanDeCuentas | null
-  transferTypeName?: string | null
-  transferTypeColor?: string | null
-  raw: Income | Expense | Transfer
+function formatCurrency(amount: number | string): string {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2
+  }).format(Number(amount))
 }
 
 export default function OperationsPage() {
   const navigate = useNavigate()
-  const [operations, setOperations] = useState<Operation[]>([])
-  const [filteredOperations, setFilteredOperations] = useState<Operation[]>([])
+  const [asientos, setAsientos] = useState<Asiento[]>([])
+  const [cuentas, setCuentas] = useState<CuentaContable[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [filterType, setFilterType] = useState<string>('all')
+  const [filterEstado, setFilterEstado] = useState<string>('all')
+  const [filterOrigen, setFilterOrigen] = useState<string>('all')
+  const [expandedId, setExpandedId] = useState<number | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
-  const [addDialogType, setAddDialogType] = useState<OperationType>('income')
-  const [selectedOperation, setSelectedOperation] = useState<Operation | null>(null)
+  const [totalPages, setTotalPages] = useState(1)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     const user = authService.getUser()
@@ -60,18 +53,23 @@ export default function OperationsPage() {
       navigate('/profile')
       return
     }
-    fetchOperations()
-  }, [navigate, selectedDate])
+    fetchCuentas()
+  }, [navigate])
 
   useEffect(() => {
-    if (filterType === 'all') {
-      setFilteredOperations(operations)
-    } else {
-      setFilteredOperations(operations.filter(op => op.type === filterType))
-    }
-  }, [filterType, operations])
+    fetchAsientos()
+  }, [selectedDate, filterEstado, filterOrigen, currentPage])
 
-  const fetchOperations = async () => {
+  const fetchCuentas = async () => {
+    try {
+      const response = await accountingService.getCuentas()
+      setCuentas(response.data || [])
+    } catch (error) {
+      console.error('Error fetching cuentas:', error)
+    }
+  }
+
+  const fetchAsientos = async () => {
     try {
       setLoading(true)
       const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
@@ -79,401 +77,376 @@ export default function OperationsPage() {
       const startDateStr = startDate.toISOString().split('T')[0]
       const endDateStr = endDate.toISOString().split('T')[0]
 
-      const [incomesResponse, expensesResponse, transfersResponse] = await Promise.all([
-        accountingService.getIncomes({ start_date: startDateStr, end_date: endDateStr, limit: 1000 }),
-        accountingService.getExpenses({ start_date: startDateStr, end_date: endDateStr, limit: 1000 }),
-        accountingService.getTransfers({ start_date: startDateStr, end_date: endDateStr, limit: 1000 }),
-      ])
+      const params: Record<string, unknown> = {
+        start_date: startDateStr,
+        end_date: endDateStr,
+        page: currentPage,
+        limit: 50,
+      }
 
-      const allOperations: Operation[] = [
-        ...(incomesResponse.data || []).map((income: Income) => ({
-          id: income.id,
-          date: income.date,
-          type: 'income' as const,
-          amount: Number(income.amount),
-          description: income.description || null,
-          originPlanCta: income.originPlanCta || null,
-          destinationPlanCta: income.destinationPlanCta || null,
-          raw: income,
-        })),
-        ...(expensesResponse.data || []).map((expense: Expense) => ({
-          id: expense.id,
-          date: expense.date,
-          type: 'expense' as const,
-          amount: Number(expense.amount),
-          description: expense.description || null,
-          originPlanCta: expense.originPlanCta || null,
-          destinationPlanCta: expense.destinationPlanCta || null,
-          raw: expense,
-        })),
-        ...(transfersResponse.data || []).map((transfer: Transfer) => ({
-          id: transfer.id,
-          date: transfer.date,
-          type: 'transfer' as const,
-          amount: Number(transfer.amount),
-          description: transfer.description || null,
-          originPlanCta: transfer.originPlanCta || null,
-          destinationPlanCta: transfer.destinationPlanCta || null,
-          transferTypeName: transfer.transferType?.name || null,
-          transferTypeColor: transfer.transferType?.color || null,
-          raw: transfer,
-        })),
-      ]
+      if (filterEstado !== 'all') params.estado = filterEstado
+      if (filterOrigen !== 'all') params.origen = filterOrigen
 
-      allOperations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      setOperations(allOperations)
+      const response = await accountingService.getAsientos(params)
+      setAsientos(response.data || [])
+      setTotalPages(response.pagination?.pages || 1)
     } catch (error) {
-      console.error('Error fetching operations:', error)
-      toast({ title: 'Error', description: 'No se pudieron cargar las operaciones', variant: 'destructive' })
+      console.error('Error fetching asientos:', error)
+      toast({ title: 'Error', description: 'No se pudieron cargar los asientos', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
   }
 
+  const handleConfirmar = async (id: number) => {
+    try {
+      await accountingService.confirmarAsiento(id)
+      toast({ title: 'Exito', description: 'Asiento confirmado correctamente' })
+      fetchAsientos()
+    } catch (error) {
+      console.error('Error confirming asiento:', error)
+      toast({ title: 'Error', description: 'No se pudo confirmar el asiento', variant: 'destructive' })
+    }
+  }
+
+  const handleAnular = async (id: number) => {
+    if (!confirm('Esta seguro de anular este asiento? Se creara un contra-asiento.')) return
+    try {
+      await accountingService.anularAsiento(id)
+      toast({ title: 'Exito', description: 'Asiento anulado correctamente' })
+      fetchAsientos()
+    } catch (error) {
+      console.error('Error anulling asiento:', error)
+      toast({ title: 'Error', description: 'No se pudo anular el asiento', variant: 'destructive' })
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Esta seguro de eliminar este asiento borrador? Esta accion no se puede deshacer.')) return
+    try {
+      await accountingService.deleteAsiento(id)
+      toast({ title: 'Exito', description: 'Asiento eliminado correctamente' })
+      fetchAsientos()
+    } catch (error) {
+      console.error('Error deleting asiento:', error)
+      toast({ title: 'Error', description: 'No se pudo eliminar el asiento', variant: 'destructive' })
+    }
+  }
+
+  const toggleExpand = (id: number) => {
+    setExpandedId(expandedId === id ? null : id)
+  }
+
+  const getEstadoBadge = (estado: string) => {
+    switch (estado) {
+      case 'confirmado':
+        return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Confirmado</span>
+      case 'borrador':
+        return <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Borrador</span>
+      case 'anulado':
+        return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Anulado</span>
+      default:
+        return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{estado}</span>
+    }
+  }
+
+  const getOrigenLabel = (origen: string) => {
+    const labels: Record<string, string> = {
+      manual: 'Manual',
+      ingreso: 'Ingreso',
+      egreso: 'Egreso',
+      transferencia: 'Transferencia',
+      ajuste: 'Ajuste',
+      compra: 'Compra',
+      liquidacion: 'Liquidacion',
+    }
+    return labels[origen] || origen
+  }
+
+  const calcTotals = (detalles?: AsientoDetalle[]) => {
+    if (!detalles) return { debe: 0, haber: 0 }
+    return detalles.reduce(
+      (acc, d) => {
+        const importe = Number(d.importe)
+        if (d.tipo_mov === 'debe') acc.debe += importe
+        else acc.haber += importe
+        return acc
+      },
+      { debe: 0, haber: 0 }
+    )
+  }
+
   const monthYear = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 
-  const openAddDialog = (type: OperationType) => {
-    setAddDialogType(type)
-    setAddDialogOpen(true)
-  }
-
-  const handleSubmitOperation = async (data: OperationFormData) => {
-    try {
-      if (addDialogType === 'income') {
-        await accountingService.createIncome({
-          amount: Number(data.amount),
-          origin_plan_cta_id: data.origin_plan_cta_id,
-          destination_plan_cta_id: data.destination_plan_cta_id,
-          date: data.date,
-          description: data.description || undefined,
-        })
-        toast({ title: 'Éxito', description: 'Ingreso registrado correctamente' })
-      } else if (addDialogType === 'expense') {
-        await accountingService.createExpense({
-          amount: Number(data.amount),
-          origin_plan_cta_id: data.origin_plan_cta_id,
-          destination_plan_cta_id: data.destination_plan_cta_id,
-          date: data.date,
-          description: data.description || undefined,
-        })
-        toast({ title: 'Éxito', description: 'Egreso registrado correctamente' })
-      } else {
-        await accountingService.createTransfer({
-          amount: Number(data.amount),
-          origin_plan_cta_id: data.origin_plan_cta_id,
-          destination_plan_cta_id: data.destination_plan_cta_id,
-          transfer_type_id: data.transfer_type_id,
-          date: data.date,
-          description: data.description || undefined,
-        })
-        toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
-      }
-      fetchOperations()
-    } catch (error) {
-      console.error('Error creating operation:', error)
-      toast({ title: 'Error', description: 'No se pudo registrar la operación', variant: 'destructive' })
+  // Summary
+  const summary = useMemo(() => {
+    let totalDebe = 0
+    let totalHaber = 0
+    for (const a of asientos) {
+      const t = calcTotals(a.detalles)
+      totalDebe += t.debe
+      totalHaber += t.haber
     }
-  }
-
-  const getOperationIcon = (type: string) => {
-    switch (type) {
-      case 'income': return <ArrowUpCircle className="h-5 w-5 text-green-600" />
-      case 'expense': return <ArrowDownCircle className="h-5 w-5 text-red-600" />
-      case 'transfer': return <Repeat className="h-5 w-5 text-blue-600" />
-      default: return null
-    }
-  }
-
-  const getOperationLabel = (type: string) => {
-    switch (type) {
-      case 'income': return 'Ingreso'
-      case 'expense': return 'Egreso'
-      case 'transfer': return 'Otra operación'
-      default: return ''
-    }
-  }
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
-  }
-
-  const formatDateTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('es-AR', {
-      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-    })
-  }
-
-  const getPlanCtaSummary = (op: Operation) => {
-    const parts: string[] = []
-    if (op.originPlanCta) {
-      const acct = op.originPlanCta.accounts?.[0]
-      parts.push(acct ? acct.name : op.originPlanCta.nombre)
-    }
-    if (op.destinationPlanCta) {
-      const acct = op.destinationPlanCta.accounts?.[0]
-      parts.push(acct ? acct.name : op.destinationPlanCta.nombre)
-    }
-    return parts.length === 2 ? `${parts[0]} → ${parts[1]}` : parts[0] || null
-  }
-
-  const totals = {
-    income: operations.filter(op => op.type === 'income').reduce((sum, op) => sum + op.amount, 0),
-    expense: operations.filter(op => op.type === 'expense').reduce((sum, op) => sum + op.amount, 0),
-    transfer: operations.filter(op => op.type === 'transfer').reduce((sum, op) => sum + op.amount, 0),
-  }
+    return { totalDebe, totalHaber, count: asientos.length }
+  }, [asientos])
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Libro Diario</h1>
-          <p className="mt-1 text-sm text-gray-500 capitalize">
-            {monthYear} &bull; {filteredOperations.length} operaciones
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Asientos Contables</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 capitalize">
+            {monthYear} &bull; {asientos.length} asientos
           </p>
         </div>
-        <CompactDatePicker value={selectedDate} onChange={setSelectedDate} />
-      </div>
-
-      {/* Quick Actions & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex gap-2 flex-1">
-          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => openAddDialog('income')}>
-            <Plus className="h-4 w-4 mr-1" /> Ingreso
-          </Button>
-          <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => openAddDialog('expense')}>
-            <Plus className="h-4 w-4 mr-1" /> Egreso
-          </Button>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => openAddDialog('transfer')}>
-            <Plus className="h-4 w-4 mr-1" /> Otra operación
+        <div className="flex items-center gap-3">
+          <CompactDatePicker value={selectedDate} onChange={(d) => { setSelectedDate(d); setCurrentPage(1) }} />
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Nuevo Asiento
           </Button>
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <Select value={filterEstado} onValueChange={(v) => { setFilterEstado(v); setCurrentPage(1) }}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar tipo" />
+            <SelectValue placeholder="Estado" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas las operaciones</SelectItem>
-            <SelectItem value="income">Solo ingresos</SelectItem>
-            <SelectItem value="expense">Solo egresos</SelectItem>
-            <SelectItem value="transfer">Solo otras operaciones</SelectItem>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="borrador">Borradores</SelectItem>
+            <SelectItem value="confirmado">Confirmados</SelectItem>
+            <SelectItem value="anulado">Anulados</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={filterOrigen} onValueChange={(v) => { setFilterOrigen(v); setCurrentPage(1) }}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Origen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los origenes</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+            <SelectItem value="ingreso">Ingreso</SelectItem>
+            <SelectItem value="egreso">Egreso</SelectItem>
+            <SelectItem value="transferencia">Transferencia</SelectItem>
+            <SelectItem value="ajuste">Ajuste</SelectItem>
+            <SelectItem value="compra">Compra</SelectItem>
+            <SelectItem value="liquidacion">Liquidacion</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-green-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Ingresos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              $ {totals.income.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {operations.filter(op => op.type === 'income').length} operaciones
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Egresos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              $ {totals.expense.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {operations.filter(op => op.type === 'expense').length} operaciones
-            </p>
+        <Card className="border-blue-200">
+          <CardContent className="pt-4">
+            <p className="text-sm text-gray-500">Total Debe</p>
+            <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary.totalDebe)}</p>
           </CardContent>
         </Card>
         <Card className="border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Otras Operaciones</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              $ {totals.transfer.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {operations.filter(op => op.type === 'transfer').length} operaciones
-            </p>
+          <CardContent className="pt-4">
+            <p className="text-sm text-gray-500">Total Haber</p>
+            <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary.totalHaber)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-sm text-gray-500">Asientos en periodo</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.count}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Operations List */}
+      {/* Asientos List */}
       <Card>
         <CardHeader>
-          <CardTitle>Registros</CardTitle>
+          <CardTitle>Libro Diario</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Cargando operaciones...</div>
-          ) : filteredOperations.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">Cargando asientos...</div>
+          ) : asientos.length === 0 ? (
             <div className="text-center py-12">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-500">No hay operaciones registradas en este período</p>
-              <p className="text-sm text-gray-400 mt-1">Comienza registrando un ingreso, egreso u otra operación</p>
+              <p className="text-gray-500">No hay asientos registrados en este periodo</p>
+              <p className="text-sm text-gray-400 mt-1">Comienza creando un nuevo asiento contable</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredOperations.map((operation) => (
-                <div
-                  key={`${operation.type}-${operation.id}`}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => setSelectedOperation(operation)}
-                >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="shrink-0">{getOperationIcon(operation.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900">{getOperationLabel(operation.type)}</span>
-                        {operation.transferTypeName && (
-                          <span className="text-xs px-2 py-0.5 rounded-full text-white"
-                            style={{ backgroundColor: operation.transferTypeColor || '#6b7280' }}>
-                            {operation.transferTypeName}
-                          </span>
-                        )}
+              {asientos.map((asiento) => {
+                const totals = calcTotals(asiento.detalles)
+                const isExpanded = expandedId === asiento.id_asiento
+
+                return (
+                  <div key={asiento.id_asiento} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                    {/* Row header */}
+                    <div
+                      className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                      onClick={() => toggleExpand(asiento.id_asiento)}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div className="shrink-0">
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-xs text-gray-500">{asiento.nro_comprobante}</span>
+                            {getEstadoBadge(asiento.estado)}
+                            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                              {getOrigenLabel(asiento.origen)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5 truncate">
+                            {asiento.concepto}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {new Date(asiento.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
                       </div>
-                      {operation.description && (
-                        <p className="text-sm text-gray-600 mt-0.5 truncate">{operation.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                        <span>{formatDate(operation.date)}</span>
-                        {getPlanCtaSummary(operation) && (
-                          <>
-                            <span className="text-gray-300">&bull;</span>
-                            <span className="truncate">{getPlanCtaSummary(operation)}</span>
-                          </>
-                        )}
+                      <div className="text-right shrink-0 ml-4">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          D: {formatCurrency(totals.debe)}
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          H: {formatCurrency(totals.haber)}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Expanded detail */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 p-4">
+                        {asiento.detalles && asiento.detalles.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-200 dark:border-gray-700">
+                                  <th className="text-left py-2 px-3 font-semibold">Cuenta</th>
+                                  <th className="text-right py-2 px-3 font-semibold">Debe</th>
+                                  <th className="text-right py-2 px-3 font-semibold">Haber</th>
+                                  <th className="text-left py-2 px-3 font-semibold">Referencia</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {asiento.detalles.map((detalle) => (
+                                  <tr key={detalle.id_detalle} className="border-b border-gray-100 dark:border-gray-800">
+                                    <td className="py-2 px-3">
+                                      {detalle.cuenta ? (
+                                        <span>
+                                          <span className="font-mono text-xs text-gray-500 mr-1">{detalle.cuenta.codigo}</span>
+                                          {detalle.cuenta.titulo}
+                                        </span>
+                                      ) : (
+                                        <span className="text-gray-400">Cuenta #{detalle.id_cuenta}</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3 text-right font-medium text-blue-600">
+                                      {detalle.tipo_mov === 'debe' ? formatCurrency(detalle.importe) : ''}
+                                    </td>
+                                    <td className="py-2 px-3 text-right font-medium text-blue-600">
+                                      {detalle.tipo_mov === 'haber' ? formatCurrency(detalle.importe) : ''}
+                                    </td>
+                                    <td className="py-2 px-3 text-gray-500 text-xs">
+                                      {detalle.referencia_operativa || '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-gray-100 dark:bg-gray-800 font-semibold">
+                                  <td className="py-2 px-3">Totales</td>
+                                  <td className="py-2 px-3 text-right text-blue-700 dark:text-blue-400">{formatCurrency(totals.debe)}</td>
+                                  <td className="py-2 px-3 text-right text-blue-700 dark:text-blue-400">{formatCurrency(totals.haber)}</td>
+                                  <td></td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400 italic">Sin detalles disponibles</p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2 mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
+                          {asiento.estado === 'borrador' && (
+                            <>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={(e) => { e.stopPropagation(); handleConfirmar(asiento.id_asiento) }}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-1" /> Confirmar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) => { e.stopPropagation(); handleDelete(asiento.id_asiento) }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                              </Button>
+                            </>
+                          )}
+                          {asiento.estado === 'confirmado' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={(e) => { e.stopPropagation(); handleAnular(asiento.id_asiento) }}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" /> Anular
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <div className={`text-lg font-bold ${
-                      operation.type === 'income' ? 'text-green-600'
-                        : operation.type === 'expense' ? 'text-red-600'
-                        : 'text-blue-600'
-                    }`}>
-                      {operation.type === 'expense' && '-'}
-                      $ {operation.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-500">
+                Pagina {currentPage} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Siguiente
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Detail Dialog */}
-      <OperationDetailDialog
-        operation={selectedOperation}
-        onClose={() => setSelectedOperation(null)}
-        formatDateTime={formatDateTime}
-        getOperationLabel={getOperationLabel}
-      />
-
-      {/* Add Operation Dialog */}
-      <AddOperationDialog
+      {/* Add Asiento Dialog */}
+      <AddAsientoDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
-        operationType={addDialogType}
-        onSubmit={handleSubmitOperation}
+        onSuccess={() => {
+          toast({ title: 'Exito', description: 'Asiento creado correctamente' })
+          fetchAsientos()
+        }}
+        cuentas={cuentas}
       />
-    </div>
-  )
-}
-
-function formatPlanCtaDetail(planCta: PlanDeCuentas | null | undefined): React.ReactNode {
-  if (!planCta) return <span className="text-gray-400 italic">No especificado</span>
-  const account = planCta.accounts?.[0]
-  return (
-    <span>
-      {planCta.codigo} - {planCta.nombre}
-      {account && <span className="text-gray-500"> ({account.name})</span>}
-    </span>
-  )
-}
-
-function OperationDetailDialog({
-  operation,
-  onClose,
-  formatDateTime,
-  getOperationLabel,
-}: {
-  operation: Operation | null
-  onClose: () => void
-  formatDateTime: (d: string) => string
-  getOperationLabel: (t: string) => string
-}) {
-  if (!operation) return null
-
-  const raw = operation.raw
-  const transfer = operation.type === 'transfer' ? (raw as Transfer) : null
-
-  const colorClass =
-    operation.type === 'income' ? 'text-green-600'
-      : operation.type === 'expense' ? 'text-red-600'
-      : 'text-blue-600'
-
-  return (
-    <Dialog open={!!operation} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            {operation.type === 'income' && <ArrowUpCircle className="h-5 w-5 text-green-600" />}
-            {operation.type === 'expense' && <ArrowDownCircle className="h-5 w-5 text-red-600" />}
-            {operation.type === 'transfer' && <Repeat className="h-5 w-5 text-blue-600" />}
-            {getOperationLabel(operation.type)}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="text-center py-3 bg-gray-50 rounded-lg">
-            <p className={`text-3xl font-bold ${colorClass}`}>
-              {operation.type === 'expense' && '-'}
-              $ {operation.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <DetailRow label="Fecha" value={formatDateTime(operation.date)} />
-            <DetailRow label="Origen" value={formatPlanCtaDetail(operation.originPlanCta)} />
-            <DetailRow label="Destino" value={formatPlanCtaDetail(operation.destinationPlanCta)} />
-
-            {transfer?.transferType && (
-              <DetailRow
-                label="Tipo de operación"
-                value={
-                  <span className="text-xs px-2 py-1 rounded-full text-white"
-                    style={{ backgroundColor: transfer.transferType.color || '#6b7280' }}>
-                    {transfer.transferType.name}
-                  </span>
-                }
-              />
-            )}
-
-            <DetailRow
-              label="Descripción"
-              value={operation.description || <span className="text-gray-400 italic">Sin descripción</span>}
-            />
-            <DetailRow label="Fecha de registro" value={formatDateTime(raw.created_at)} />
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex justify-between items-start gap-4">
-      <span className="text-sm text-gray-500 shrink-0">{label}</span>
-      <span className="text-sm font-medium text-gray-900 text-right">{value}</span>
     </div>
   )
 }

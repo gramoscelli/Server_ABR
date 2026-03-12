@@ -5,12 +5,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useState, useEffect, useCallback } from 'react'
-import { accountingService } from '@/lib/accountingService'
-import type { Account, CashReconciliation, CalculatedBalance } from '@/types/accounting'
+import * as accountingService from '@/lib/accountingService'
+import type { CuentaContable, CashReconciliation } from '@/types/accounting'
 import { Calculator, Loader2 } from 'lucide-react'
 
 export interface ReconciliationFormData {
-  account_id: number
+  id_cuenta: number
   date: string
   opening_balance: number
   closing_balance: number
@@ -28,10 +28,10 @@ interface AddReconciliationDialogProps {
 export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconciliation }: AddReconciliationDialogProps) {
   const [loading, setLoading] = useState(false)
   const [calculating, setCalculating] = useState(false)
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [calculatedData, setCalculatedData] = useState<CalculatedBalance | null>(null)
+  const [cuentas, setCuentas] = useState<CuentaContable[]>([])
+  const [calculatedData, setCalculatedData] = useState<{ opening_balance: string; total_debe: string; total_haber: string; expected_balance: string } | null>(null)
   const [formData, setFormData] = useState<ReconciliationFormData>({
-    account_id: 0,
+    id_cuenta: 0,
     date: new Date().toISOString().split('T')[0],
     opening_balance: 0,
     closing_balance: 0,
@@ -41,14 +41,14 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
 
   useEffect(() => {
     if (open) {
-      fetchAccounts()
+      fetchCuentas()
     }
   }, [open])
 
   useEffect(() => {
     if (reconciliation) {
       setFormData({
-        account_id: reconciliation.account_id,
+        id_cuenta: reconciliation.id_cuenta,
         date: reconciliation.date,
         opening_balance: Number(reconciliation.opening_balance),
         closing_balance: Number(reconciliation.closing_balance),
@@ -57,9 +57,9 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
       })
       setCalculatedData(null)
     } else {
-      const defaultAccountId = accounts[0]?.id || 0
+      const defaultCuentaId = cuentas[0]?.id || 0
       setFormData({
-        account_id: defaultAccountId,
+        id_cuenta: defaultCuentaId,
         date: new Date().toISOString().split('T')[0],
         opening_balance: 0,
         closing_balance: 0,
@@ -68,28 +68,28 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
       })
       setCalculatedData(null)
     }
-  }, [reconciliation, open, accounts])
+  }, [reconciliation, open, cuentas])
 
-  const fetchAccounts = async () => {
+  const fetchCuentas = async () => {
     try {
-      const response = await accountingService.getAccounts({ type: 'cash', is_active: true })
-      setAccounts(response.data || [])
+      const response = await accountingService.getCuentas({ subtipo: 'efectivo', is_active: true })
+      setCuentas(response.data || [])
     } catch (error) {
-      console.error('Error fetching accounts:', error)
+      console.error('Error fetching cuentas:', error)
     }
   }
 
-  const calculateBalance = useCallback(async (accountId: number, date: string) => {
-    if (!accountId || !date) return
+  const calculateBalance = useCallback(async (cuentaId: number, date: string) => {
+    if (!cuentaId || !date) return
 
     setCalculating(true)
     try {
-      const result = await accountingService.calculateExpectedBalance(accountId, date)
-      setCalculatedData(result)
+      const result = await accountingService.calculateExpectedBalance(cuentaId, date)
+      setCalculatedData(result.data)
       setFormData(prev => ({
         ...prev,
-        opening_balance: Number(result.opening_balance),
-        expected_balance: Number(result.expected_balance),
+        opening_balance: Number(result.data.opening_balance),
+        expected_balance: Number(result.data.expected_balance),
       }))
     } catch (error) {
       console.error('Error calculating balance:', error)
@@ -99,15 +99,14 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
     }
   }, [])
 
-  // Calculate when account or date changes (only for new reconciliations)
   useEffect(() => {
-    if (!reconciliation && formData.account_id && formData.date) {
+    if (!reconciliation && formData.id_cuenta && formData.date) {
       const timer = setTimeout(() => {
-        calculateBalance(formData.account_id, formData.date)
+        calculateBalance(formData.id_cuenta, formData.date)
       }, 300)
       return () => clearTimeout(timer)
     }
-  }, [formData.account_id, formData.date, reconciliation, calculateBalance])
+  }, [formData.id_cuenta, formData.date, reconciliation, calculateBalance])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,19 +134,19 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="account_id">Cuenta *</Label>
+              <Label htmlFor="id_cuenta">Cuenta de Efectivo *</Label>
               <Select
-                value={String(formData.account_id)}
-                onValueChange={(value) => setFormData({ ...formData, account_id: Number(value) })}
+                value={String(formData.id_cuenta)}
+                onValueChange={(value) => setFormData({ ...formData, id_cuenta: Number(value) })}
                 disabled={loading || !!reconciliation}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccione una cuenta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={String(account.id)}>
-                      {account.name} - {account.currency}
+                  {cuentas.map((cuenta) => (
+                    <SelectItem key={cuenta.id} value={String(cuenta.id)}>
+                      {cuenta.codigo} - {cuenta.titulo}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -167,7 +166,6 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
             </div>
           </div>
 
-          {/* Calculated Balance Info */}
           {calculating ? (
             <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -185,20 +183,12 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
                   <span className="ml-2 font-medium">${Number(calculatedData.opening_balance).toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Ingresos:</span>
-                  <span className="ml-2 font-medium text-green-600">+${Number(calculatedData.incomes).toFixed(2)}</span>
+                  <span className="text-gray-600">Total Debe:</span>
+                  <span className="ml-2 font-medium text-green-600">+${Number(calculatedData.total_debe).toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-600">Egresos:</span>
-                  <span className="ml-2 font-medium text-red-600">-${Number(calculatedData.expenses).toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Transf. entrada:</span>
-                  <span className="ml-2 font-medium text-green-600">+${Number(calculatedData.incoming_transfers).toFixed(2)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Transf. salida:</span>
-                  <span className="ml-2 font-medium text-red-600">-${Number(calculatedData.outgoing_transfers).toFixed(2)}</span>
+                  <span className="text-gray-600">Total Haber:</span>
+                  <span className="ml-2 font-medium text-red-600">-${Number(calculatedData.total_haber).toFixed(2)}</span>
                 </div>
                 <div className="col-span-2 pt-2 border-t border-blue-200">
                   <span className="text-gray-700 font-medium">Saldo esperado:</span>
@@ -284,7 +274,7 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
               </div>
               {difference === 0 ? (
                 <p className="text-sm text-green-700 mt-1 font-medium">
-                  ✓ Los balances coinciden perfectamente
+                  Los balances coinciden perfectamente
                 </p>
               ) : (
                 <p className="text-sm mt-1">

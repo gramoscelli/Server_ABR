@@ -1,435 +1,233 @@
 import { fetchWithAuth } from './auth'
 import { API_ENDPOINTS } from '@/config/api'
 import type {
-  Account,
-  AccountQueryParams,
-  AccountsSummary,
   ApiResponse,
-  BalanceHistoryEntry,
-  BalanceHistoryQueryParams,
-  CalculatedBalance,
+  Asiento,
+  AsientoQueryParams,
   CashReconciliation,
   CashReconciliationQueryParams,
-  CategoryStat,
-  CreateAccountData,
+  CreateAsientoData,
   CreateCashReconciliationData,
-  CreateExpenseData,
-  CreateIncomeData,
-  CreateTransferData,
-  CreateTransferTypeData,
+  CreateCuentaContableData,
+  CuentaContable,
+  CuentaQueryParams,
   DashboardData,
   DashboardQueryParams,
-  Expense,
-  ExpenseQueryParams,
-  Income,
-  IncomeQueryParams,
+  LiquidacionElectronica,
   MonthlyData,
   PaginatedResponse,
-  PlanDeCuentas,
-  StatsQueryParams,
-  Transfer,
-  TransferQueryParams,
-  TransferType,
-  UpdateAccountBalanceData,
-  UpdateAccountData,
   UpdateCashReconciliationData,
-  UpdateExpenseData,
-  UpdateIncomeData,
-  UpdateTransferTypeData,
+  UpdateCuentaContableData,
 } from '@/types/accounting'
 
-class AccountingService {
-  // Dashboard
-  async getDashboard(params?: DashboardQueryParams): Promise<DashboardData> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.DASHBOARD}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<DashboardData> = await response.json()
-    return data.data
-  }
-
-  async getMonthlyData(params?: DashboardQueryParams): Promise<MonthlyData[]> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.DASHBOARD_MONTHLY}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<MonthlyData[]> = await response.json()
-    return data.data
-  }
-
-  // Accounts
-  async getAccounts(
-    params?: AccountQueryParams
-  ): Promise<ApiResponse<Account[]> & { summary: AccountsSummary }> {
-    const queryParams = new URLSearchParams()
-    if (params?.type) queryParams.append('type', params.type)
-    if (params?.is_active !== undefined) queryParams.append('is_active', String(params.is_active))
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.ACCOUNTS}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    return await response.json()
-  }
-
-  async getAccount(id: number): Promise<Account> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.ACCOUNT_BY_ID(id))
-    const data: ApiResponse<Account> = await response.json()
-    return data.data
-  }
-
-  async createAccount(accountData: CreateAccountData): Promise<Account> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.ACCOUNTS, {
-      method: 'POST',
-      body: JSON.stringify(accountData),
-    })
-    const data: ApiResponse<Account> = await response.json()
-    return data.data
-  }
-
-  async updateAccount(id: number, accountData: UpdateAccountData): Promise<Account> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.ACCOUNT_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(accountData),
-    })
-    const data: ApiResponse<Account> = await response.json()
-    return data.data
-  }
-
-  async updateAccountBalance(id: number, balanceData: UpdateAccountBalanceData): Promise<Account> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.ACCOUNT_BALANCE(id), {
-      method: 'PUT',
-      body: JSON.stringify(balanceData),
-    })
-    const data: ApiResponse<Account> = await response.json()
-    return data.data
-  }
-
-  async deleteAccount(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.ACCOUNT_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  async getAccountBalanceHistory(
-    id: number,
-    params?: BalanceHistoryQueryParams
-  ): Promise<BalanceHistoryEntry[]> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.ACCOUNT_BALANCE_HISTORY(id)}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<BalanceHistoryEntry[]> = await response.json()
-    return data.data
-  }
-
-  // Expenses
-  async getExpenses(params?: ExpenseQueryParams): Promise<PaginatedResponse<Expense>> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.plan_cta_id) queryParams.append('plan_cta_id', String(params.plan_cta_id))
-    if (params?.account_id) queryParams.append('account_id', String(params.account_id))
-    if (params?.min_amount) queryParams.append('min_amount', String(params.min_amount))
-    if (params?.max_amount) queryParams.append('max_amount', String(params.max_amount))
-    if (params?.page) queryParams.append('page', String(params.page))
-    if (params?.limit) queryParams.append('limit', String(params.limit))
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.EXPENSES}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    return await response.json()
-  }
-
-  async getExpense(id: number): Promise<Expense> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_BY_ID(id))
-    const data: ApiResponse<Expense> = await response.json()
-    return data.data
-  }
-
-  async createExpense(expenseData: CreateExpenseData): Promise<Expense> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSES, {
-      method: 'POST',
-      body: JSON.stringify(expenseData),
-    })
-    const data: ApiResponse<Expense> = await response.json()
-    return data.data
-  }
-
-  async updateExpense(id: number, expenseData: UpdateExpenseData): Promise<Expense> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(expenseData),
-    })
-    const data: ApiResponse<Expense> = await response.json()
-    return data.data
-  }
-
-  async deleteExpense(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  async getExpenseStatsByCategory(params?: StatsQueryParams): Promise<{
-    data: CategoryStat[]
-    uncategorized: { total: string; count: number }
-  }> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.EXPENSES_STATS_BY_CATEGORY}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    const result: ApiResponse<CategoryStat[]> & { uncategorized: { total: string; count: number } } =
-      await response.json()
-    return {
-      data: result.data,
-      uncategorized: result.uncategorized,
+function buildQuery(params: Record<string, string | number | boolean | undefined | null>): string {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      query.append(key, String(value))
     }
   }
-
-  // Incomes
-  async getIncomes(params?: IncomeQueryParams): Promise<PaginatedResponse<Income>> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.plan_cta_id) queryParams.append('plan_cta_id', String(params.plan_cta_id))
-    if (params?.account_id) queryParams.append('account_id', String(params.account_id))
-    if (params?.page) queryParams.append('page', String(params.page))
-    if (params?.limit) queryParams.append('limit', String(params.limit))
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.INCOMES}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    return await response.json()
-  }
-
-  async getIncome(id: number): Promise<Income> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_BY_ID(id))
-    const data: ApiResponse<Income> = await response.json()
-    return data.data
-  }
-
-  async createIncome(incomeData: CreateIncomeData): Promise<Income> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOMES, {
-      method: 'POST',
-      body: JSON.stringify(incomeData),
-    })
-    const data: ApiResponse<Income> = await response.json()
-    return data.data
-  }
-
-  async updateIncome(id: number, incomeData: UpdateIncomeData): Promise<Income> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(incomeData),
-    })
-    const data: ApiResponse<Income> = await response.json()
-    return data.data
-  }
-
-  async deleteIncome(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  // Transfers
-  async getTransfers(params?: TransferQueryParams): Promise<PaginatedResponse<Transfer>> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.account_id) queryParams.append('account_id', String(params.account_id))
-    if (params?.page) queryParams.append('page', String(params.page))
-    if (params?.limit) queryParams.append('limit', String(params.limit))
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.TRANSFERS}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    return await response.json()
-  }
-
-  async getTransfer(id: number): Promise<Transfer> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_BY_ID(id))
-    const data: ApiResponse<Transfer> = await response.json()
-    return data.data
-  }
-
-  async createTransfer(transferData: CreateTransferData): Promise<Transfer> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFERS, {
-      method: 'POST',
-      body: JSON.stringify(transferData),
-    })
-    const data: ApiResponse<Transfer> = await response.json()
-    return data.data
-  }
-
-  async deleteTransfer(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  // Transfer Types
-  async getTransferTypes(): Promise<TransferType[]> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPES)
-    const data: ApiResponse<TransferType[]> = await response.json()
-    return data.data
-  }
-
-  async getTransferType(id: number): Promise<TransferType> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPE_BY_ID(id))
-    const data: ApiResponse<TransferType> = await response.json()
-    return data.data
-  }
-
-  async createTransferType(typeData: CreateTransferTypeData): Promise<TransferType> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPES, {
-      method: 'POST',
-      body: JSON.stringify(typeData),
-    })
-    const data: ApiResponse<TransferType> = await response.json()
-    return data.data
-  }
-
-  async updateTransferType(id: number, typeData: UpdateTransferTypeData): Promise<TransferType> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPE_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(typeData),
-    })
-    const data: ApiResponse<TransferType> = await response.json()
-    return data.data
-  }
-
-  async deleteTransferType(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPE_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  // Plan de Cuentas (Chart of Accounts)
-  async getPlanDeCuentas(params?: { tipo?: string }): Promise<PlanDeCuentas[]> {
-    const queryParams = new URLSearchParams()
-    if (params?.tipo) queryParams.append('tipo', params.tipo)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<PlanDeCuentas[]> = await response.json()
-    return data.data
-  }
-
-  async createPlanDeCuentas(data: { codigo: number; nombre: string; tipo: string; grupo: string }): Promise<PlanDeCuentas> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    })
-    const result: ApiResponse<PlanDeCuentas> = await response.json()
-    return result.data
-  }
-
-  async updatePlanDeCuentas(id: number, updateData: { nombre?: string; is_active?: boolean }): Promise<PlanDeCuentas> {
-    const response = await fetchWithAuth(`${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updateData),
-    })
-    const result: ApiResponse<PlanDeCuentas> = await response.json()
-    return result.data
-  }
-
-  async deletePlanDeCuentas(id: number): Promise<void> {
-    await fetchWithAuth(`${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}/${id}`, {
-      method: 'DELETE',
-    })
-  }
-
-  // Cash Reconciliations
-  async getCashReconciliations(
-    params?: CashReconciliationQueryParams
-  ): Promise<CashReconciliation[]> {
-    const queryParams = new URLSearchParams()
-    if (params?.account_id) queryParams.append('account_id', String(params.account_id))
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATIONS}${queryParams.toString() ? `?${queryParams}` : ''}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<CashReconciliation[]> = await response.json()
-    return data.data
-  }
-
-  async getCashReconciliation(id: number): Promise<CashReconciliation> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id))
-    const data: ApiResponse<CashReconciliation> = await response.json()
-    return data.data
-  }
-
-  async getCashReconciliationByDate(
-    date: string,
-    accountId: number
-  ): Promise<CashReconciliation | null> {
-    const url = `${API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_DATE(date)}?account_id=${accountId}`
-    const response = await fetchWithAuth(url)
-    const data: ApiResponse<CashReconciliation | null> = await response.json()
-    return data.data
-  }
-
-  async createCashReconciliation(
-    reconciliationData: CreateCashReconciliationData
-  ): Promise<CashReconciliation> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATIONS, {
-      method: 'POST',
-      body: JSON.stringify(reconciliationData),
-    })
-    const data: ApiResponse<CashReconciliation> = await response.json()
-    return data.data
-  }
-
-  async updateCashReconciliation(
-    id: number,
-    reconciliationData: UpdateCashReconciliationData
-  ): Promise<CashReconciliation> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(reconciliationData),
-    })
-    const data: ApiResponse<CashReconciliation> = await response.json()
-    return data.data
-  }
-
-  async deleteCashReconciliation(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  async calculateExpectedBalance(accountId: number, date: string): Promise<CalculatedBalance> {
-    const response = await fetchWithAuth(
-      API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_CALCULATE(accountId, date)
-    )
-    const data: ApiResponse<CalculatedBalance> = await response.json()
-    return data.data
-  }
-
-  // Reports
-  async getEstadoResultados(params?: { start_date?: string; end_date?: string }): Promise<any> {
-    const queryParams = new URLSearchParams()
-    if (params?.start_date) queryParams.append('start_date', params.start_date)
-    if (params?.end_date) queryParams.append('end_date', params.end_date)
-
-    const url = `${API_ENDPOINTS.ACCOUNTING.REPORTS.ESTADO_RESULTADOS}${
-      queryParams.toString() ? `?${queryParams.toString()}` : ''
-    }`
-    const response = await fetchWithAuth(url)
-    return await response.json()
-  }
-
-  async getBalanceGeneral(): Promise<any> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.REPORTS.BALANCE_GENERAL)
-    return await response.json()
-  }
+  const str = query.toString()
+  return str ? `?${str}` : ''
 }
 
-export const accountingService = new AccountingService()
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetchWithAuth(url, options)
+  return response.json()
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+export async function getDashboard(params?: DashboardQueryParams): Promise<DashboardData> {
+  const query = params ? buildQuery(params as Record<string, string | undefined>) : ''
+  const result: ApiResponse<DashboardData> = await fetchJson(`${API_ENDPOINTS.ACCOUNTING.DASHBOARD}${query}`)
+  return result.data
+}
+
+export async function getDashboardMonthly(year?: number): Promise<MonthlyData[]> {
+  const query = year ? `?year=${year}` : ''
+  const result: ApiResponse<MonthlyData[]> = await fetchJson(`${API_ENDPOINTS.ACCOUNTING.DASHBOARD_MONTHLY}${query}`)
+  return result.data
+}
+
+// ============================================================
+// CUENTAS CONTABLES (Chart of Accounts)
+// ============================================================
+
+export async function getCuentas(params?: CuentaQueryParams): Promise<{ data: CuentaContable[] }> {
+  const query = params ? buildQuery(params as Record<string, string | boolean | undefined>) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.CUENTAS}${query}`)
+}
+
+export async function getCuenta(id: number): Promise<ApiResponse<CuentaContable>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CUENTA_BY_ID(id))
+}
+
+export async function getCuentaByCodigo(codigo: number): Promise<ApiResponse<CuentaContable>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CUENTA_BY_CODIGO(codigo))
+}
+
+export async function createCuenta(data: CreateCuentaContableData): Promise<ApiResponse<CuentaContable>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CUENTAS, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateCuenta(id: number, data: UpdateCuentaContableData): Promise<ApiResponse<CuentaContable>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CUENTA_BY_ID(id), {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteCuenta(id: number): Promise<ApiResponse<void>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CUENTA_BY_ID(id), {
+    method: 'DELETE',
+  })
+}
+
+// ============================================================
+// ASIENTOS (Journal Entries)
+// ============================================================
+
+export async function getAsientos(params?: AsientoQueryParams): Promise<PaginatedResponse<Asiento>> {
+  const query = params ? buildQuery(params as Record<string, string | number | undefined>) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.ASIENTOS}${query}`)
+}
+
+export async function getAsiento(id: number): Promise<ApiResponse<Asiento>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_BY_ID(id))
+}
+
+export async function createAsiento(data: CreateAsientoData): Promise<ApiResponse<Asiento>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTOS, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateAsiento(id: number, data: Partial<CreateAsientoData>): Promise<ApiResponse<Asiento>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_BY_ID(id), {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function confirmarAsiento(id: number): Promise<ApiResponse<Asiento>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_CONFIRMAR(id), {
+    method: 'POST',
+  })
+}
+
+export async function anularAsiento(id: number): Promise<ApiResponse<{ asientoOriginal: Asiento; contraAsiento: Asiento }>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_ANULAR(id), {
+    method: 'POST',
+  })
+}
+
+export async function deleteAsiento(id: number): Promise<ApiResponse<void>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_BY_ID(id), {
+    method: 'DELETE',
+  })
+}
+
+// ============================================================
+// LIQUIDACIONES
+// ============================================================
+
+export async function getLiquidaciones(params?: Record<string, string | number | undefined>): Promise<PaginatedResponse<LiquidacionElectronica>> {
+  const query = params ? buildQuery(params) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.LIQUIDACIONES}${query}`)
+}
+
+export async function createLiquidacion(data: Record<string, unknown>): Promise<ApiResponse<LiquidacionElectronica>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.LIQUIDACIONES, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function acreditarLiquidacion(id: number, id_cuenta_destino: number): Promise<ApiResponse<LiquidacionElectronica>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.LIQUIDACION_ACREDITAR(id), {
+    method: 'POST',
+    body: JSON.stringify({ id_cuenta_destino }),
+  })
+}
+
+// ============================================================
+// CASH RECONCILIATIONS
+// ============================================================
+
+export async function getCashReconciliations(params?: CashReconciliationQueryParams): Promise<{ data: CashReconciliation[] }> {
+  const query = params ? buildQuery(params as Record<string, string | number | undefined>) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATIONS}${query}`)
+}
+
+export async function getCashReconciliationByDate(date: string, id_cuenta?: number): Promise<ApiResponse<CashReconciliation>> {
+  const query = id_cuenta ? `?id_cuenta=${id_cuenta}` : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_DATE(date)}${query}`)
+}
+
+export async function calculateExpectedBalance(cuentaId: number, date: string): Promise<ApiResponse<{
+  opening_balance: string
+  total_debe: string
+  total_haber: string
+  expected_balance: string
+}>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_CALCULATE(cuentaId, date))
+}
+
+export async function createCashReconciliation(data: CreateCashReconciliationData): Promise<ApiResponse<CashReconciliation>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATIONS, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateCashReconciliation(id: number, data: UpdateCashReconciliationData): Promise<ApiResponse<CashReconciliation>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteCashReconciliation(id: number): Promise<ApiResponse<void>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
+    method: 'DELETE',
+  })
+}
+
+// ============================================================
+// REPORTS
+// ============================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getLibroDiario(start_date: string, end_date: string): Promise<any> {
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.REPORTS.LIBRO_DIARIO}?start_date=${start_date}&end_date=${end_date}`)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMayor(cuentaId: number, params?: { start_date?: string; end_date?: string }): Promise<any> {
+  const query = params ? buildQuery(params) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.REPORTS.MAYOR(cuentaId)}${query}`)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getBalanceSumasSaldos(as_of_date?: string): Promise<any> {
+  const query = as_of_date ? `?as_of_date=${as_of_date}` : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.REPORTS.BALANCE_SUMAS_SALDOS}${query}`)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getEstadoResultados(start_date: string, end_date: string): Promise<any> {
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.REPORTS.ESTADO_RESULTADOS}?start_date=${start_date}&end_date=${end_date}`)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getBalanceGeneral(as_of_date?: string): Promise<any> {
+  const query = as_of_date ? `?as_of_date=${as_of_date}` : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.REPORTS.BALANCE_GENERAL}${query}`)
+}

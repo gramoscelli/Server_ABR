@@ -2,10 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import {
   Tag,
-  ArrowLeftRight,
   Settings as SettingsIcon,
-  Plus,
-  Building2,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
@@ -14,25 +11,11 @@ export default function SettingsPage() {
 
   const settingsSections = [
     {
-      title: 'Cuentas',
-      description: 'Gestiona cuentas de efectivo y bancarias',
-      icon: Building2,
-      color: 'bg-green-500',
-      route: '/accounting/accounts',
-    },
-    {
       title: 'Plan de Cuentas',
-      description: 'Gestiona el plan de cuentas para clasificar ingresos y egresos',
+      description: 'Gestiona el plan de cuentas contable, cuentas especializadas y saldos',
       icon: Tag,
       color: 'bg-purple-500',
       route: '/accounting/categories',
-    },
-    {
-      title: 'Tipos de Operaciones',
-      description: 'Define los tipos de operaciones entre cuentas',
-      icon: ArrowLeftRight,
-      color: 'bg-blue-500',
-      route: '/accounting/transfer-types',
     },
   ]
 
@@ -87,12 +70,9 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
           <p>
-            • <strong>Plan de Cuentas:</strong> Organiza tus ingresos y egresos según el plan de cuentas
-            para facilitar el análisis financiero.
-          </p>
-          <p>
-            • <strong>Tipos de Operaciones:</strong> Define diferentes tipos de movimientos entre
-            cuentas (retiros, depósitos, etc.).
+            • <strong>Plan de Cuentas:</strong> Organiza las cuentas contables por tipo (activo, pasivo,
+            patrimonio, ingreso, egreso) para el sistema de partida doble. Las cuentas de efectivo,
+            bancarias y pago electrónico tienen campos extendidos para gestión detallada.
           </p>
           <p className="pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-500">
             Las configuraciones se aplican a todo el módulo de contabilidad y afectan cómo se

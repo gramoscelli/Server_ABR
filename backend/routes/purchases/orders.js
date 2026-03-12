@@ -13,7 +13,8 @@ const {
   Supplier,
   accountingDb
 } = require('../../models/purchases');
-const { Account, Expense } = require('../../models/accounting');
+const { CuentaContable, Asiento, AsientoDetalle } = require('../../models/accounting');
+const asientoService = require('../../services/asientoService');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
@@ -124,7 +125,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'board_member', 'ad
         { model: Supplier, as: 'supplier' },
         { model: PurchaseRequest, as: 'purchaseRequest' },
         { model: Quotation, as: 'quotation' },
-        { model: Account, as: 'account' },
+        { model: CuentaContable, as: 'cuenta' },
         { model: PurchaseOrderItem, as: 'items', order: [['order_index', 'ASC']] }
       ]
     });
@@ -322,94 +323,78 @@ router.put('/:id/status', authenticateToken, authorizeRoles('root', 'board_membe
  * @access  Private (root, board_member, admin_employee)
  */
 router.post('/:id/to-expense', authenticateToken, authorizeRoles('root', 'board_member', 'admin_employee'), async (req, res) => {
-  const transaction = await accountingDb.transaction();
-
   try {
-    const { account_id, plan_cta_id, invoice_number, invoice_date, invoice_attachment_url } = req.body;
+    const { id_cuenta_origen, id_cuenta_destino, invoice_number, invoice_date, invoice_attachment_url } = req.body;
 
-    if (!account_id) {
-      await transaction.rollback();
+    if (!id_cuenta_origen || !id_cuenta_destino) {
       return res.status(400).json({
         success: false,
-        error: 'La cuenta de pago es requerida'
+        error: 'Las cuentas origen (pago) y destino (gasto) son requeridas'
       });
     }
 
     const order = await PurchaseOrder.findByPk(req.params.id, {
-      include: [{ model: Supplier, as: 'supplier' }],
-      transaction
+      include: [{ model: Supplier, as: 'supplier' }]
     });
 
     if (!order) {
-      await transaction.rollback();
       return res.status(404).json({
         success: false,
         error: 'Orden no encontrada'
       });
     }
 
-    if (order.expense_id) {
-      await transaction.rollback();
+    if (order.id_asiento) {
       return res.status(400).json({
         success: false,
-        error: 'Esta orden ya tiene un gasto asociado'
+        error: 'Esta orden ya tiene un asiento asociado'
       });
     }
 
-    // Create expense
-    const expense = await Expense.create({
-      amount: order.total_amount,
-      plan_cta_id: plan_cta_id || null,
-      account_id,
-      date: invoice_date || new Date(),
-      description: `OC ${order.order_number} - ${order.supplier?.business_name || 'Proveedor'}`,
-      attachment_url: invoice_attachment_url,
-      user_id: req.user.id,
-      purchase_order_id: order.id
-    }, { transaction });
+    // Create journal entry: debit expense account, credit payment account
+    const result = await asientoService.createAsiento({
+      fecha: invoice_date || new Date(),
+      origen: 'compra',
+      concepto: `OC ${order.order_number} - ${order.supplier?.business_name || 'Proveedor'}`,
+      detalles: [
+        { id_cuenta: id_cuenta_destino, tipo_mov: 'debe', importe: order.total_amount, referencia_operativa: invoice_number || null },
+        { id_cuenta: id_cuenta_origen, tipo_mov: 'haber', importe: order.total_amount, referencia_operativa: `OC-${order.order_number}` }
+      ],
+      usuario_id: req.user.id,
+      estado: 'confirmado'
+    });
 
     // Update order
     await order.update({
       status: 'invoiced',
-      expense_id: expense.id,
-      account_id,
+      id_asiento: result.asiento.id_asiento,
+      id_cuenta: id_cuenta_origen,
       invoice_number,
       invoice_date,
       invoice_attachment_url
-    }, { transaction });
-
-    // Update account balance
-    const account = await Account.findByPk(account_id, { transaction });
-    if (account) {
-      await account.update({
-        current_balance: parseFloat(account.current_balance) - parseFloat(order.total_amount)
-      }, { transaction });
-    }
+    });
 
     // Update purchase request to completed
     if (order.purchase_request_id) {
       await PurchaseRequest.update(
         { status: 'completed' },
-        { where: { id: order.purchase_request_id }, transaction }
+        { where: { id: order.purchase_request_id } }
       );
     }
 
-    await transaction.commit();
-
     res.json({
       success: true,
-      message: 'Gasto creado exitosamente',
+      message: 'Asiento contable creado exitosamente',
       data: {
-        expense_id: expense.id,
+        id_asiento: result.asiento.id_asiento,
         order_status: 'invoiced'
       }
     });
   } catch (error) {
-    await transaction.rollback();
     console.error('Error creating expense from order:', error);
     res.status(500).json({
       success: false,
-      error: 'Error al crear gasto',
+      error: 'Error al crear asiento contable',
       message: error.message
     });
   }

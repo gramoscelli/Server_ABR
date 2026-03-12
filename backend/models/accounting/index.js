@@ -1,50 +1,55 @@
 /**
  * Accounting Models Index
- * Exports all accounting models and sets up associations
+ * Double-entry bookkeeping system with journal entries (asientos contables)
  */
 
 const { accountingDb } = require('../../config/database');
-const TransferType = require('./TransferType');
-const PlanDeCuentas = require('./PlanDeCuentas');
-const Account = require('./Account');
-const Expense = require('./Expense');
-const Income = require('./Income');
-const Transfer = require('./Transfer');
+const CuentaContable = require('./CuentaContable');
+const Asiento = require('./Asiento');
+const AsientoDetalle = require('./AsientoDetalle');
+const CuentaEfectivo = require('./CuentaEfectivo');
+const CuentaBancaria = require('./CuentaBancaria');
+const CuentaPagoElectronico = require('./CuentaPagoElectronico');
+const LiquidacionElectronica = require('./LiquidacionElectronica');
 const CashReconciliation = require('./CashReconciliation');
 
-// Setup associations
-TransferType.hasMany(Transfer, { as: 'transfers', foreignKey: 'transfer_type_id' });
+// === Asiento associations ===
+Asiento.hasMany(AsientoDetalle, { as: 'detalles', foreignKey: 'id_asiento' });
+AsientoDetalle.belongsTo(Asiento, { as: 'asiento', foreignKey: 'id_asiento' });
 
-// Plan de Cuentas associations
-PlanDeCuentas.hasMany(Expense, { as: 'expenses', foreignKey: 'plan_cta_id' });
-PlanDeCuentas.hasMany(Income, { as: 'incomes', foreignKey: 'plan_cta_id' });
-PlanDeCuentas.hasMany(Account, { as: 'accounts', foreignKey: 'plan_cta_id' });
+// === AsientoDetalle → CuentaContable ===
+AsientoDetalle.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
+CuentaContable.hasMany(AsientoDetalle, { as: 'movimientos', foreignKey: 'id_cuenta' });
 
-Expense.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
-Income.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
-Account.belongsTo(PlanDeCuentas, { as: 'planCta', foreignKey: 'plan_cta_id' });
+// === CuentaContable → Extended account tables (1:1) ===
+CuentaContable.hasOne(CuentaEfectivo, { as: 'efectivo', foreignKey: 'id_cuenta' });
+CuentaEfectivo.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
 
-Account.hasMany(Expense, { as: 'expenses', foreignKey: 'account_id' });
-Account.hasMany(Income, { as: 'incomes', foreignKey: 'account_id' });
-Account.hasMany(Transfer, { as: 'outgoingTransfers', foreignKey: 'from_account_id' });
-Account.hasMany(Transfer, { as: 'incomingTransfers', foreignKey: 'to_account_id' });
-Account.hasMany(CashReconciliation, { as: 'reconciliations', foreignKey: 'account_id' });
+CuentaContable.hasOne(CuentaBancaria, { as: 'bancaria', foreignKey: 'id_cuenta' });
+CuentaBancaria.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
 
-// Origin/destination associations for double-entry bookkeeping
-Expense.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
-Expense.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
-Income.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
-Income.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
-Transfer.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
-Transfer.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
+CuentaContable.hasOne(CuentaPagoElectronico, { as: 'pagoElectronico', foreignKey: 'id_cuenta' });
+CuentaPagoElectronico.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
+
+// === LiquidacionElectronica associations ===
+LiquidacionElectronica.belongsTo(CuentaPagoElectronico, { as: 'cuentaPago', foreignKey: 'id_cuenta' });
+CuentaPagoElectronico.hasMany(LiquidacionElectronica, { as: 'liquidaciones', foreignKey: 'id_cuenta' });
+
+LiquidacionElectronica.belongsTo(Asiento, { as: 'asientoOrigen', foreignKey: 'id_asiento_origen' });
+LiquidacionElectronica.belongsTo(Asiento, { as: 'asientoAcreditacion', foreignKey: 'id_asiento_acreditacion' });
+
+// === CashReconciliation → CuentaContable ===
+CashReconciliation.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
+CuentaContable.hasMany(CashReconciliation, { as: 'reconciliaciones', foreignKey: 'id_cuenta' });
 
 module.exports = {
   accountingDb,
-  TransferType,
-  PlanDeCuentas,
-  Account,
-  Expense,
-  Income,
-  Transfer,
+  CuentaContable,
+  Asiento,
+  AsientoDetalle,
+  CuentaEfectivo,
+  CuentaBancaria,
+  CuentaPagoElectronico,
+  LiquidacionElectronica,
   CashReconciliation
 };

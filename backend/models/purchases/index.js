@@ -21,8 +21,7 @@ const PurchaseOrderItem = require('./PurchaseOrderItem');
 const PurchaseRequestHistory = require('./PurchaseRequestHistory');
 
 // Import accounting models for cross-references
-const Account = require('../accounting/Account');
-const Expense = require('../accounting/Expense');
+const { CuentaContable, Asiento } = require('../accounting');
 
 // ============================================================================
 // SUPPLIER ASSOCIATIONS
@@ -87,11 +86,11 @@ PurchaseOrder.belongsTo(Quotation, { as: 'quotation', foreignKey: 'quotation_id'
 Supplier.hasMany(PurchaseOrder, { as: 'orders', foreignKey: 'supplier_id' });
 PurchaseOrder.belongsTo(Supplier, { as: 'supplier', foreignKey: 'supplier_id' });
 
-Account.hasMany(PurchaseOrder, { as: 'purchaseOrders', foreignKey: 'account_id' });
-PurchaseOrder.belongsTo(Account, { as: 'account', foreignKey: 'account_id' });
+CuentaContable.hasMany(PurchaseOrder, { as: 'purchaseOrders', foreignKey: 'id_cuenta' });
+PurchaseOrder.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
 
-Expense.hasMany(PurchaseOrder, { as: 'purchaseOrders', foreignKey: 'expense_id' });
-PurchaseOrder.belongsTo(Expense, { as: 'expense', foreignKey: 'expense_id' });
+Asiento.hasMany(PurchaseOrder, { as: 'purchaseOrders', foreignKey: 'id_asiento' });
+PurchaseOrder.belongsTo(Asiento, { as: 'asiento', foreignKey: 'id_asiento' });
 
 PurchaseOrder.hasMany(PurchaseOrderItem, { as: 'items', foreignKey: 'order_id', onDelete: 'CASCADE' });
 PurchaseOrderItem.belongsTo(PurchaseOrder, { as: 'order', foreignKey: 'order_id' });

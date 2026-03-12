@@ -1,11 +1,11 @@
 /**
  * CashReconciliation Model
  * Represents daily cash reconciliation (arqueos de caja)
+ * Now references cuenta_contable instead of accounts
  */
 
 const { DataTypes } = require('sequelize');
 const { accountingDb } = require('../../config/database');
-const Account = require('./Account');
 
 const CashReconciliation = accountingDb.define('cash_reconciliations', {
   id: {
@@ -13,11 +13,11 @@ const CashReconciliation = accountingDb.define('cash_reconciliations', {
     primaryKey: true,
     autoIncrement: true
   },
-  account_id: {
+  id_cuenta: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'accounts',
+      model: 'cuenta_contable',
       key: 'id'
     }
   },
@@ -68,15 +68,9 @@ const CashReconciliation = accountingDb.define('cash_reconciliations', {
   indexes: [
     {
       unique: true,
-      fields: ['account_id', 'date']
+      fields: ['id_cuenta', 'date']
     }
   ]
-});
-
-// Define associations
-CashReconciliation.belongsTo(Account, {
-  as: 'account',
-  foreignKey: 'account_id'
 });
 
 module.exports = CashReconciliation;

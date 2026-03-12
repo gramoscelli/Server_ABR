@@ -1,254 +1,238 @@
 /**
- * Dashboard Routes
- * Consolidated statistics and summary for accounting dashboard
+ * Accounting Dashboard Routes
+ * Summary and analytics based on asiento_detalle
  */
+
 const express = require('express');
 const router = express.Router();
-const { Account, Expense, Income, Transfer, PlanDeCuentas } = require('../../models/accounting');
-const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
+const { accountingDb, Asiento, AsientoDetalle, CuentaContable, CuentaEfectivo, CuentaBancaria, CuentaPagoElectronico } = require('../../models/accounting');
 const { Op } = require('sequelize');
-const { buildDateFilter } = require('../../utils/dateFilter');
+const asientoService = require('../../services/asientoService');
 
-/**
- * @route   GET /api/accounting/dashboard
- * @desc    Get dashboard summary with all accounts and period statistics
- * @access  Private (root, admin_employee)
- */
-router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+// GET / - Dashboard summary
+router.get('/', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
 
-    // Get all accounts with balances
-    const accounts = await Account.findAll({
-      where: { is_active: true },
-      order: [['type', 'ASC'], ['name', 'ASC']]
+    // Default: current month
+    const now = new Date();
+    const periodStart = start_date || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const periodEnd = end_date || now.toISOString().split('T')[0];
+
+    // 1. Get all cuentas with subtipo (financial accounts)
+    const cuentasFinancieras = await CuentaContable.findAll({
+      where: {
+        subtipo: { [Op.ne]: null },
+        is_active: true
+      },
+      include: [
+        { model: CuentaEfectivo, as: 'efectivo', required: false },
+        { model: CuentaBancaria, as: 'bancaria', required: false },
+        { model: CuentaPagoElectronico, as: 'pagoElectronico', required: false }
+      ],
+      order: [['codigo', 'ASC']]
     });
 
-    // Calculate totals by account type
-    const balanceByType = {
-      cash: accounts.filter(a => a.type === 'cash').reduce((sum, a) => sum + parseFloat(a.current_balance), 0),
-      bank: accounts.filter(a => a.type === 'bank').reduce((sum, a) => sum + parseFloat(a.current_balance), 0),
-      other: accounts.filter(a => a.type === 'other').reduce((sum, a) => sum + parseFloat(a.current_balance), 0)
+    // 2. Calculate balances for financial accounts
+    const cuentasConSaldo = [];
+    for (const cuenta of cuentasFinancieras) {
+      const balance = await asientoService.getAccountBalance(cuenta.id, periodEnd);
+      cuentasConSaldo.push({
+        ...cuenta.toJSON(),
+        saldo: balance.saldo,
+        total_debe: balance.total_debe,
+        total_haber: balance.total_haber
+      });
+    }
+
+    // 3. Balances by subtipo
+    const balanceBySub = { efectivo: 0, bancaria: 0, cobro_electronico: 0, total: 0 };
+    for (const c of cuentasConSaldo) {
+      const sub = c.subtipo;
+      if (balanceBySub[sub] !== undefined) {
+        balanceBySub[sub] += c.saldo;
+      }
+      balanceBySub.total += c.saldo;
+    }
+
+    // 4. Period totals: ingresos and egresos from confirmed asientos
+    const periodWhere = {
+      estado: 'confirmado',
+      fecha: { [Op.between]: [periodStart, periodEnd] }
     };
 
-    const totalBalance = balanceByType.cash + balanceByType.bank + balanceByType.other;
-
-    // Build date filter for period statistics
-    const dateWhere = {};
-    const dateFilter = buildDateFilter(start_date, end_date);
-    if (dateFilter) dateWhere.date = dateFilter;
-
-    // Get period statistics
-    const [totalExpenses, totalIncomes, expensesByCategory, incomesByCategory, recentExpenses, recentIncomes, recentTransfers] = await Promise.all([
-      Expense.sum('amount', { where: dateWhere }) || 0,
-      Income.sum('amount', { where: dateWhere }) || 0,
-
-      // Expenses grouped by plan de cuentas
-      Expense.findAll({
-        where: dateWhere,
-        include: [{
-          model: PlanDeCuentas,
-          as: 'planCta',
-          required: false,
-          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
-        }],
-        attributes: ['plan_cta_id', 'amount']
-      }),
-
-      // Incomes grouped by plan de cuentas
-      Income.findAll({
-        where: dateWhere,
-        include: [{
-          model: PlanDeCuentas,
-          as: 'planCta',
-          required: false,
-          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
-        }],
-        attributes: ['plan_cta_id', 'amount']
-      }),
-
-      // Recent transactions
-      Expense.findAll({
-        limit: 5,
-        order: [['date', 'DESC'], ['created_at', 'DESC']],
-        include: [
-          { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
-          { model: Account, as: 'account', attributes: ['id', 'name'] }
-        ]
-      }),
-
-      Income.findAll({
-        limit: 5,
-        order: [['date', 'DESC'], ['created_at', 'DESC']],
-        include: [
-          { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
-          { model: Account, as: 'account', attributes: ['id', 'name'] }
-        ]
-      }),
-
-      Transfer.findAll({
-        limit: 5,
-        order: [['date', 'DESC'], ['created_at', 'DESC']],
-        include: [
-          { model: Account, as: 'fromAccount', attributes: ['id', 'name'] },
-          { model: Account, as: 'toAccount', attributes: ['id', 'name'] }
-        ]
-      })
-    ]);
-
-    // Group expenses by plan de cuentas
-    const expenseCategoryMap = {};
-    expensesByCategory.forEach(exp => {
-      if (exp.planCta) {
-        const ctaId = exp.planCta.id;
-        if (!expenseCategoryMap[ctaId]) {
-          expenseCategoryMap[ctaId] = {
-            id: ctaId,
-            codigo: exp.planCta.codigo,
-            name: exp.planCta.nombre,
-            total: 0
-          };
-        }
-        expenseCategoryMap[ctaId].total += parseFloat(exp.amount);
-      }
+    // Total egresos (movements to egreso-type accounts on debe side)
+    const egresos = await AsientoDetalle.findAll({
+      attributes: [
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'egreso' }, attributes: [] }
+      ],
+      where: { tipo_mov: 'debe' },
+      raw: true
     });
 
-    // Group incomes by plan de cuentas
-    const incomeCategoryMap = {};
-    incomesByCategory.forEach(inc => {
-      if (inc.planCta) {
-        const ctaId = inc.planCta.id;
-        if (!incomeCategoryMap[ctaId]) {
-          incomeCategoryMap[ctaId] = {
-            id: ctaId,
-            codigo: inc.planCta.codigo,
-            name: inc.planCta.nombre,
-            total: 0
-          };
-        }
-        incomeCategoryMap[ctaId].total += parseFloat(inc.amount);
-      }
+    const ingresos = await AsientoDetalle.findAll({
+      attributes: [
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'ingreso' }, attributes: [] }
+      ],
+      where: { tipo_mov: 'haber' },
+      raw: true
+    });
+
+    const totalEgresos = parseFloat(egresos[0]?.total) || 0;
+    const totalIngresos = parseFloat(ingresos[0]?.total) || 0;
+
+    // 5. Top cuentas by movement in period
+    const egresosByCuenta = await AsientoDetalle.findAll({
+      attributes: [
+        'id_cuenta',
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total'],
+        [accountingDb.fn('COUNT', accountingDb.col('asiento_detalle.id_detalle')), 'count']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'egreso' }, attributes: ['id', 'codigo', 'titulo'] }
+      ],
+      where: { tipo_mov: 'debe' },
+      group: ['id_cuenta', 'cuenta.id', 'cuenta.codigo', 'cuenta.titulo'],
+      order: [[accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'DESC']],
+      limit: 10,
+      raw: true,
+      nest: true
+    });
+
+    const ingresosByCuenta = await AsientoDetalle.findAll({
+      attributes: [
+        'id_cuenta',
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total'],
+        [accountingDb.fn('COUNT', accountingDb.col('asiento_detalle.id_detalle')), 'count']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'ingreso' }, attributes: ['id', 'codigo', 'titulo'] }
+      ],
+      where: { tipo_mov: 'haber' },
+      group: ['id_cuenta', 'cuenta.id', 'cuenta.codigo', 'cuenta.titulo'],
+      order: [[accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'DESC']],
+      limit: 10,
+      raw: true,
+      nest: true
+    });
+
+    // 6. Recent asientos
+    const recentAsientos = await Asiento.findAll({
+      where: periodWhere,
+      include: [{
+        model: AsientoDetalle,
+        as: 'detalles',
+        include: [{
+          model: CuentaContable,
+          as: 'cuenta',
+          attributes: ['id', 'codigo', 'titulo', 'tipo']
+        }]
+      }],
+      order: [['fecha', 'DESC'], ['id_asiento', 'DESC']],
+      limit: 10
     });
 
     res.json({
       success: true,
       data: {
-        accounts: {
-          list: accounts,
-          summary: {
-            total: accounts.length,
-            cash: accounts.filter(a => a.type === 'cash').length,
-            bank: accounts.filter(a => a.type === 'bank').length,
-            other: accounts.filter(a => a.type === 'other').length
-          }
-        },
+        cuentas: cuentasConSaldo,
         balances: {
-          total: totalBalance.toFixed(2),
-          by_type: {
-            cash: balanceByType.cash.toFixed(2),
-            bank: balanceByType.bank.toFixed(2),
-            other: balanceByType.other.toFixed(2)
+          total: balanceBySub.total.toFixed(2),
+          by_subtipo: {
+            efectivo: balanceBySub.efectivo.toFixed(2),
+            bancaria: balanceBySub.bancaria.toFixed(2),
+            cobro_electronico: balanceBySub.cobro_electronico.toFixed(2)
           }
         },
         period: {
-          start_date: start_date || null,
-          end_date: end_date || null,
-          total_expenses: (parseFloat(totalExpenses) || 0).toFixed(2),
-          total_incomes: (parseFloat(totalIncomes) || 0).toFixed(2),
-          net_result: ((parseFloat(totalIncomes) || 0) - (parseFloat(totalExpenses) || 0)).toFixed(2),
-          expenses_by_category: Object.values(expenseCategoryMap).map(cat => ({
-            ...cat,
-            total: cat.total.toFixed(2)
-          })),
-          incomes_by_category: Object.values(incomeCategoryMap).map(cat => ({
-            ...cat,
-            total: cat.total.toFixed(2)
-          }))
+          start_date: periodStart,
+          end_date: periodEnd,
+          total_egresos: totalEgresos.toFixed(2),
+          total_ingresos: totalIngresos.toFixed(2),
+          net_result: (totalIngresos - totalEgresos).toFixed(2),
+          egresos_by_cuenta: egresosByCuenta,
+          ingresos_by_cuenta: ingresosByCuenta
         },
-        recent_transactions: {
-          expenses: recentExpenses,
-          incomes: recentIncomes,
-          transfers: recentTransfers
-        }
+        recent_asientos: recentAsientos
       }
     });
   } catch (error) {
-    console.error('Error fetching dashboard data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error al obtener datos del dashboard',
-      message: error.message
-    });
+    console.error('Error fetching dashboard:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener dashboard' });
   }
 });
 
-/**
- * @route   GET /api/accounting/dashboard/monthly
- * @desc    Get monthly evolution for charts (expenses, incomes, net)
- * @access  Private (root, admin_employee)
- */
-router.get('/monthly', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
+// GET /monthly - Monthly evolution
+router.get('/monthly', async (req, res) => {
   try {
-    const { start_date, end_date } = req.query;
+    const { year } = req.query;
+    const targetYear = parseInt(year) || new Date().getFullYear();
 
-    const dateWhere = {};
-    const monthlyDateFilter = buildDateFilter(start_date, end_date);
-    if (monthlyDateFilter) dateWhere.date = monthlyDateFilter;
+    const startDate = `${targetYear}-01-01`;
+    const endDate = `${targetYear}-12-31`;
 
-    const [expenses, incomes] = await Promise.all([
-      Expense.findAll({
-        where: dateWhere,
-        attributes: ['date', 'amount'],
-        order: [['date', 'ASC']]
-      }),
-      Income.findAll({
-        where: dateWhere,
-        attributes: ['date', 'amount'],
-        order: [['date', 'ASC']]
-      })
-    ]);
+    const asientoWhere = {
+      estado: 'confirmado',
+      fecha: { [Op.between]: [startDate, endDate] }
+    };
 
-    // Group by month
-    const monthlyData = {};
-
-    expenses.forEach(exp => {
-      const dateStr = exp.date instanceof Date ? exp.date.toISOString() : String(exp.date);
-      const month = dateStr.substring(0, 7); // YYYY-MM
-      if (!monthlyData[month]) {
-        monthlyData[month] = { month, expenses: 0, incomes: 0 };
-      }
-      monthlyData[month].expenses += parseFloat(exp.amount);
+    const monthlyEgresos = await AsientoDetalle.findAll({
+      attributes: [
+        [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha')), 'month'],
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: asientoWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'egreso' }, attributes: [] }
+      ],
+      where: { tipo_mov: 'debe' },
+      group: [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha'))],
+      raw: true
     });
 
-    incomes.forEach(inc => {
-      const dateStr = inc.date instanceof Date ? inc.date.toISOString() : String(inc.date);
-      const month = dateStr.substring(0, 7); // YYYY-MM
-      if (!monthlyData[month]) {
-        monthlyData[month] = { month, expenses: 0, incomes: 0 };
-      }
-      monthlyData[month].incomes += parseFloat(inc.amount);
+    const monthlyIngresos = await AsientoDetalle.findAll({
+      attributes: [
+        [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha')), 'month'],
+        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+      ],
+      include: [
+        { model: Asiento, as: 'asiento', where: asientoWhere, attributes: [] },
+        { model: CuentaContable, as: 'cuenta', where: { tipo: 'ingreso' }, attributes: [] }
+      ],
+      where: { tipo_mov: 'haber' },
+      group: [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha'))],
+      raw: true
     });
 
-    const result = Object.values(monthlyData)
-      .map(m => ({
-        month: m.month,
-        expenses: m.expenses.toFixed(2),
-        incomes: m.incomes.toFixed(2),
-        net: (m.incomes - m.expenses).toFixed(2)
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+    const months = [];
+    for (let m = 1; m <= 12; m++) {
+      const egreso = monthlyEgresos.find(e => parseInt(e.month) === m);
+      const ingreso = monthlyIngresos.find(i => parseInt(i.month) === m);
+      const egresoTotal = parseFloat(egreso?.total) || 0;
+      const ingresoTotal = parseFloat(ingreso?.total) || 0;
 
-    res.json({
-      success: true,
-      data: result
-    });
+      months.push({
+        month: `${targetYear}-${String(m).padStart(2, '0')}`,
+        egresos: egresoTotal.toFixed(2),
+        ingresos: ingresoTotal.toFixed(2),
+        net: (ingresoTotal - egresoTotal).toFixed(2)
+      });
+    }
+
+    res.json({ success: true, data: months });
   } catch (error) {
     console.error('Error fetching monthly data:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error al obtener datos mensuales',
-      message: error.message
-    });
+    res.status(500).json({ success: false, error: 'Error al obtener datos mensuales' });
   }
 });
 

@@ -14,18 +14,12 @@ const OAuthCallbackPage = lazy(() => import('@/pages/OAuthCallbackPage'))
 const HomePage = lazy(() => import('@/pages/HomePage'))
 const ComingSoonPage = lazy(() => import('@/pages/ComingSoonPage'))
 
-// Accounting module pages
+// Accounting module pages (double-entry bookkeeping)
 const DashboardPage = lazy(() => import('@/pages/accounting/DashboardPage'))
 const OperationsPage = lazy(() => import('@/pages/accounting/OperationsPage'))
 const ReportsPage = lazy(() => import('@/pages/accounting/ReportsPage'))
-const AccountsPage = lazy(() => import('@/pages/accounting/AccountsPage'))
 const CategoriesPage = lazy(() => import('@/pages/accounting/CategoriesPage'))
-const TransferTypesPage = lazy(() => import('@/pages/accounting/TransferTypesPage'))
 const AccountingSettingsPage = lazy(() => import('@/pages/accounting/SettingsPage'))
-// Legacy pages (for backward compatibility)
-const ExpensesPage = lazy(() => import('@/pages/accounting/ExpensesPage'))
-const IncomesPage = lazy(() => import('@/pages/accounting/IncomesPage'))
-const TransfersPage = lazy(() => import('@/pages/accounting/TransfersPage'))
 const ReconciliationsPage = lazy(() => import('@/pages/accounting/ReconciliationsPage'))
 
 // Purchases module pages
@@ -211,14 +205,7 @@ function App() {
           />
           <Route
             path="/accounting/accounts"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <AccountsPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
+            element={<Navigate to="/accounting/categories" replace />}
           />
           <Route
             path="/accounting/reports"
@@ -253,17 +240,6 @@ function App() {
             }
             errorElement={<RouteErrorBoundary />}
           />
-          <Route
-            path="/accounting/transfer-types"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <TransferTypesPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
-          />
           {/* Legacy routes - redirect to new structure */}
           <Route
             path="/accounting/expenses"
@@ -276,6 +252,10 @@ function App() {
           <Route
             path="/accounting/transfers"
             element={<Navigate to="/accounting/operations" replace />}
+          />
+          <Route
+            path="/accounting/transfer-types"
+            element={<Navigate to="/accounting/categories" replace />}
           />
           <Route
             path="/accounting/reconciliations"

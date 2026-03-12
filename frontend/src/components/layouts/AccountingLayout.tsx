@@ -6,6 +6,7 @@ import {
   Settings,
   DollarSign,
   Calculator,
+  List,
 } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
@@ -15,9 +16,14 @@ const navigation: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: 'Operaciones',
+    name: 'Asientos',
     href: '/accounting/operations',
     icon: BookOpenText,
+  },
+  {
+    name: 'Plan de Cuentas',
+    href: '/accounting/categories',
+    icon: List,
   },
   {
     name: 'Arqueos de Caja',

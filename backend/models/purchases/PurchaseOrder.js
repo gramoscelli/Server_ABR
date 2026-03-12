@@ -91,19 +91,19 @@ const PurchaseOrder = accountingDb.define('purchase_orders', {
     type: DataTypes.TEXT,
     allowNull: true
   },
-  account_id: {
+  id_cuenta: {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-      model: 'accounts',
+      model: 'cuenta_contable',
       key: 'id'
     },
     comment: 'Cuenta contable para el pago'
   },
-  expense_id: {
+  id_asiento: {
     type: DataTypes.INTEGER,
     allowNull: true,
-    comment: 'References accounting.expenses.id when invoiced'
+    comment: 'References accounting.asiento.id_asiento when invoiced'
   },
   invoice_number: {
     type: DataTypes.STRING(50),
