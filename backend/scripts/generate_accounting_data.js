@@ -16,8 +16,7 @@
 
 const {
   Account, Expense, Income, Transfer,
-  ExpenseCategory, IncomeCategory, TransferType,
-  CashReconciliation, accountingDb
+  TransferType, CashReconciliation, accountingDb
 } = require('../models/accounting');
 const { User, Role, sequelize } = require('../models');
 
@@ -37,63 +36,24 @@ const ACCOUNTS_DATA = [
   { name: 'Mercado Pago', type: 'other', currency: 'ARS', initial_balance: 15000, notes: 'Cuenta digital para cobros online' }
 ];
 
-const EXPENSE_CATEGORIES_DATA = [
-  { name: 'Servicios', color: '#3498db', subcategories: [
-    { name: 'Electricidad', color: '#f1c40f' },
-    { name: 'Gas', color: '#e67e22' },
-    { name: 'Agua', color: '#1abc9c' },
-    { name: 'Internet/Teléfono', color: '#9b59b6' }
-  ]},
-  { name: 'Mantenimiento', color: '#e74c3c', subcategories: [
-    { name: 'Limpieza', color: '#c0392b' },
-    { name: 'Reparaciones', color: '#d35400' },
-    { name: 'Jardinería', color: '#27ae60' }
-  ]},
-  { name: 'Suministros', color: '#2ecc71', subcategories: [
-    { name: 'Papelería', color: '#16a085' },
-    { name: 'Artículos de limpieza', color: '#1abc9c' },
-    { name: 'Insumos varios', color: '#3498db' }
-  ]},
-  { name: 'Personal', color: '#9b59b6', subcategories: [
-    { name: 'Sueldos', color: '#8e44ad' },
-    { name: 'Cargas sociales', color: '#6c3483' },
-    { name: 'Capacitación', color: '#7d3c98' }
-  ]},
-  { name: 'Biblioteca', color: '#34495e', subcategories: [
-    { name: 'Libros nuevos', color: '#2c3e50' },
-    { name: 'Suscripciones', color: '#5d6d7e' },
-    { name: 'Encuadernación', color: '#7f8c8d' }
-  ]},
-  { name: 'Impuestos y tasas', color: '#95a5a6' },
-  { name: 'Seguros', color: '#7f8c8d' },
-  { name: 'Gastos bancarios', color: '#bdc3c7' },
-  { name: 'Eventos', color: '#e91e63' },
-  { name: 'Otros', color: '#607d8b' }
+// Expense types for description generation
+const EXPENSE_TYPES = [
+  'Electricidad', 'Gas', 'Agua', 'Internet/Teléfono',
+  'Limpieza', 'Reparaciones', 'Jardinería',
+  'Papelería', 'Sueldos', 'Cargas sociales',
+  'Libros nuevos', 'Suscripciones',
+  'Impuestos y tasas', 'Seguros', 'Gastos bancarios',
+  'Eventos', 'Otros'
 ];
 
-const INCOME_CATEGORIES_DATA = [
-  { name: 'Cuotas de socios', color: '#27ae60', subcategories: [
-    { name: 'Cuota mensual', color: '#2ecc71' },
-    { name: 'Cuota anual', color: '#16a085' },
-    { name: 'Inscripciones nuevas', color: '#1abc9c' }
-  ]},
-  { name: 'Donaciones', color: '#3498db', subcategories: [
-    { name: 'Donaciones particulares', color: '#2980b9' },
-    { name: 'Donaciones empresas', color: '#1a5276' }
-  ]},
-  { name: 'Eventos', color: '#e67e22', subcategories: [
-    { name: 'Entradas eventos', color: '#d35400' },
-    { name: 'Alquiler de espacio', color: '#ca6f1e' }
-  ]},
-  { name: 'Subvenciones', color: '#9b59b6', subcategories: [
-    { name: 'Municipal', color: '#8e44ad' },
-    { name: 'Provincial', color: '#7d3c98' },
-    { name: 'Nacional', color: '#6c3483' }
-  ]},
-  { name: 'Intereses bancarios', color: '#1abc9c' },
-  { name: 'Servicios de fotocopias', color: '#f39c12' },
-  { name: 'Multas por atraso', color: '#c0392b' },
-  { name: 'Otros ingresos', color: '#7f8c8d' }
+// Income types for description generation
+const INCOME_TYPES = [
+  'Cuota mensual', 'Cuota anual', 'Inscripciones nuevas',
+  'Donaciones particulares', 'Donaciones empresas',
+  'Entradas eventos', 'Alquiler de espacio',
+  'Municipal', 'Provincial', 'Nacional',
+  'Intereses bancarios', 'Servicios de fotocopias',
+  'Multas por atraso', 'Otros ingresos'
 ];
 
 const TRANSFER_TYPES_DATA = [
@@ -202,8 +162,6 @@ async function generateData() {
       await Transfer.destroy({ where: {}, force: true });
       await Expense.destroy({ where: {}, force: true });
       await Income.destroy({ where: {}, force: true });
-      await ExpenseCategory.destroy({ where: {}, force: true });
-      await IncomeCategory.destroy({ where: {}, force: true });
       await TransferType.destroy({ where: {}, force: true });
       await Account.destroy({ where: {}, force: true });
       console.log('✓ Datos limpiados\n');
@@ -221,50 +179,6 @@ async function generateData() {
       console.log(`  ${created ? '✓ Creada' : '○ Existente'}: ${account.name}`);
     }
     console.log(`  Total: ${accounts.length} cuentas\n`);
-
-    // Create expense categories
-    console.log('Creando categorías de egresos...');
-    const expenseCategories = [];
-    for (const catData of EXPENSE_CATEGORIES_DATA) {
-      const [parent, created] = await ExpenseCategory.findOrCreate({
-        where: { name: catData.name },
-        defaults: { color: catData.color, order_index: expenseCategories.length }
-      });
-      expenseCategories.push(parent);
-
-      if (catData.subcategories) {
-        for (const subData of catData.subcategories) {
-          const [sub] = await ExpenseCategory.findOrCreate({
-            where: { name: subData.name },
-            defaults: { color: subData.color, parent_id: parent.id, order_index: expenseCategories.length }
-          });
-          expenseCategories.push(sub);
-        }
-      }
-    }
-    console.log(`  Total: ${expenseCategories.length} categorías\n`);
-
-    // Create income categories
-    console.log('Creando categorías de ingresos...');
-    const incomeCategories = [];
-    for (const catData of INCOME_CATEGORIES_DATA) {
-      const [parent, created] = await IncomeCategory.findOrCreate({
-        where: { name: catData.name },
-        defaults: { color: catData.color, order_index: incomeCategories.length }
-      });
-      incomeCategories.push(parent);
-
-      if (catData.subcategories) {
-        for (const subData of catData.subcategories) {
-          const [sub] = await IncomeCategory.findOrCreate({
-            where: { name: subData.name },
-            defaults: { color: subData.color, parent_id: parent.id, order_index: incomeCategories.length }
-          });
-          incomeCategories.push(sub);
-        }
-      }
-    }
-    console.log(`  Total: ${incomeCategories.length} categorías\n`);
 
     // Create transfer types
     console.log('Creando tipos de transferencia...');
@@ -329,9 +243,6 @@ async function generateData() {
 
     // Generate expenses (80-150 per month, scaled for partial months)
     console.log('  Creando egresos...');
-    const leafExpenseCategories = expenseCategories.filter(c =>
-      !expenseCategories.some(other => other.parent_id === c.id)
-    );
 
     for (let m = 0; m < monthsDiff; m++) {
       const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, EXTEND_TO_CURRENT && m === 0 ? startDate.getDate() : 1);
@@ -347,15 +258,14 @@ async function generateData() {
       const numExpenses = Math.max(1, Math.round(randomBetween(80, 150) * scaleFactor));
 
       for (let i = 0; i < numExpenses; i++) {
-        const category = randomChoice(leafExpenseCategories);
+        const expenseType = randomChoice(EXPENSE_TYPES);
         // Bank-related expenses go to bank accounts, rest to cash
-        const preferCash = !['Gastos bancarios', 'Sueldos', 'Cargas sociales'].includes(category.name);
+        const preferCash = !['Gastos bancarios', 'Sueldos', 'Cargas sociales'].includes(expenseType);
         const account = weightedAccountChoice(accounts, preferCash);
-        const descriptions = EXPENSE_DESCRIPTIONS[category.name] || ['Gasto ' + category.name];
+        const descriptions = EXPENSE_DESCRIPTIONS[expenseType] || ['Gasto ' + expenseType];
 
         await Expense.create({
           amount: randomBetween(500, 50000),
-          category_id: category.id,
           account_id: account.id,
           date: formatDate(randomDate(monthStart, monthEnd)),
           description: randomChoice(descriptions),
@@ -368,9 +278,6 @@ async function generateData() {
 
     // Generate incomes (30-60 per month, scaled for partial months)
     console.log('  Creando ingresos...');
-    const leafIncomeCategories = incomeCategories.filter(c =>
-      !incomeCategories.some(other => other.parent_id === c.id)
-    );
 
     for (let m = 0; m < monthsDiff; m++) {
       const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + m, EXTEND_TO_CURRENT && m === 0 ? startDate.getDate() : 1);
@@ -383,15 +290,14 @@ async function generateData() {
       const numIncomes = Math.max(1, Math.round(randomBetween(30, 60) * scaleFactor));
 
       for (let i = 0; i < numIncomes; i++) {
-        const category = randomChoice(leafIncomeCategories);
+        const incomeType = randomChoice(INCOME_TYPES);
         // Bank-related incomes (subsidies, large donations) go to bank, rest to cash
-        const preferCash = !['Municipal', 'Provincial', 'Nacional', 'Intereses bancarios', 'Donaciones empresas'].includes(category.name);
+        const preferCash = !['Municipal', 'Provincial', 'Nacional', 'Intereses bancarios', 'Donaciones empresas'].includes(incomeType);
         const account = weightedAccountChoice(accounts, preferCash);
-        const descriptions = INCOME_DESCRIPTIONS[category.name] || ['Ingreso ' + category.name];
+        const descriptions = INCOME_DESCRIPTIONS[incomeType] || ['Ingreso ' + incomeType];
 
         await Income.create({
           amount: randomBetween(1000, 100000),
-          category_id: category.id,
           account_id: account.id,
           date: formatDate(randomDate(monthStart, monthEnd)),
           description: randomChoice(descriptions),
@@ -488,8 +394,6 @@ async function generateData() {
     console.log('║   RESUMEN DE DATOS GENERADOS                     ║');
     console.log('╠══════════════════════════════════════════════════╣');
     console.log(`║   Cuentas:              ${accounts.length.toString().padStart(5)}                    ║`);
-    console.log(`║   Categorías egresos:   ${expenseCategories.length.toString().padStart(5)}                    ║`);
-    console.log(`║   Categorías ingresos:  ${incomeCategories.length.toString().padStart(5)}                    ║`);
     console.log(`║   Tipos transferencia:  ${transferTypes.length.toString().padStart(5)}                    ║`);
     console.log(`║   Egresos:              ${expenseCount.toString().padStart(5)}                    ║`);
     console.log(`║   Ingresos:             ${incomeCount.toString().padStart(5)}                    ║`);

@@ -23,7 +23,7 @@ const Transfer = accountingDb.define('transfers', {
   },
   from_account_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'accounts',
       key: 'id'
@@ -31,11 +31,29 @@ const Transfer = accountingDb.define('transfers', {
   },
   to_account_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'accounts',
       key: 'id'
     }
+  },
+  origin_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Origin account in chart of accounts (double-entry: money leaves here)'
+  },
+  destination_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Destination account in chart of accounts (double-entry: money enters here)'
   },
   transfer_type_id: {
     type: DataTypes.INTEGER,
@@ -74,8 +92,11 @@ const Transfer = accountingDb.define('transfers', {
   updatedAt: 'updated_at',
   validate: {
     differentAccounts() {
-      if (this.from_account_id === this.to_account_id) {
+      if (this.from_account_id && this.to_account_id && this.from_account_id === this.to_account_id) {
         throw new Error('From and To accounts must be different');
+      }
+      if (this.origin_plan_cta_id && this.destination_plan_cta_id && this.origin_plan_cta_id === this.destination_plan_cta_id) {
+        throw new Error('Origin and destination accounts must be different');
       }
     }
   }

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { accountingService } from '@/lib/accountingService'
-import type { Account, PlanDeCuentas } from '@/types/accounting'
+import type { Account } from '@/types/accounting'
 
 interface AddIncomeDialogProps {
   open: boolean
@@ -28,7 +28,6 @@ export interface IncomeFormData {
   amount: string
   account_id: number
   date: string
-  plan_cta_id: number | null
   description: string
   attachment_url?: string
 }
@@ -38,11 +37,9 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
     amount: '',
     account_id: 0,
     date: new Date().toISOString().slice(0, 16),
-    plan_cta_id: null,
     description: '',
   })
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [planDeCuentas, setPlanDeCuentas] = useState<PlanDeCuentas[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -54,12 +51,8 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
   const loadData = async () => {
     try {
       setLoading(true)
-      const [accountsResponse, planDeCuentasData] = await Promise.all([
-        accountingService.getAccounts({ is_active: true }),
-        accountingService.getPlanDeCuentas({ tipo: 'ingreso' }),
-      ])
+      const accountsResponse = await accountingService.getAccounts({ is_active: true })
       setAccounts(accountsResponse.data)
-      setPlanDeCuentas(planDeCuentasData)
 
       // Set default account if available
       if (accountsResponse.data.length > 0 && !formData.account_id) {
@@ -88,7 +81,6 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
         amount: '',
         account_id: accounts.length > 0 ? accounts[0].id : 0,
         date: new Date().toISOString().slice(0, 16),
-        plan_cta_id: null,
         description: '',
       })
       onOpenChange(false)
@@ -161,32 +153,6 @@ export function AddIncomeDialog({ open, onOpenChange, onSubmit }: AddIncomeDialo
                 disabled={loading}
               />
             </div>
-          </div>
-
-          {/* Plan de Cuentas */}
-          <div className="space-y-2">
-            <Label htmlFor="plan_cta" className="text-sm font-medium text-gray-700">
-              Cuenta Contable
-            </Label>
-            <Select
-              value={formData.plan_cta_id ? String(formData.plan_cta_id) : 'none'}
-              onValueChange={(value) =>
-                setFormData({ ...formData, plan_cta_id: value === 'none' ? null : parseInt(value) })
-              }
-              disabled={loading}
-            >
-              <SelectTrigger id="plan_cta">
-                <SelectValue placeholder="Sin Categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin Categoría</SelectItem>
-                {planDeCuentas.map((cuenta) => (
-                  <SelectItem key={cuenta.id} value={String(cuenta.id)}>
-                    {cuenta.codigo} - {cuenta.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Description */}

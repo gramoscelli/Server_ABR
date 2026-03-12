@@ -10,7 +10,7 @@ const jwt = require('jsonwebtoken');
 const { User, Role, RefreshToken } = require('../../models');
 const { sequelize } = require('../../config/database');
 const { accountingDb } = require('../../config/database');
-const { Expense, Income, Transfer, Account, ExpenseCategory, IncomeCategory, TransferType } = require('../../models/accounting');
+const { Expense, Income, Transfer, Account, TransferType } = require('../../models/accounting');
 const expensesRouter = require('../../routes/accounting/expenses');
 const incomesRouter = require('../../routes/accounting/incomes');
 const transfersRouter = require('../../routes/accounting/transfers');
@@ -25,8 +25,6 @@ app.use('/api/accounting/transfers', transfersRouter);
 describe('Accounting Routes - Date Filtering', () => {
   let accessToken;
   let testAccount;
-  let testExpenseCategory;
-  let testIncomeCategory;
   let testTransferType;
   let testAccount2;
 
@@ -60,8 +58,6 @@ describe('Accounting Routes - Date Filtering', () => {
     await Income.destroy({ where: {}, force: true });
     await Transfer.destroy({ where: {}, force: true });
     await Account.destroy({ where: {}, force: true });
-    await ExpenseCategory.destroy({ where: {}, force: true });
-    await IncomeCategory.destroy({ where: {}, force: true });
     await TransferType.destroy({ where: {}, force: true });
     await RefreshToken.destroy({ where: {}, force: true });
     await User.destroy({ where: {}, force: true });
@@ -103,18 +99,6 @@ describe('Accounting Routes - Date Filtering', () => {
       is_active: true
     });
 
-    // Create test expense category
-    testExpenseCategory = await ExpenseCategory.create({
-      name: 'Test Category',
-      color: '#FF0000'
-    });
-
-    // Create test income category
-    testIncomeCategory = await IncomeCategory.create({
-      name: 'Test Income Category',
-      color: '#00FF00'
-    });
-
     // Create test transfer type
     testTransferType = await TransferType.create({
       name: 'Test Transfer Type'
@@ -128,7 +112,7 @@ describe('Accounting Routes - Date Filtering', () => {
       // Create expenses with different dates
       await Expense.create({
         amount: 1000,
-        category_id: testExpenseCategory.id,
+
         account_id: testAccount.id,
         date: '2025-01-15',
         description: 'Expense on Jan 15',
@@ -137,7 +121,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
       await Expense.create({
         amount: 2000,
-        category_id: testExpenseCategory.id,
+
         account_id: testAccount.id,
         date: '2025-01-16',
         description: 'Expense on Jan 16',
@@ -146,7 +130,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
       await Expense.create({
         amount: 3000,
-        category_id: testExpenseCategory.id,
+
         account_id: testAccount.id,
         date: '2025-01-17',
         description: 'Expense on Jan 17',
@@ -196,16 +180,6 @@ describe('Accounting Routes - Date Filtering', () => {
       expect(response.body.data).toHaveLength(0);
     });
 
-    test('should include category in response with correct alias', async () => {
-      const response = await request(app)
-        .get('/api/accounting/expenses?start_date=2025-01-16&end_date=2025-01-16')
-        .set('Authorization', `Bearer ${accessToken}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.data[0].category).toBeDefined();
-      expect(response.body.data[0].category.name).toBe('Test Category');
-    });
-
     test('should include account in response', async () => {
       const response = await request(app)
         .get('/api/accounting/expenses?start_date=2025-01-16&end_date=2025-01-16')
@@ -224,7 +198,7 @@ describe('Accounting Routes - Date Filtering', () => {
       // Create incomes with different dates
       await Income.create({
         amount: 5000,
-        category_id: testIncomeCategory.id,
+
         account_id: testAccount.id,
         date: '2025-01-15',
         description: 'Income on Jan 15',
@@ -233,7 +207,7 @@ describe('Accounting Routes - Date Filtering', () => {
 
       await Income.create({
         amount: 6000,
-        category_id: testIncomeCategory.id,
+
         account_id: testAccount.id,
         date: '2025-01-16',
         description: 'Income on Jan 16',

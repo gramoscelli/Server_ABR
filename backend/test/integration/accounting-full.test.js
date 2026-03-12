@@ -12,8 +12,7 @@ const { accountingDb } = require('../../config/database');
 const { User, Role } = require('../../models');
 const {
   Account, Expense, Income, Transfer,
-  ExpenseCategory, IncomeCategory, TransferType,
-  CashReconciliation
+  TransferType, CashReconciliation
 } = require('../../models/accounting');
 
 // Import routes
@@ -21,8 +20,6 @@ const accountsRouter = require('../../routes/accounting/accounts');
 const expensesRouter = require('../../routes/accounting/expenses');
 const incomesRouter = require('../../routes/accounting/incomes');
 const transfersRouter = require('../../routes/accounting/transfers');
-const expenseCategoriesRouter = require('../../routes/accounting/expenseCategories');
-const incomeCategoriesRouter = require('../../routes/accounting/incomeCategories');
 const transferTypesRouter = require('../../routes/accounting/transferTypes');
 const cashReconciliationsRouter = require('../../routes/accounting/cashReconciliations');
 const dashboardRouter = require('../../routes/accounting/dashboard');
@@ -34,8 +31,6 @@ app.use('/api/accounting/accounts', accountsRouter);
 app.use('/api/accounting/expenses', expensesRouter);
 app.use('/api/accounting/incomes', incomesRouter);
 app.use('/api/accounting/transfers', transfersRouter);
-app.use('/api/accounting/expense-categories', expenseCategoriesRouter);
-app.use('/api/accounting/income-categories', incomeCategoriesRouter);
 app.use('/api/accounting/transfer-types', transferTypesRouter);
 app.use('/api/accounting/cash-reconciliations', cashReconciliationsRouter);
 app.use('/api/accounting/dashboard', dashboardRouter);
@@ -47,8 +42,6 @@ describe('Comprehensive Accounting Module Tests', () => {
 
   // Test data holders
   let testAccounts = [];
-  let testExpenseCategories = [];
-  let testIncomeCategories = [];
   let testTransferTypes = [];
   let testExpenses = [];
   let testIncomes = [];
@@ -261,105 +254,6 @@ describe('Comprehensive Accounting Module Tests', () => {
   });
 
   // =============================================
-  // EXPENSE CATEGORIES TESTS
-  // =============================================
-  describe('Expense Categories API', () => {
-    describe('POST /api/accounting/expense-categories', () => {
-      it('should create parent expense category', async () => {
-        const response = await request(app)
-          .post('/api/accounting/expense-categories')
-          .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            name: 'Servicios',
-            color: '#3498db',
-            description: 'Gastos de servicios'
-          });
-
-        expect(response.status).toBe(201);
-        expect(response.body.data.name).toBe('Servicios');
-        testExpenseCategories.push(response.body.data);
-      });
-
-      it('should create subcategory', async () => {
-        const response = await request(app)
-          .post('/api/accounting/expense-categories')
-          .set('Authorization', `Bearer ${accessToken}`)
-          .send({
-            name: 'Electricidad',
-            parent_id: testExpenseCategories[0].id,
-            color: '#f1c40f'
-          });
-
-        expect(response.status).toBe(201);
-        testExpenseCategories.push(response.body.data);
-      });
-
-      it('should create more categories', async () => {
-        const categories = [
-          { name: 'Mantenimiento', color: '#e74c3c' },
-          { name: 'Suministros', color: '#2ecc71' },
-          { name: 'Personal', color: '#9b59b6' }
-        ];
-
-        for (const cat of categories) {
-          const response = await request(app)
-            .post('/api/accounting/expense-categories')
-            .set('Authorization', `Bearer ${accessToken}`)
-            .send(cat);
-          testExpenseCategories.push(response.body.data);
-        }
-      });
-    });
-
-    describe('GET /api/accounting/expense-categories', () => {
-      it('should return hierarchical categories', async () => {
-        const response = await request(app)
-          .get('/api/accounting/expense-categories')
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(response.status).toBe(200);
-        expect(response.body.data.length).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  // =============================================
-  // INCOME CATEGORIES TESTS
-  // =============================================
-  describe('Income Categories API', () => {
-    describe('POST /api/accounting/income-categories', () => {
-      it('should create income categories', async () => {
-        const categories = [
-          { name: 'Cuotas Socios', color: '#27ae60' },
-          { name: 'Donaciones', color: '#3498db' },
-          { name: 'Eventos', color: '#e67e22' },
-          { name: 'Subvenciones', color: '#9b59b6' }
-        ];
-
-        for (const cat of categories) {
-          const response = await request(app)
-            .post('/api/accounting/income-categories')
-            .set('Authorization', `Bearer ${accessToken}`)
-            .send(cat);
-          expect(response.status).toBe(201);
-          testIncomeCategories.push(response.body.data);
-        }
-      });
-    });
-
-    describe('GET /api/accounting/income-categories', () => {
-      it('should return all income categories', async () => {
-        const response = await request(app)
-          .get('/api/accounting/income-categories')
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(response.status).toBe(200);
-        expect(response.body.data.length).toBeGreaterThanOrEqual(4);
-      });
-    });
-  });
-
-  // =============================================
   // TRANSFER TYPES TESTS
   // =============================================
   describe('Transfer Types API', () => {
@@ -403,21 +297,18 @@ describe('Comprehensive Accounting Module Tests', () => {
         const expenses = [
           {
             amount: 15000,
-            category_id: testExpenseCategories[0].id,
             account_id: testAccounts[0].id,
             date: '2025-01-15',
             description: 'Pago factura luz enero'
           },
           {
             amount: 8500,
-            category_id: testExpenseCategories[2].id,
             account_id: testAccounts[0].id,
             date: '2025-01-16',
             description: 'Reparación aire acondicionado'
           },
           {
             amount: 25000,
-            category_id: testExpenseCategories[3].id,
             account_id: testAccounts[1].id,
             date: '2025-01-17',
             description: 'Compra de libros nuevos'
@@ -456,14 +347,6 @@ describe('Comprehensive Accounting Module Tests', () => {
         expect(response.body.data.length).toBe(2);
       });
 
-      it('should filter by category', async () => {
-        const response = await request(app)
-          .get(`/api/accounting/expenses?category_id=${testExpenseCategories[0].id}`)
-          .set('Authorization', `Bearer ${accessToken}`);
-
-        expect(response.status).toBe(200);
-        expect(response.body.data.every(e => e.category_id === testExpenseCategories[0].id)).toBe(true);
-      });
     });
 
     describe('GET /api/accounting/expenses/:id', () => {
@@ -473,7 +356,6 @@ describe('Comprehensive Accounting Module Tests', () => {
           .set('Authorization', `Bearer ${accessToken}`);
 
         expect(response.status).toBe(200);
-        expect(response.body.data.category).toBeDefined();
         expect(response.body.data.account).toBeDefined();
       });
     });
@@ -503,21 +385,18 @@ describe('Comprehensive Accounting Module Tests', () => {
         const incomes = [
           {
             amount: 50000,
-            category_id: testIncomeCategories[0].id,
             account_id: testAccounts[0].id,
             date: '2025-01-15',
             description: 'Cobro cuotas enero'
           },
           {
             amount: 10000,
-            category_id: testIncomeCategories[1].id,
             account_id: testAccounts[0].id,
             date: '2025-01-16',
             description: 'Donación anónima'
           },
           {
             amount: 75000,
-            category_id: testIncomeCategories[2].id,
             account_id: testAccounts[1].id,
             date: '2025-01-18',
             description: 'Venta entradas evento cultural'
@@ -656,7 +535,6 @@ describe('Comprehensive Accounting Module Tests', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             amount: 100,
-            category_id: testExpenseCategories[0].id,
             account_id: testAccounts[0].id,
             date: '2025-01-20',
             description: 'To be deleted'
@@ -677,7 +555,6 @@ describe('Comprehensive Accounting Module Tests', () => {
           .set('Authorization', `Bearer ${accessToken}`)
           .send({
             amount: 100,
-            category_id: testIncomeCategories[0].id,
             account_id: testAccounts[0].id,
             date: '2025-01-20',
             description: 'To be deleted'

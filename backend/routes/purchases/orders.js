@@ -13,7 +13,7 @@ const {
   Supplier,
   accountingDb
 } = require('../../models/purchases');
-const { Account, Expense, ExpenseCategory } = require('../../models/accounting');
+const { Account, Expense } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
@@ -325,7 +325,7 @@ router.post('/:id/to-expense', authenticateToken, authorizeRoles('root', 'board_
   const transaction = await accountingDb.transaction();
 
   try {
-    const { account_id, category_id, invoice_number, invoice_date, invoice_attachment_url } = req.body;
+    const { account_id, plan_cta_id, invoice_number, invoice_date, invoice_attachment_url } = req.body;
 
     if (!account_id) {
       await transaction.rollback();
@@ -359,7 +359,7 @@ router.post('/:id/to-expense', authenticateToken, authorizeRoles('root', 'board_
     // Create expense
     const expense = await Expense.create({
       amount: order.total_amount,
-      category_id,
+      plan_cta_id: plan_cta_id || null,
       account_id,
       date: invoice_date || new Date(),
       description: `OC ${order.order_number} - ${order.supplier?.business_name || 'Proveedor'}`,

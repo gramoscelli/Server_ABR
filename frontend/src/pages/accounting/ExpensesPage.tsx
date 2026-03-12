@@ -11,9 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { authService } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
-import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
-import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
-import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { AddOperationDialog, OperationFormData, OperationType } from '@/components/cash/AddOperationDialog'
 import { accountingService } from '@/lib/accountingService'
 import type { Expense, CategoryStat } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
@@ -37,9 +35,8 @@ export default function ExpensesPage() {
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<PeriodFilterValue>(createPeriodValue('this_month'))
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
-  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
-  const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [addDialogType, setAddDialogType] = useState<OperationType>('expense')
 
   useEffect(() => {
     // Check if user has access (root or admin_employee)
@@ -102,82 +99,46 @@ export default function ExpensesPage() {
 
   const periodLabel = period.label
 
-  const handleAddExpense = async (data: ExpenseFormData) => {
-    try {
-      await accountingService.createExpense({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Egreso creado correctamente',
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error('Error creating expense:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo crear el egreso',
-        variant: 'destructive',
-      })
-    }
+  const openAddDialog = (type: OperationType) => {
+    setAddDialogType(type)
+    setAddDialogOpen(true)
   }
 
-  const handleAddIncome = async (data: IncomeFormData) => {
+  const handleSubmitOperation = async (data: OperationFormData) => {
     try {
-      await accountingService.createIncome({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Ingreso creado correctamente',
-      })
-
+      if (addDialogType === 'income') {
+        await accountingService.createIncome({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Ingreso registrado correctamente' })
+      } else if (addDialogType === 'expense') {
+        await accountingService.createExpense({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Egreso registrado correctamente' })
+      } else {
+        await accountingService.createTransfer({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          transfer_type_id: data.transfer_type_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
+      }
       fetchData()
     } catch (error) {
-      console.error('Error creating income:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo crear el ingreso',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleAddTransfer = async (data: TransferFormData) => {
-    try {
-      await accountingService.createTransfer({
-        amount: Number(data.amount),
-        from_account_id: data.from_account_id,
-        to_account_id: data.to_account_id,
-        transfer_type_id: data.transfer_type_id,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Operación registrada correctamente',
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error('Error creating transfer:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo registrar la operación',
-        variant: 'destructive',
-      })
+      console.error('Error:', error)
+      toast({ title: 'Error', description: 'No se pudo registrar la operación', variant: 'destructive' })
     }
   }
 
@@ -218,21 +179,21 @@ export default function ExpensesPage() {
           <div className="flex gap-2">
             <Button
               className="bg-red-500 hover:bg-red-600 text-white"
-              onClick={() => setIsAddExpenseOpen(true)}
+              onClick={() => openAddDialog('expense')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Egreso
             </Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setIsAddIncomeOpen(true)}
+              onClick={() => openAddDialog('income')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Ingreso
             </Button>
             <Button
               className="bg-gray-900 hover:bg-gray-800 text-white"
-              onClick={() => setIsAddTransferOpen(true)}
+              onClick={() => openAddDialog('transfer')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Otra operación
@@ -323,7 +284,7 @@ export default function ExpensesPage() {
                     <p className="text-gray-500 mb-4">No hay egresos disponibles</p>
                     <Button
                       className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                      onClick={() => setIsAddExpenseOpen(true)}
+                      onClick={() => openAddDialog('expense')}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar Egreso
@@ -338,27 +299,13 @@ export default function ExpensesPage() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            {expense.category && (
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: expense.category.color }}
-                              />
-                            )}
                             <p className="font-medium text-gray-900">
                               {expense.description || 'Sin descripción'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm text-gray-500">
-                              {expense.category?.name || 'Sin categoría'}
-                            </p>
-                            {expense.account && (
-                              <>
-                                <span className="text-gray-400">•</span>
-                                <p className="text-sm text-gray-500">{expense.account.name}</p>
-                              </>
-                            )}
-                          </div>
+                          {expense.account && (
+                            <p className="text-sm text-gray-500 mt-1">{expense.account.name}</p>
+                          )}
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
@@ -442,21 +389,12 @@ export default function ExpensesPage() {
           </div>
         </div>
 
-        {/* Dialogs */}
-        <AddExpenseDialog
-          open={isAddExpenseOpen}
-          onOpenChange={setIsAddExpenseOpen}
-          onSubmit={handleAddExpense}
-        />
-        <AddIncomeDialog
-          open={isAddIncomeOpen}
-          onOpenChange={setIsAddIncomeOpen}
-          onSubmit={handleAddIncome}
-        />
-        <AddTransferDialog
-          open={isAddTransferOpen}
-          onOpenChange={setIsAddTransferOpen}
-          onSubmit={handleAddTransfer}
+        {/* Dialog */}
+        <AddOperationDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          operationType={addDialogType}
+          onSubmit={handleSubmitOperation}
         />
       </div>
   )

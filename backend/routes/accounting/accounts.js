@@ -8,6 +8,7 @@ const router = express.Router();
 const { Account, Expense, Income, Transfer, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
+const { accountingDb } = require('../../config/database');
 const { buildDateFilter } = require('../../utils/dateFilter');
 const { fixModelEncoding, fixArrayEncoding } = require('../../utils/encoding');
 
@@ -150,10 +151,41 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       });
     }
 
+    if (!plan_cta_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'La cuenta contable (plan de cuentas) es requerida'
+      });
+    }
+
     if (type && !['cash', 'bank', 'other'].includes(type)) {
       return res.status(400).json({
         success: false,
         error: 'Tipo inválido. Debe ser: cash, bank o other'
+      });
+    }
+
+    // Validate plan_cta_id exists and belongs to grupo 11 or 12
+    const planCta = await PlanDeCuentas.findByPk(plan_cta_id);
+    if (!planCta) {
+      return res.status(400).json({
+        success: false,
+        error: 'La cuenta contable seleccionada no existe'
+      });
+    }
+    if (!['11', '12'].includes(planCta.grupo)) {
+      return res.status(400).json({
+        success: false,
+        error: 'La cuenta contable debe pertenecer al grupo 11 (Caja) o 12 (Bancos)'
+      });
+    }
+
+    // Validate plan_cta_id is not already used by another account
+    const existingAccount = await Account.findOne({ where: { plan_cta_id } });
+    if (existingAccount) {
+      return res.status(400).json({
+        success: false,
+        error: 'Esta cuenta contable ya está vinculada a otra cuenta'
       });
     }
 
@@ -167,7 +199,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       current_balance: initial_balance || 0,
       is_active: true,
       notes: notes || null,
-      plan_cta_id: plan_cta_id || null
+      plan_cta_id
     });
 
     res.status(201).json({
@@ -210,6 +242,32 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       });
     }
 
+    // Validate plan_cta_id if provided
+    if (plan_cta_id !== undefined) {
+      const planCta = await PlanDeCuentas.findByPk(plan_cta_id);
+      if (!planCta) {
+        return res.status(400).json({
+          success: false,
+          error: 'La cuenta contable seleccionada no existe'
+        });
+      }
+      if (!['11', '12'].includes(planCta.grupo)) {
+        return res.status(400).json({
+          success: false,
+          error: 'La cuenta contable debe pertenecer al grupo 11 (Caja) o 12 (Bancos)'
+        });
+      }
+      const existingAccount = await Account.findOne({
+        where: { plan_cta_id, id: { [Op.ne]: account.id } }
+      });
+      if (existingAccount) {
+        return res.status(400).json({
+          success: false,
+          error: 'Esta cuenta contable ya está vinculada a otra cuenta'
+        });
+      }
+    }
+
     if (name !== undefined) account.name = name;
     if (type !== undefined) account.type = type;
     if (account_number !== undefined) account.account_number = account_number;
@@ -238,14 +296,16 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 
 /**
  * @route   PUT /api/accounting/accounts/:id/balance
- * @desc    Adjust account balance (manual adjustment)
+ * @desc    Adjust account balance (manual adjustment) - creates a trackable operation
  * @access  Private (root)
  */
 router.put('/:id/balance', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  const transaction = await accountingDb.transaction();
   try {
-    const account = await Account.findByPk(req.params.id);
+    const account = await Account.findByPk(req.params.id, { transaction });
 
     if (!account) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         error: 'Cuenta no encontrada'
@@ -255,17 +315,66 @@ router.put('/:id/balance', authenticateToken, authorizeRoles('root'), async (req
     const { new_balance, notes } = req.body;
 
     if (new_balance === undefined) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
         error: 'El nuevo balance es requerido'
       });
     }
 
-    const oldBalance = account.current_balance;
-    account.current_balance = new_balance;
-    if (notes) account.notes = notes;
+    const oldBalance = parseFloat(account.current_balance);
+    const newBalanceNum = parseFloat(new_balance);
+    const difference = newBalanceNum - oldBalance;
 
-    await account.save();
+    if (difference === 0) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: 'El nuevo balance es igual al actual'
+      });
+    }
+
+    // Find the appropriate "AJUSTE CONTABLE" plan_de_cuentas entry
+    const ajustePlanCta = await PlanDeCuentas.findOne({
+      where: {
+        nombre: 'AJUSTE CONTABLE',
+        tipo: difference > 0 ? 'ingreso' : 'egreso'
+      },
+      transaction
+    });
+
+    if (!ajustePlanCta) {
+      await transaction.rollback();
+      return res.status(500).json({
+        success: false,
+        error: 'No se encontró la cuenta contable "AJUSTE CONTABLE". Ejecute la migración 021.'
+      });
+    }
+
+    const description = notes || `Ajuste de saldo: $${oldBalance.toFixed(2)} → $${newBalanceNum.toFixed(2)}`;
+    const operationData = {
+      amount: Math.abs(difference),
+      account_id: account.id,
+      plan_cta_id: ajustePlanCta.id,
+      date: new Date(),
+      description,
+      user_id: req.user.id
+    };
+
+    let operation;
+    if (difference > 0) {
+      // Positive adjustment → create Income
+      operation = await Income.create(operationData, { transaction });
+    } else {
+      // Negative adjustment → create Expense
+      operation = await Expense.create(operationData, { transaction });
+    }
+
+    // Update account balance
+    account.current_balance = newBalanceNum;
+    await account.save({ transaction });
+
+    await transaction.commit();
 
     res.json({
       success: true,
@@ -273,11 +382,16 @@ router.put('/:id/balance', authenticateToken, authorizeRoles('root'), async (req
       data: {
         account: fixModelEncoding(account, ACCOUNT_TEXT_FIELDS),
         old_balance: oldBalance,
-        new_balance: new_balance,
-        difference: parseFloat(new_balance) - parseFloat(oldBalance)
+        new_balance: newBalanceNum,
+        difference,
+        operation: {
+          type: difference > 0 ? 'income' : 'expense',
+          id: operation.id
+        }
       }
     });
   } catch (error) {
+    await transaction.rollback();
     console.error('Error adjusting balance:', error);
     res.status(500).json({
       success: false,
@@ -365,19 +479,21 @@ router.get('/:id/balance-history', authenticateToken, authorizeRoles('root', 'ad
       });
     }
 
-    const where = { account_id: req.params.id };
     const dateFilter = buildDateFilter(start_date, end_date);
-    if (dateFilter) where.date = dateFilter;
+    const txnWhere = { account_id: req.params.id };
+    if (dateFilter) txnWhere.date = dateFilter;
+
+    const transferDateWhere = dateFilter ? { date: dateFilter } : {};
 
     const [expenses, incomes, outgoingTransfers, incomingTransfers] = await Promise.all([
-      Expense.findAll({ where, order: [['date', 'ASC']] }),
-      Income.findAll({ where, order: [['date', 'ASC']] }),
+      Expense.findAll({ where: txnWhere, order: [['date', 'ASC']] }),
+      Income.findAll({ where: txnWhere, order: [['date', 'ASC']] }),
       Transfer.findAll({
-        where: { ...where, from_account_id: req.params.id },
+        where: { ...transferDateWhere, from_account_id: req.params.id },
         order: [['date', 'ASC']]
       }),
       Transfer.findAll({
-        where: { ...where, to_account_id: req.params.id },
+        where: { ...transferDateWhere, to_account_id: req.params.id },
         order: [['date', 'ASC']]
       })
     ]);

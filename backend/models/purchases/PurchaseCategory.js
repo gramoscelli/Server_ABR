@@ -36,11 +36,6 @@ const PurchaseCategory = accountingDb.define('purchase_categories', {
       is: /^#[0-9A-Fa-f]{6}$/
     }
   },
-  expense_category_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    comment: 'Categoría de gasto asociada para contabilidad'
-  },
   order_index: {
     type: DataTypes.INTEGER,
     defaultValue: 0

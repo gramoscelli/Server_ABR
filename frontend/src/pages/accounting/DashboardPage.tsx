@@ -15,9 +15,7 @@ import {
 import { useEffect, useState, useMemo } from 'react'
 import { authService } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
-import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
-import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
-import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { AddOperationDialog, OperationFormData, OperationType } from '@/components/cash/AddOperationDialog'
 import { accountingService } from '@/lib/accountingService'
 import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
@@ -145,9 +143,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   // Dialogs
-  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
-  const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [addDialogType, setAddDialogType] = useState<OperationType>('income')
 
   // Check access
   useEffect(() => {
@@ -306,54 +303,45 @@ export default function DashboardPage() {
   // TRANSACTION HANDLERS
   // ============================================================================
 
-  const handleAddIncome = async (data: IncomeFormData) => {
-    try {
-      await accountingService.createIncome({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-      toast({ title: 'Éxito', description: 'Ingreso registrado correctamente' })
-      fetchStats()
-    } catch (error) {
-      console.error('Error creating income:', error)
-      toast({ title: 'Error', description: 'No se pudo registrar el ingreso', variant: 'destructive' })
-    }
+  const openAddDialog = (type: OperationType) => {
+    setAddDialogType(type)
+    setAddDialogOpen(true)
   }
 
-  const handleAddExpense = async (data: ExpenseFormData) => {
+  const handleSubmitOperation = async (data: OperationFormData) => {
     try {
-      await accountingService.createExpense({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-      toast({ title: 'Éxito', description: 'Egreso registrado correctamente' })
+      if (addDialogType === 'income') {
+        await accountingService.createIncome({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Ingreso registrado correctamente' })
+      } else if (addDialogType === 'expense') {
+        await accountingService.createExpense({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Egreso registrado correctamente' })
+      } else {
+        await accountingService.createTransfer({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          transfer_type_id: data.transfer_type_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
+      }
       fetchStats()
     } catch (error) {
-      console.error('Error creating expense:', error)
-      toast({ title: 'Error', description: 'No se pudo registrar el egreso', variant: 'destructive' })
-    }
-  }
-
-  const handleAddTransfer = async (data: TransferFormData) => {
-    try {
-      await accountingService.createTransfer({
-        amount: Number(data.amount),
-        from_account_id: data.from_account_id,
-        to_account_id: data.to_account_id,
-        transfer_type_id: data.transfer_type_id,
-        date: data.date,
-        description: data.description || undefined,
-      })
-      toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
-      fetchStats()
-    } catch (error) {
-      console.error('Error creating transfer:', error)
+      console.error('Error:', error)
       toast({ title: 'Error', description: 'No se pudo registrar la operación', variant: 'destructive' })
     }
   }
@@ -404,21 +392,21 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Button
           className="bg-green-600 hover:bg-green-700 text-white h-auto py-3"
-          onClick={() => setIsAddIncomeOpen(true)}
+          onClick={() => openAddDialog('income')}
         >
           <ArrowUpCircle className="h-5 w-5 mr-2" />
           <span className="font-semibold">Registrar Ingreso</span>
         </Button>
         <Button
           className="bg-red-600 hover:bg-red-700 text-white h-auto py-3"
-          onClick={() => setIsAddExpenseOpen(true)}
+          onClick={() => openAddDialog('expense')}
         >
           <ArrowDownCircle className="h-5 w-5 mr-2" />
           <span className="font-semibold">Registrar Egreso</span>
         </Button>
         <Button
           className="bg-blue-600 hover:bg-blue-700 text-white h-auto py-3"
-          onClick={() => setIsAddTransferOpen(true)}
+          onClick={() => openAddDialog('transfer')}
         >
           <Repeat className="h-5 w-5 mr-2" />
           <span className="font-semibold">Otra operación</span>
@@ -717,21 +705,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Dialogs */}
-      <AddIncomeDialog
-        open={isAddIncomeOpen}
-        onOpenChange={setIsAddIncomeOpen}
-        onSubmit={handleAddIncome}
-      />
-      <AddExpenseDialog
-        open={isAddExpenseOpen}
-        onOpenChange={setIsAddExpenseOpen}
-        onSubmit={handleAddExpense}
-      />
-      <AddTransferDialog
-        open={isAddTransferOpen}
-        onOpenChange={setIsAddTransferOpen}
-        onSubmit={handleAddTransfer}
+      {/* Dialog */}
+      <AddOperationDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        operationType={addDialogType}
+        onSubmit={handleSubmitOperation}
       />
     </div>
   )

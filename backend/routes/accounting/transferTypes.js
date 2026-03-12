@@ -7,6 +7,9 @@ const express = require('express');
 const router = express.Router();
 const { TransferType } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
+const { fixModelEncoding, fixArrayEncoding } = require('../../utils/encoding');
+
+const TRANSFER_TYPE_TEXT_FIELDS = ['name', 'description'];
 
 /**
  * @route   GET /api/accounting/transfer-types
@@ -21,7 +24,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 
     res.json({
       success: true,
-      data: types
+      data: fixArrayEncoding(types, TRANSFER_TYPE_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error fetching transfer types:', error);
@@ -51,7 +54,7 @@ router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 
     res.json({
       success: true,
-      data: type
+      data: fixModelEncoding(type, TRANSFER_TYPE_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error fetching transfer type:', error);
@@ -97,7 +100,7 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
     res.status(201).json({
       success: true,
       message: 'Tipo de transferencia creado exitosamente',
-      data: type
+      data: fixModelEncoding(type, TRANSFER_TYPE_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error creating transfer type:', error);
@@ -145,7 +148,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
     res.json({
       success: true,
       message: 'Tipo de transferencia actualizado exitosamente',
-      data: type
+      data: fixModelEncoding(type, TRANSFER_TYPE_TEXT_FIELDS)
     });
   } catch (error) {
     console.error('Error updating transfer type:', error);

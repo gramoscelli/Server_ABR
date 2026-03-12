@@ -65,6 +65,7 @@ export default function AccountsPage() {
         initial_balance: Number(data.initial_balance),
         is_active: data.is_active,
         notes: data.notes || undefined,
+        plan_cta_id: data.plan_cta_id!,
       })
 
       toast({
@@ -96,6 +97,7 @@ export default function AccountsPage() {
         currency: data.currency,
         is_active: data.is_active,
         notes: data.notes || undefined,
+        plan_cta_id: data.plan_cta_id!,
       })
 
       toast({

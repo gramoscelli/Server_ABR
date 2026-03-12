@@ -21,7 +21,7 @@ export default function SettingsPage() {
       route: '/accounting/accounts',
     },
     {
-      title: 'Categorías',
+      title: 'Plan de Cuentas',
       description: 'Gestiona el plan de cuentas para clasificar ingresos y egresos',
       icon: Tag,
       color: 'bg-purple-500',
@@ -87,7 +87,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
           <p>
-            • <strong>Categorías:</strong> Organiza tus ingresos y egresos en categorías personalizadas
+            • <strong>Plan de Cuentas:</strong> Organiza tus ingresos y egresos según el plan de cuentas
             para facilitar el análisis financiero.
           </p>
           <p>

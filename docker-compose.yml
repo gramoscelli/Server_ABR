@@ -70,6 +70,8 @@ services:
       - ./db_backup:/app/db_backup
     ports:
       - 3000:3000
+    cap_add:
+      - SYS_TIME
     depends_on:
       db:
         condition: service_healthy

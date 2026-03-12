@@ -78,15 +78,6 @@ export const API_ENDPOINTS = {
     TRANSFERS: '/api/accounting/transfers',
     TRANSFER_BY_ID: (id: number) => `/api/accounting/transfers/${id}`,
 
-    // Expense Categories
-    EXPENSE_CATEGORIES: '/api/accounting/expense-categories',
-    EXPENSE_CATEGORY_BY_ID: (id: number) => `/api/accounting/expense-categories/${id}`,
-    EXPENSE_CATEGORIES_REORDER: '/api/accounting/expense-categories/reorder',
-
-    // Income Categories
-    INCOME_CATEGORIES: '/api/accounting/income-categories',
-    INCOME_CATEGORY_BY_ID: (id: number) => `/api/accounting/income-categories/${id}`,
-
     // Transfer Types
     TRANSFER_TYPES: '/api/accounting/transfer-types',
     TRANSFER_TYPE_BY_ID: (id: number) => `/api/accounting/transfer-types/${id}`,

@@ -5,7 +5,6 @@
 
 const { DataTypes } = require('sequelize');
 const { accountingDb } = require('../../config/database');
-const ExpenseCategory = require('./ExpenseCategory');
 const Account = require('./Account');
 
 const Expense = accountingDb.define('expenses', {
@@ -21,14 +20,6 @@ const Expense = accountingDb.define('expenses', {
       min: 0.01
     }
   },
-  category_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'expense_categories',
-      key: 'id'
-    }
-  },
   plan_cta_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
@@ -40,11 +31,29 @@ const Expense = accountingDb.define('expenses', {
   },
   account_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'accounts',
       key: 'id'
     }
+  },
+  origin_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Origin account in chart of accounts (double-entry: money leaves here)'
+  },
+  destination_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Destination account in chart of accounts (double-entry: money enters here)'
   },
   date: {
     type: DataTypes.DATE,
@@ -80,11 +89,6 @@ const Expense = accountingDb.define('expenses', {
 });
 
 // Define associations
-Expense.belongsTo(ExpenseCategory, {
-  as: 'category',
-  foreignKey: 'category_id'
-});
-
 Expense.belongsTo(Account, {
   as: 'account',
   foreignKey: 'account_id'

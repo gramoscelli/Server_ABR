@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useState, useEffect } from 'react'
-import type { Account } from '@/types/accounting'
+import { accountingService } from '@/lib/accountingService'
+import type { Account, PlanDeCuentas } from '@/types/accounting'
 
 export interface AccountFormData {
   name: string
@@ -16,6 +17,7 @@ export interface AccountFormData {
   initial_balance: string
   is_active: boolean
   notes: string
+  plan_cta_id: number | null
 }
 
 interface AddAccountDialogProps {
@@ -27,6 +29,8 @@ interface AddAccountDialogProps {
 
 export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddAccountDialogProps) {
   const [loading, setLoading] = useState(false)
+  const [planCuentas, setPlanCuentas] = useState<PlanDeCuentas[]>([])
+  const [usedPlanCtaIds, setUsedPlanCtaIds] = useState<number[]>([])
   const [formData, setFormData] = useState<AccountFormData>({
     name: '',
     type: 'cash',
@@ -36,7 +40,39 @@ export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddA
     initial_balance: '0',
     is_active: true,
     notes: '',
+    plan_cta_id: null,
   })
+
+  // Load plan de cuentas (grupo 11 and 12) and used plan_cta_ids when dialog opens
+  useEffect(() => {
+    if (!open) return
+
+    const loadData = async () => {
+      try {
+        const [allPlanCuentas, accountsResponse] = await Promise.all([
+          accountingService.getPlanDeCuentas(),
+          accountingService.getAccounts(),
+        ])
+
+        // Filter to only grupo 11 (Caja) and 12 (Bancos), active only
+        const filtered = allPlanCuentas.filter(
+          (pc) => ['11', '12'].includes(pc.grupo) && pc.is_active
+        )
+        setPlanCuentas(filtered)
+
+        // Get plan_cta_ids already used by other accounts
+        const accounts = accountsResponse.data || []
+        const used = accounts
+          .filter((acc) => acc.plan_cta_id && (!account || acc.id !== account.id))
+          .map((acc) => acc.plan_cta_id)
+        setUsedPlanCtaIds(used)
+      } catch (error) {
+        console.error('Error loading plan de cuentas:', error)
+      }
+    }
+
+    loadData()
+  }, [open, account])
 
   useEffect(() => {
     if (account) {
@@ -49,6 +85,7 @@ export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddA
         initial_balance: String(account.initial_balance),
         is_active: account.is_active,
         notes: account.notes || '',
+        plan_cta_id: account.plan_cta_id,
       })
     } else {
       setFormData({
@@ -60,12 +97,28 @@ export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddA
         initial_balance: '0',
         is_active: true,
         notes: '',
+        plan_cta_id: null,
       })
     }
   }, [account, open])
 
+  const handlePlanCtaChange = (value: string) => {
+    const planCtaId = Number(value)
+    const selected = planCuentas.find((pc) => pc.id === planCtaId)
+    setFormData({
+      ...formData,
+      plan_cta_id: planCtaId,
+      name: selected ? selected.nombre : formData.name,
+    })
+  }
+
+  const availablePlanCuentas = planCuentas.filter(
+    (pc) => !usedPlanCtaIds.includes(pc.id) || (account && pc.id === account.plan_cta_id)
+  )
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.plan_cta_id) return
     setLoading(true)
     try {
       await onSubmit(formData)
@@ -85,6 +138,30 @@ export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddA
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <Label htmlFor="plan_cta_id">Cuenta Contable *</Label>
+              <Select
+                value={formData.plan_cta_id ? String(formData.plan_cta_id) : ''}
+                onValueChange={handlePlanCtaChange}
+                disabled={loading}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar cuenta del plan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePlanCuentas.map((pc) => (
+                    <SelectItem key={pc.id} value={String(pc.id)}>
+                      {pc.codigo} - {pc.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Solo cuentas del grupo Caja (11) y Bancos (12)
+              </p>
+            </div>
+
             <div className="col-span-2">
               <Label htmlFor="name">Nombre de la Cuenta *</Label>
               <Input
@@ -211,7 +288,7 @@ export function AddAccountDialog({ open, onOpenChange, onSubmit, account }: AddA
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.plan_cta_id}>
               {loading ? 'Guardando...' : account ? 'Actualizar' : 'Crear'}
             </Button>
           </div>

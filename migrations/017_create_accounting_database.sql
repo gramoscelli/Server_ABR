@@ -33,10 +33,7 @@ CREATE TABLE IF NOT EXISTS `plan_de_cuentas` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `codigo` (`codigo`),
-  KEY `idx_tipo` (`tipo`),
-  KEY `idx_codigo` (`codigo`),
-  KEY `idx_grupo` (`grupo`)
+  UNIQUE KEY `codigo` (`codigo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

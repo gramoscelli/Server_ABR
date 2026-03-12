@@ -4,7 +4,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const { Account, Expense, Income, Transfer, ExpenseCategory, IncomeCategory, PlanDeCuentas } = require('../../models/accounting');
+const { Account, Expense, Income, Transfer, PlanDeCuentas } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { buildDateFilter } = require('../../utils/dateFilter');
@@ -43,26 +43,28 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       Expense.sum('amount', { where: dateWhere }) || 0,
       Income.sum('amount', { where: dateWhere }) || 0,
 
-      // Expenses grouped by category
+      // Expenses grouped by plan de cuentas
       Expense.findAll({
         where: dateWhere,
         include: [{
-          model: ExpenseCategory,
-          as: 'category',
-          required: false
+          model: PlanDeCuentas,
+          as: 'planCta',
+          required: false,
+          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
         }],
-        attributes: ['category_id', 'amount']
+        attributes: ['plan_cta_id', 'amount']
       }),
 
-      // Incomes grouped by category
+      // Incomes grouped by plan de cuentas
       Income.findAll({
         where: dateWhere,
         include: [{
-          model: IncomeCategory,
-          as: 'category',
-          required: false
+          model: PlanDeCuentas,
+          as: 'planCta',
+          required: false,
+          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
         }],
-        attributes: ['category_id', 'amount']
+        attributes: ['plan_cta_id', 'amount']
       }),
 
       // Recent transactions
@@ -70,7 +72,6 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
         limit: 5,
         order: [['date', 'DESC'], ['created_at', 'DESC']],
         include: [
-          { model: ExpenseCategory, as: 'category', required: false },
           { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
           { model: Account, as: 'account', attributes: ['id', 'name'] }
         ]
@@ -80,7 +81,6 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
         limit: 5,
         order: [['date', 'DESC'], ['created_at', 'DESC']],
         include: [
-          { model: IncomeCategory, as: 'category', required: false },
           { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
           { model: Account, as: 'account', attributes: ['id', 'name'] }
         ]
@@ -96,37 +96,37 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
       })
     ]);
 
-    // Group expenses by category
+    // Group expenses by plan de cuentas
     const expenseCategoryMap = {};
     expensesByCategory.forEach(exp => {
-      if (exp.category) {
-        const catId = exp.category.id;
-        if (!expenseCategoryMap[catId]) {
-          expenseCategoryMap[catId] = {
-            id: catId,
-            name: exp.category.name,
-            color: exp.category.color,
+      if (exp.planCta) {
+        const ctaId = exp.planCta.id;
+        if (!expenseCategoryMap[ctaId]) {
+          expenseCategoryMap[ctaId] = {
+            id: ctaId,
+            codigo: exp.planCta.codigo,
+            name: exp.planCta.nombre,
             total: 0
           };
         }
-        expenseCategoryMap[catId].total += parseFloat(exp.amount);
+        expenseCategoryMap[ctaId].total += parseFloat(exp.amount);
       }
     });
 
-    // Group incomes by category
+    // Group incomes by plan de cuentas
     const incomeCategoryMap = {};
     incomesByCategory.forEach(inc => {
-      if (inc.category) {
-        const catId = inc.category.id;
-        if (!incomeCategoryMap[catId]) {
-          incomeCategoryMap[catId] = {
-            id: catId,
-            name: inc.category.name,
-            color: inc.category.color,
+      if (inc.planCta) {
+        const ctaId = inc.planCta.id;
+        if (!incomeCategoryMap[ctaId]) {
+          incomeCategoryMap[ctaId] = {
+            id: ctaId,
+            codigo: inc.planCta.codigo,
+            name: inc.planCta.nombre,
             total: 0
           };
         }
-        incomeCategoryMap[catId].total += parseFloat(inc.amount);
+        incomeCategoryMap[ctaId].total += parseFloat(inc.amount);
       }
     });
 
@@ -212,7 +212,8 @@ router.get('/monthly', authenticateToken, authorizeRoles('root', 'admin_employee
     const monthlyData = {};
 
     expenses.forEach(exp => {
-      const month = exp.date.substring(0, 7); // YYYY-MM
+      const dateStr = exp.date instanceof Date ? exp.date.toISOString() : String(exp.date);
+      const month = dateStr.substring(0, 7); // YYYY-MM
       if (!monthlyData[month]) {
         monthlyData[month] = { month, expenses: 0, incomes: 0 };
       }
@@ -220,7 +221,8 @@ router.get('/monthly', authenticateToken, authorizeRoles('root', 'admin_employee
     });
 
     incomes.forEach(inc => {
-      const month = inc.date.substring(0, 7); // YYYY-MM
+      const dateStr = inc.date instanceof Date ? inc.date.toISOString() : String(inc.date);
+      const month = dateStr.substring(0, 7); // YYYY-MM
       if (!monthlyData[month]) {
         monthlyData[month] = { month, expenses: 0, incomes: 0 };
       }

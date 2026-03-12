@@ -4,8 +4,6 @@
  */
 
 const { accountingDb } = require('../../config/database');
-const ExpenseCategory = require('./ExpenseCategory');
-const IncomeCategory = require('./IncomeCategory');
 const TransferType = require('./TransferType');
 const PlanDeCuentas = require('./PlanDeCuentas');
 const Account = require('./Account');
@@ -15,8 +13,6 @@ const Transfer = require('./Transfer');
 const CashReconciliation = require('./CashReconciliation');
 
 // Setup associations
-ExpenseCategory.hasMany(Expense, { as: 'expenses', foreignKey: 'category_id' });
-IncomeCategory.hasMany(Income, { as: 'incomes', foreignKey: 'category_id' });
 TransferType.hasMany(Transfer, { as: 'transfers', foreignKey: 'transfer_type_id' });
 
 // Plan de Cuentas associations
@@ -34,10 +30,16 @@ Account.hasMany(Transfer, { as: 'outgoingTransfers', foreignKey: 'from_account_i
 Account.hasMany(Transfer, { as: 'incomingTransfers', foreignKey: 'to_account_id' });
 Account.hasMany(CashReconciliation, { as: 'reconciliations', foreignKey: 'account_id' });
 
+// Origin/destination associations for double-entry bookkeeping
+Expense.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
+Expense.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
+Income.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
+Income.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
+Transfer.belongsTo(PlanDeCuentas, { as: 'originPlanCta', foreignKey: 'origin_plan_cta_id' });
+Transfer.belongsTo(PlanDeCuentas, { as: 'destinationPlanCta', foreignKey: 'destination_plan_cta_id' });
+
 module.exports = {
   accountingDb,
-  ExpenseCategory,
-  IncomeCategory,
   TransferType,
   PlanDeCuentas,
   Account,

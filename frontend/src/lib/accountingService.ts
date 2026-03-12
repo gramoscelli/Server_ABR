@@ -13,7 +13,6 @@ import type {
   CategoryStat,
   CreateAccountData,
   CreateCashReconciliationData,
-  CreateCategoryData,
   CreateExpenseData,
   CreateIncomeData,
   CreateTransferData,
@@ -21,15 +20,12 @@ import type {
   DashboardData,
   DashboardQueryParams,
   Expense,
-  ExpenseCategory,
   ExpenseQueryParams,
   Income,
-  IncomeCategory,
   IncomeQueryParams,
   MonthlyData,
   PaginatedResponse,
   PlanDeCuentas,
-  ReorderCategoriesData,
   StatsQueryParams,
   Transfer,
   TransferQueryParams,
@@ -37,7 +33,6 @@ import type {
   UpdateAccountBalanceData,
   UpdateAccountData,
   UpdateCashReconciliationData,
-  UpdateCategoryData,
   UpdateExpenseData,
   UpdateIncomeData,
   UpdateTransferTypeData,
@@ -138,7 +133,7 @@ class AccountingService {
     const queryParams = new URLSearchParams()
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.category_id) queryParams.append('category_id', String(params.category_id))
+    if (params?.plan_cta_id) queryParams.append('plan_cta_id', String(params.plan_cta_id))
     if (params?.account_id) queryParams.append('account_id', String(params.account_id))
     if (params?.min_amount) queryParams.append('min_amount', String(params.min_amount))
     if (params?.max_amount) queryParams.append('max_amount', String(params.max_amount))
@@ -203,7 +198,7 @@ class AccountingService {
     const queryParams = new URLSearchParams()
     if (params?.start_date) queryParams.append('start_date', params.start_date)
     if (params?.end_date) queryParams.append('end_date', params.end_date)
-    if (params?.category_id) queryParams.append('category_id', String(params.category_id))
+    if (params?.plan_cta_id) queryParams.append('plan_cta_id', String(params.plan_cta_id))
     if (params?.account_id) queryParams.append('account_id', String(params.account_id))
     if (params?.page) queryParams.append('page', String(params.page))
     if (params?.limit) queryParams.append('limit', String(params.limit))
@@ -278,90 +273,6 @@ class AccountingService {
     })
   }
 
-  // Expense Categories
-  async getExpenseCategories(): Promise<ExpenseCategory[]> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORIES)
-    const data: ApiResponse<ExpenseCategory[]> = await response.json()
-    return data.data
-  }
-
-  async getExpenseCategory(id: number): Promise<ExpenseCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORY_BY_ID(id))
-    const data: ApiResponse<ExpenseCategory> = await response.json()
-    return data.data
-  }
-
-  async createExpenseCategory(categoryData: CreateCategoryData): Promise<ExpenseCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORIES, {
-      method: 'POST',
-      body: JSON.stringify(categoryData),
-    })
-    const data: ApiResponse<ExpenseCategory> = await response.json()
-    return data.data
-  }
-
-  async updateExpenseCategory(
-    id: number,
-    categoryData: UpdateCategoryData
-  ): Promise<ExpenseCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORY_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(categoryData),
-    })
-    const data: ApiResponse<ExpenseCategory> = await response.json()
-    return data.data
-  }
-
-  async deleteExpenseCategory(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORY_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
-  async reorderExpenseCategories(data: ReorderCategoriesData): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.EXPENSE_CATEGORIES_REORDER, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    })
-  }
-
-  // Income Categories
-  async getIncomeCategories(): Promise<IncomeCategory[]> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_CATEGORIES)
-    const data: ApiResponse<IncomeCategory[]> = await response.json()
-    return data.data
-  }
-
-  async getIncomeCategory(id: number): Promise<IncomeCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_CATEGORY_BY_ID(id))
-    const data: ApiResponse<IncomeCategory> = await response.json()
-    return data.data
-  }
-
-  async createIncomeCategory(categoryData: CreateCategoryData): Promise<IncomeCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_CATEGORIES, {
-      method: 'POST',
-      body: JSON.stringify(categoryData),
-    })
-    const data: ApiResponse<IncomeCategory> = await response.json()
-    return data.data
-  }
-
-  async updateIncomeCategory(id: number, categoryData: UpdateCategoryData): Promise<IncomeCategory> {
-    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_CATEGORY_BY_ID(id), {
-      method: 'PUT',
-      body: JSON.stringify(categoryData),
-    })
-    const data: ApiResponse<IncomeCategory> = await response.json()
-    return data.data
-  }
-
-  async deleteIncomeCategory(id: number): Promise<void> {
-    await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.INCOME_CATEGORY_BY_ID(id), {
-      method: 'DELETE',
-    })
-  }
-
   // Transfer Types
   async getTransferTypes(): Promise<TransferType[]> {
     const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.TRANSFER_TYPES)
@@ -410,6 +321,15 @@ class AccountingService {
     return data.data
   }
 
+  async createPlanDeCuentas(data: { codigo: number; nombre: string; tipo: string; grupo: string }): Promise<PlanDeCuentas> {
+    const response = await fetchWithAuth(API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+    const result: ApiResponse<PlanDeCuentas> = await response.json()
+    return result.data
+  }
+
   async updatePlanDeCuentas(id: number, updateData: { nombre?: string; is_active?: boolean }): Promise<PlanDeCuentas> {
     const response = await fetchWithAuth(`${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}/${id}`, {
       method: 'PUT',
@@ -417,6 +337,12 @@ class AccountingService {
     })
     const result: ApiResponse<PlanDeCuentas> = await response.json()
     return result.data
+  }
+
+  async deletePlanDeCuentas(id: number): Promise<void> {
+    await fetchWithAuth(`${API_ENDPOINTS.ACCOUNTING.PLAN_DE_CUENTAS}/${id}`, {
+      method: 'DELETE',
+    })
   }
 
   // Cash Reconciliations

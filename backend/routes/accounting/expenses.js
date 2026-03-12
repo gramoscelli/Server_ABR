@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Expense, ExpenseCategory, Account, PlanDeCuentas, accountingDb } = require('../../models/accounting');
+const { Expense, Account, PlanDeCuentas, accountingDb } = require('../../models/accounting');
 const { authenticateToken, authorizeRoles } = require('../../middleware/auth');
 const { Op } = require('sequelize');
 const { fixEncoding } = require('../../utils/encoding');
@@ -17,10 +17,28 @@ function fixExpenseEncoding(expense) {
   const fixed = expense.toJSON ? expense.toJSON() : { ...expense };
   if (fixed.description) fixed.description = fixEncoding(fixed.description);
   if (fixed.notes) fixed.notes = fixEncoding(fixed.notes);
-  if (fixed.category?.name) fixed.category.name = fixEncoding(fixed.category.name);
+  if (fixed.planCta?.nombre) fixed.planCta.nombre = fixEncoding(fixed.planCta.nombre);
   if (fixed.account?.name) fixed.account.name = fixEncoding(fixed.account.name);
+  if (fixed.originPlanCta?.nombre) fixed.originPlanCta.nombre = fixEncoding(fixed.originPlanCta.nombre);
+  if (fixed.destinationPlanCta?.nombre) fixed.destinationPlanCta.nombre = fixEncoding(fixed.destinationPlanCta.nombre);
   return fixed;
 }
+
+// Common include for double-entry plan de cuentas associations
+const planCtaInclude = [
+  {
+    model: PlanDeCuentas, as: 'originPlanCta', required: false,
+    attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'],
+    include: [{ model: Account, as: 'accounts', required: false, attributes: ['id', 'name', 'type', 'current_balance'] }]
+  },
+  {
+    model: PlanDeCuentas, as: 'destinationPlanCta', required: false,
+    attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'],
+    include: [{ model: Account, as: 'accounts', required: false, attributes: ['id', 'name', 'type', 'current_balance'] }]
+  },
+  { model: PlanDeCuentas, as: 'planCta', required: false, attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo'] },
+  { model: Account, as: 'account', required: false, attributes: ['id', 'name', 'type'] }
+];
 
 /**
  * @route   GET /api/accounting/expenses
@@ -32,7 +50,6 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     const {
       start_date,
       end_date,
-      category_id,
       plan_cta_id,
       account_id,
       min_amount,
@@ -46,7 +63,6 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
     const dateFilter = buildDateFilter(start_date, end_date);
     if (dateFilter) where.date = dateFilter;
 
-    if (category_id) where.category_id = category_id;
     if (plan_cta_id) where.plan_cta_id = plan_cta_id;
     if (account_id) where.account_id = account_id;
 
@@ -60,24 +76,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 
     const { count, rows: expenses } = await Expense.findAndCountAll({
       where,
-      include: [
-        {
-          model: ExpenseCategory,
-          as: 'category',
-          required: false
-        },
-        {
-          model: PlanDeCuentas,
-          as: 'planCta',
-          required: false,
-          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
-        },
-        {
-          model: Account,
-          as: 'account',
-          attributes: ['id', 'name', 'type']
-        }
-      ],
+      include: planCtaInclude,
       order: [['date', 'DESC'], ['created_at', 'DESC']],
       limit: parseInt(limit),
       offset
@@ -121,25 +120,7 @@ router.get('/', authenticateToken, authorizeRoles('root', 'admin_employee'), asy
 router.get('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
     const expense = await Expense.findByPk(req.params.id, {
-      include: [
-        {
-          model: ExpenseCategory,
-          as: 'category',
-          include: [{
-            model: ExpenseCategory,
-            as: 'parent'
-          }]
-        },
-        {
-          model: PlanDeCuentas,
-          as: 'planCta',
-          attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
-        },
-        {
-          model: Account,
-          as: 'account'
-        }
-      ]
+      include: planCtaInclude
     });
 
     if (!expense) {
@@ -172,7 +153,8 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
   const transaction = await accountingDb.transaction();
 
   try {
-    const { amount, category_id, plan_cta_id, account_id, date, description, attachment_url } = req.body;
+    const { amount, origin_plan_cta_id, destination_plan_cta_id, date, description, attachment_url,
+            account_id, plan_cta_id } = req.body;
 
     // Validations
     if (!amount || amount <= 0) {
@@ -183,59 +165,54 @@ router.post('/', authenticateToken, authorizeRoles('root', 'admin_employee'), as
       });
     }
 
-    if (!account_id) {
+    if (!origin_plan_cta_id && !account_id) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        error: 'La cuenta es requerida'
+        error: 'La cuenta de origen es requerida (origin_plan_cta_id o account_id)'
       });
     }
 
-    // Verify account exists
-    const account = await Account.findByPk(account_id);
-    if (!account) {
-      await transaction.rollback();
-      return res.status(404).json({
-        success: false,
-        error: 'Cuenta no encontrada'
-      });
+    // Resolve origin/destination from old fields if new ones not provided
+    let originId = origin_plan_cta_id;
+    let destId = destination_plan_cta_id;
+
+    if (!originId && account_id) {
+      const acct = await Account.findByPk(account_id);
+      if (acct) originId = acct.plan_cta_id;
+    }
+    if (!destId && plan_cta_id) {
+      destId = plan_cta_id;
     }
 
-    // Verify category if provided
-    if (category_id) {
-      const category = await ExpenseCategory.findByPk(category_id);
-      if (!category) {
-        await transaction.rollback();
-        return res.status(404).json({
-          success: false,
-          error: 'Categoría no encontrada'
-        });
-      }
-    }
+    // Find accounts linked to origin/destination for balance updates
+    const [originAccount, destAccount] = await Promise.all([
+      originId ? Account.findOne({ where: { plan_cta_id: originId } }) : null,
+      destId ? Account.findOne({ where: { plan_cta_id: destId } }) : null,
+    ]);
 
-    // Create expense
+    // Create expense with all fields
     const expense = await Expense.create({
       amount,
-      category_id: category_id || null,
-      plan_cta_id: plan_cta_id || null,
-      account_id,
+      origin_plan_cta_id: originId || null,
+      destination_plan_cta_id: destId || null,
+      account_id: originAccount?.id || account_id || null,
+      plan_cta_id: destId || plan_cta_id || null,
       date: date || new Date(),
       description: description || null,
       attachment_url: attachment_url || null,
       user_id: req.user.id
     }, { transaction });
 
-    // Update account balance
-    await account.updateBalance(parseFloat(amount), false, transaction);
+    // Update balances
+    if (originAccount) await originAccount.updateBalance(parseFloat(amount), false, transaction);
+    if (destAccount) await destAccount.updateBalance(parseFloat(amount), true, transaction);
 
     await transaction.commit();
 
     // Fetch created expense with relations
     const createdExpense = await Expense.findByPk(expense.id, {
-      include: [
-        { model: ExpenseCategory, as: 'category' },
-        { model: Account, as: 'account' }
-      ]
+      include: planCtaInclude
     });
 
     res.status(201).json({
@@ -273,27 +250,41 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
       });
     }
 
-    const { amount, category_id, account_id, date, description, attachment_url } = req.body;
+    const { amount, plan_cta_id, account_id, date, description, attachment_url,
+            origin_plan_cta_id, destination_plan_cta_id } = req.body;
 
     // If amount or account changed, update balances
-    if (amount !== undefined || account_id !== undefined) {
-      const oldAccount = await Account.findByPk(expense.account_id);
-      const newAccountId = account_id || expense.account_id;
-      const oldAmount = parseFloat(expense.amount);
-      const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
+    const oldAmount = parseFloat(expense.amount);
+    const newAmount = amount !== undefined ? parseFloat(amount) : oldAmount;
+    const amountOrAccountChanged = amount !== undefined || account_id !== undefined ||
+      origin_plan_cta_id !== undefined || destination_plan_cta_id !== undefined;
 
-      // Revert old transaction
-      await oldAccount.updateBalance(oldAmount, true, transaction);
+    if (amountOrAccountChanged) {
+      // Revert old balance changes
+      const [oldOriginAccount, oldDestAccount] = await Promise.all([
+        expense.origin_plan_cta_id ? Account.findOne({ where: { plan_cta_id: expense.origin_plan_cta_id }, transaction }) : (expense.account_id ? Account.findByPk(expense.account_id, { transaction }) : null),
+        expense.destination_plan_cta_id ? Account.findOne({ where: { plan_cta_id: expense.destination_plan_cta_id }, transaction }) : null,
+      ]);
+      if (oldOriginAccount) await oldOriginAccount.updateBalance(oldAmount, true, transaction);
+      if (oldDestAccount) await oldDestAccount.updateBalance(oldAmount, false, transaction);
 
-      // Apply new transaction
-      const newAccount = await Account.findByPk(newAccountId);
-      await newAccount.updateBalance(newAmount, false, transaction);
+      // Apply new balance changes
+      const newOriginId = origin_plan_cta_id !== undefined ? origin_plan_cta_id : expense.origin_plan_cta_id;
+      const newDestId = destination_plan_cta_id !== undefined ? destination_plan_cta_id : expense.destination_plan_cta_id;
+      const [newOriginAccount, newDestAccount] = await Promise.all([
+        newOriginId ? Account.findOne({ where: { plan_cta_id: newOriginId }, transaction }) : null,
+        newDestId ? Account.findOne({ where: { plan_cta_id: newDestId }, transaction }) : null,
+      ]);
+      if (newOriginAccount) await newOriginAccount.updateBalance(newAmount, false, transaction);
+      if (newDestAccount) await newDestAccount.updateBalance(newAmount, true, transaction);
     }
 
-    // Update expense
+    // Update expense fields
     if (amount !== undefined) expense.amount = amount;
-    if (category_id !== undefined) expense.category_id = category_id;
+    if (plan_cta_id !== undefined) expense.plan_cta_id = plan_cta_id;
     if (account_id !== undefined) expense.account_id = account_id;
+    if (origin_plan_cta_id !== undefined) expense.origin_plan_cta_id = origin_plan_cta_id;
+    if (destination_plan_cta_id !== undefined) expense.destination_plan_cta_id = destination_plan_cta_id;
     if (date !== undefined) expense.date = date;
     if (description !== undefined) expense.description = description;
     if (attachment_url !== undefined) expense.attachment_url = attachment_url;
@@ -304,10 +295,7 @@ router.put('/:id', authenticateToken, authorizeRoles('root', 'admin_employee'), 
 
     // Fetch updated expense
     const updatedExpense = await Expense.findByPk(expense.id, {
-      include: [
-        { model: ExpenseCategory, as: 'category' },
-        { model: Account, as: 'account' }
-      ]
+      include: planCtaInclude
     });
 
     res.json({
@@ -345,9 +333,13 @@ router.delete('/:id', authenticateToken, authorizeRoles('root'), async (req, res
       });
     }
 
-    // Revert account balance
-    const account = await Account.findByPk(expense.account_id);
-    await account.updateBalance(parseFloat(expense.amount), true, transaction);
+    // Revert balance changes (reverse of create: origin gets money back, destination loses)
+    const [originAccount, destAccount] = await Promise.all([
+      expense.origin_plan_cta_id ? Account.findOne({ where: { plan_cta_id: expense.origin_plan_cta_id } }) : (expense.account_id ? Account.findByPk(expense.account_id) : null),
+      expense.destination_plan_cta_id ? Account.findOne({ where: { plan_cta_id: expense.destination_plan_cta_id } }) : null,
+    ]);
+    if (originAccount) await originAccount.updateBalance(parseFloat(expense.amount), true, transaction);
+    if (destAccount) await destAccount.updateBalance(parseFloat(expense.amount), false, transaction);
 
     await expense.destroy({ transaction });
 
@@ -384,30 +376,31 @@ router.get('/stats/by-category', authenticateToken, authorizeRoles('root', 'admi
     const expenses = await Expense.findAll({
       where,
       include: [{
-        model: ExpenseCategory,
-        as: 'category',
-        required: false
+        model: PlanDeCuentas,
+        as: 'planCta',
+        required: false,
+        attributes: ['id', 'codigo', 'nombre', 'tipo', 'grupo']
       }]
     });
 
-    // Group by category
+    // Group by plan de cuentas
     const categoryStats = {};
     let totalWithoutCategory = 0;
 
     expenses.forEach(exp => {
-      if (exp.category) {
-        const catId = exp.category.id;
-        if (!categoryStats[catId]) {
-          categoryStats[catId] = {
-            id: catId,
-            name: exp.category.name,
-            color: exp.category.color,
+      if (exp.planCta) {
+        const ctaId = exp.planCta.id;
+        if (!categoryStats[ctaId]) {
+          categoryStats[ctaId] = {
+            id: ctaId,
+            codigo: exp.planCta.codigo,
+            name: exp.planCta.nombre,
             total: 0,
             count: 0
           };
         }
-        categoryStats[catId].total += parseFloat(exp.amount);
-        categoryStats[catId].count += 1;
+        categoryStats[ctaId].total += parseFloat(exp.amount);
+        categoryStats[ctaId].count += 1;
       } else {
         totalWithoutCategory += parseFloat(exp.amount);
       }
@@ -423,7 +416,7 @@ router.get('/stats/by-category', authenticateToken, authorizeRoles('root', 'admi
       data: result,
       uncategorized: {
         total: totalWithoutCategory.toFixed(2),
-        count: expenses.filter(e => !e.category).length
+        count: expenses.filter(e => !e.planCta).length
       }
     });
   } catch (error) {

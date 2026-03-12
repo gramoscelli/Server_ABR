@@ -37,6 +37,6 @@ describe('SettingsPage - Label renaming', () => {
     render(<SettingsPage />)
 
     expect(screen.getByText('Cuentas')).toBeInTheDocument()
-    expect(screen.getByText('Categorías')).toBeInTheDocument()
+    expect(screen.getByText('Plan de Cuentas')).toBeInTheDocument()
   })
 })

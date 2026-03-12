@@ -11,9 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { authService } from '@/lib/auth'
 import { useNavigate } from 'react-router-dom'
-import { AddIncomeDialog, IncomeFormData } from '@/components/cash/AddIncomeDialog'
-import { AddExpenseDialog, ExpenseFormData } from '@/components/cash/AddExpenseDialog'
-import { AddTransferDialog, TransferFormData } from '@/components/cash/AddTransferDialog'
+import { AddOperationDialog, OperationFormData, OperationType } from '@/components/cash/AddOperationDialog'
 import { accountingService } from '@/lib/accountingService'
 import type { Income } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
@@ -36,9 +34,8 @@ export default function IncomesPage() {
   const [incomes, setIncomes] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState<PeriodFilterValue>(createPeriodValue('this_month'))
-  const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
-  const [isAddTransferOpen, setIsAddTransferOpen] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [addDialogType, setAddDialogType] = useState<OperationType>('income')
 
   useEffect(() => {
     // Check if user has access (root or admin_employee)
@@ -97,82 +94,46 @@ export default function IncomesPage() {
 
   const periodLabel = period.label
 
-  const handleAddIncome = async (data: IncomeFormData) => {
-    try {
-      await accountingService.createIncome({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Ingreso creado correctamente',
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error('Error creating income:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo crear el ingreso',
-        variant: 'destructive',
-      })
-    }
+  const openAddDialog = (type: OperationType) => {
+    setAddDialogType(type)
+    setAddDialogOpen(true)
   }
 
-  const handleAddExpense = async (data: ExpenseFormData) => {
+  const handleSubmitOperation = async (data: OperationFormData) => {
     try {
-      await accountingService.createExpense({
-        amount: Number(data.amount),
-        account_id: data.account_id,
-        plan_cta_id: data.plan_cta_id || undefined,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Egreso creado correctamente',
-      })
-
+      if (addDialogType === 'income') {
+        await accountingService.createIncome({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Ingreso registrado correctamente' })
+      } else if (addDialogType === 'expense') {
+        await accountingService.createExpense({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Egreso registrado correctamente' })
+      } else {
+        await accountingService.createTransfer({
+          amount: Number(data.amount),
+          origin_plan_cta_id: data.origin_plan_cta_id,
+          destination_plan_cta_id: data.destination_plan_cta_id,
+          transfer_type_id: data.transfer_type_id,
+          date: data.date,
+          description: data.description || undefined,
+        })
+        toast({ title: 'Éxito', description: 'Operación registrada correctamente' })
+      }
       fetchData()
     } catch (error) {
-      console.error('Error creating expense:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo crear el egreso',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const handleAddTransfer = async (data: TransferFormData) => {
-    try {
-      await accountingService.createTransfer({
-        amount: Number(data.amount),
-        from_account_id: data.from_account_id,
-        to_account_id: data.to_account_id,
-        transfer_type_id: data.transfer_type_id,
-        date: data.date,
-        description: data.description || undefined,
-      })
-
-      toast({
-        title: 'Éxito',
-        description: 'Operación registrada correctamente',
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error('Error creating transfer:', error)
-      toast({
-        title: 'Error',
-        description: 'No se pudo registrar la operación',
-        variant: 'destructive',
-      })
+      console.error('Error:', error)
+      toast({ title: 'Error', description: 'No se pudo registrar la operación', variant: 'destructive' })
     }
   }
 
@@ -213,21 +174,21 @@ export default function IncomesPage() {
           <div className="flex gap-2">
             <Button
               className="bg-red-500 hover:bg-red-600 text-white"
-              onClick={() => setIsAddExpenseOpen(true)}
+              onClick={() => openAddDialog('expense')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Egreso
             </Button>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={() => setIsAddIncomeOpen(true)}
+              onClick={() => openAddDialog('income')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Ingreso
             </Button>
             <Button
               className="bg-gray-900 hover:bg-gray-800 text-white"
-              onClick={() => setIsAddTransferOpen(true)}
+              onClick={() => openAddDialog('transfer')}
             >
               <Plus className="h-4 w-4 mr-2" />
               Otra operación
@@ -269,7 +230,7 @@ export default function IncomesPage() {
                     <p className="text-gray-500 mb-4">No hay ingresos disponibles</p>
                     <Button
                       className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                      onClick={() => setIsAddIncomeOpen(true)}
+                      onClick={() => openAddDialog('income')}
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar Ingreso
@@ -284,27 +245,13 @@ export default function IncomesPage() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            {income.category && (
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: income.category.color }}
-                              />
-                            )}
                             <p className="font-medium text-gray-900">
                               {income.description || 'Sin descripción'}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-sm text-gray-500">
-                              {income.category?.name || 'Sin categoría'}
-                            </p>
-                            {income.account && (
-                              <>
-                                <span className="text-gray-400">•</span>
-                                <p className="text-sm text-gray-500">{income.account.name}</p>
-                              </>
-                            )}
-                          </div>
+                          {income.account && (
+                            <p className="text-sm text-gray-500 mt-1">{income.account.name}</p>
+                          )}
                         </div>
                         <div className="text-right flex items-center gap-2">
                           <div>
@@ -388,21 +335,12 @@ export default function IncomesPage() {
           </div>
         </div>
 
-        {/* Dialogs */}
-        <AddIncomeDialog
-          open={isAddIncomeOpen}
-          onOpenChange={setIsAddIncomeOpen}
-          onSubmit={handleAddIncome}
-        />
-        <AddExpenseDialog
-          open={isAddExpenseOpen}
-          onOpenChange={setIsAddExpenseOpen}
-          onSubmit={handleAddExpense}
-        />
-        <AddTransferDialog
-          open={isAddTransferOpen}
-          onOpenChange={setIsAddTransferOpen}
-          onSubmit={handleAddTransfer}
+        {/* Dialog */}
+        <AddOperationDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          operationType={addDialogType}
+          onSubmit={handleSubmitOperation}
         />
       </div>
   )

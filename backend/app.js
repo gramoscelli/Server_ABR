@@ -20,8 +20,6 @@ var settingsRouter = require('./routes/settings');
 var whatsappRouter = require('./routes/whatsapp');
 
 // Accounting routes
-var accountingExpenseCategoriesRouter = require('./routes/accounting/expenseCategories');
-var accountingIncomeCategoriesRouter = require('./routes/accounting/incomeCategories');
 var accountingTransferTypesRouter = require('./routes/accounting/transferTypes');
 var accountingPlanDeCuentasRouter = require('./routes/accounting/planDeCuentas');
 var accountingAccountsRouter = require('./routes/accounting/accounts');
@@ -184,8 +182,6 @@ app.use('/api/whatsapp', apiLimiter, validateCsrfToken, whatsappRouter); // What
 
 // Accounting module routes (protected, state-changing routes need CSRF)
 // Note: authenticateToken runs BEFORE rate limiter so authenticated users skip rate limiting
-app.use('/api/accounting/expense-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingExpenseCategoriesRouter);
-app.use('/api/accounting/income-categories', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingIncomeCategoriesRouter);
 app.use('/api/accounting/transfer-types', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingTransferTypesRouter);
 app.use('/api/accounting/plan-de-cuentas', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingPlanDeCuentasRouter);
 app.use('/api/accounting/accounts', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingAccountsRouter);

@@ -55,11 +55,12 @@ const Account = accountingDb.define('accounts', {
   },
   plan_cta_id: {
     type: DataTypes.INTEGER,
-    allowNull: true,
+    allowNull: false,
     references: {
       model: 'plan_de_cuentas',
       key: 'id'
     },
+    unique: true,
     comment: 'Links to chart of accounts (plan de cuentas)'
   },
   created_at: {

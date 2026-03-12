@@ -1,31 +1,5 @@
 // Accounting Types
 
-export interface Category {
-  id: number
-  name: string
-  parent_id: number | null
-  color: string
-  budget: number | null
-  is_featured: boolean
-  order_index: number
-  subcategories?: Category[]
-  parent?: Category
-  created_at: string
-  updated_at: string
-}
-
-export interface ExpenseCategory extends Category {
-  description?: string | null
-  is_active?: boolean
-  display_order?: number
-}
-
-export interface IncomeCategory extends Category {
-  description?: string | null
-  is_active?: boolean
-  display_order?: number
-}
-
 export interface TransferType {
   id: number
   name: string
@@ -46,6 +20,7 @@ export interface PlanDeCuentas {
   is_active: boolean
   created_at: string
   updated_at: string
+  accounts?: Account[]  // Associated cash/bank account (0 or 1 via unique FK)
 }
 
 export interface Account {
@@ -59,7 +34,7 @@ export interface Account {
   current_balance: string | number  // Backend may return as string
   is_active: boolean
   notes: string | null
-  plan_cta_id?: number | null
+  plan_cta_id: number
   planCta?: PlanDeCuentas
   created_at: string
   updated_at: string
@@ -67,51 +42,59 @@ export interface Account {
 
 export interface Expense {
   id: number
-  amount: string | number  // Backend may return as string
-  category_id: number | null
-  plan_cta_id: number | null
-  account_id: number
+  amount: string | number
+  origin_plan_cta_id: number | null
+  destination_plan_cta_id: number | null
+  plan_cta_id: number | null       // legacy
+  account_id: number | null        // legacy
   date: string
   description: string | null
   attachment_url: string | null
   user_id: number
   created_at: string
   updated_at: string
-  category?: ExpenseCategory
-  planCta?: PlanDeCuentas
-  account?: Account
+  originPlanCta?: PlanDeCuentas
+  destinationPlanCta?: PlanDeCuentas
+  planCta?: PlanDeCuentas           // legacy
+  account?: Account                 // legacy
 }
 
 export interface Income {
   id: number
-  amount: string | number  // Backend may return as string
-  category_id: number | null
-  plan_cta_id: number | null
-  account_id: number
+  amount: string | number
+  origin_plan_cta_id: number | null
+  destination_plan_cta_id: number | null
+  plan_cta_id: number | null       // legacy
+  account_id: number | null        // legacy
   date: string
   description: string | null
   attachment_url: string | null
   user_id: number
   created_at: string
   updated_at: string
-  category?: IncomeCategory
-  planCta?: PlanDeCuentas
-  account?: Account
+  originPlanCta?: PlanDeCuentas
+  destinationPlanCta?: PlanDeCuentas
+  planCta?: PlanDeCuentas           // legacy
+  account?: Account                 // legacy
 }
 
 export interface Transfer {
   id: number
-  amount: string | number  // Backend may return as string
-  from_account_id: number
-  to_account_id: number
+  amount: string | number
+  origin_plan_cta_id: number | null
+  destination_plan_cta_id: number | null
+  from_account_id: number | null   // legacy
+  to_account_id: number | null     // legacy
   transfer_type_id: number | null
   date: string
   description: string | null
   user_id: number
   created_at: string
   updated_at: string
-  fromAccount?: Account
-  toAccount?: Account
+  originPlanCta?: PlanDeCuentas
+  destinationPlanCta?: PlanDeCuentas
+  fromAccount?: Account             // legacy
+  toAccount?: Account               // legacy
   transferType?: TransferType
 }
 
@@ -236,7 +219,7 @@ export interface CalculatedBalance {
 export interface ExpenseQueryParams {
   start_date?: string
   end_date?: string
-  category_id?: number
+  plan_cta_id?: number
   account_id?: number
   min_amount?: number
   max_amount?: number
@@ -247,7 +230,7 @@ export interface ExpenseQueryParams {
 export interface IncomeQueryParams {
   start_date?: string
   end_date?: string
-  category_id?: number
+  plan_cta_id?: number
   account_id?: number
   page?: number
   limit?: number
@@ -290,9 +273,9 @@ export interface StatsQueryParams {
 // Form data types
 export interface CreateExpenseData {
   amount: number
-  category_id?: number | null
-  plan_cta_id?: number | null
-  account_id: number
+  origin_plan_cta_id?: number | null
+  destination_plan_cta_id?: number | null
+  account_id?: number              // legacy compat
   date?: string
   description?: string
   attachment_url?: string
@@ -300,9 +283,8 @@ export interface CreateExpenseData {
 
 export interface UpdateExpenseData {
   amount?: number
-  category_id?: number | null
-  plan_cta_id?: number | null
-  account_id?: number
+  origin_plan_cta_id?: number | null
+  destination_plan_cta_id?: number | null
   date?: string
   description?: string
   attachment_url?: string
@@ -310,9 +292,9 @@ export interface UpdateExpenseData {
 
 export interface CreateIncomeData {
   amount: number
-  category_id?: number | null
-  plan_cta_id?: number | null
-  account_id: number
+  origin_plan_cta_id?: number | null
+  destination_plan_cta_id?: number | null
+  account_id?: number              // legacy compat
   date?: string
   description?: string
   attachment_url?: string
@@ -320,9 +302,8 @@ export interface CreateIncomeData {
 
 export interface UpdateIncomeData {
   amount?: number
-  category_id?: number | null
-  plan_cta_id?: number | null
-  account_id?: number
+  origin_plan_cta_id?: number | null
+  destination_plan_cta_id?: number | null
   date?: string
   description?: string
   attachment_url?: string
@@ -330,8 +311,10 @@ export interface UpdateIncomeData {
 
 export interface CreateTransferData {
   amount: number
-  from_account_id: number
-  to_account_id: number
+  origin_plan_cta_id?: number | null
+  destination_plan_cta_id?: number | null
+  from_account_id?: number         // legacy compat
+  to_account_id?: number           // legacy compat
   transfer_type_id?: number | null
   date?: string
   description?: string
@@ -346,7 +329,7 @@ export interface CreateAccountData {
   initial_balance?: number
   is_active?: boolean
   notes?: string
-  plan_cta_id?: number | null
+  plan_cta_id: number
 }
 
 export interface UpdateAccountData {
@@ -357,38 +340,12 @@ export interface UpdateAccountData {
   currency?: string
   is_active?: boolean
   notes?: string
-  plan_cta_id?: number | null
+  plan_cta_id?: number
 }
 
 export interface UpdateAccountBalanceData {
   new_balance: number
   notes?: string
-}
-
-export interface CreateCategoryData {
-  name: string
-  parent_id?: number
-  color?: string
-  budget?: number
-  is_featured?: boolean
-  order_index?: number
-  description?: string | null
-  is_active?: boolean
-}
-
-export interface UpdateCategoryData {
-  name?: string
-  parent_id?: number
-  color?: string
-  budget?: number
-  is_featured?: boolean
-  order_index?: number
-  description?: string | null
-  is_active?: boolean
-}
-
-export interface ReorderCategoriesData {
-  categories: { id: number }[]
 }
 
 export interface CreateTransferTypeData {

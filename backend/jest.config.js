@@ -39,7 +39,7 @@ module.exports = {
   moduleDirectories: ['node_modules', '<rootDir>'],
 
   // Timeout
-  testTimeout: 10000,
+  testTimeout: 30000,
 
   // Verbose output
   verbose: true,

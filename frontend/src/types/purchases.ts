@@ -90,7 +90,6 @@ export interface PurchaseCategory {
   name: string
   parent_id: number | null
   color: string
-  expense_category_id: number | null
   order_index: number
   is_active: boolean
   subcategories?: PurchaseCategory[]
@@ -436,7 +435,6 @@ export interface CreatePurchaseCategoryData {
   name: string
   parent_id?: number
   color?: string
-  expense_category_id?: number
   order_index?: number
 }
 

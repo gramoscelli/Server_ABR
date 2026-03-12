@@ -5,7 +5,6 @@
 
 const { DataTypes } = require('sequelize');
 const { accountingDb } = require('../../config/database');
-const IncomeCategory = require('./IncomeCategory');
 const Account = require('./Account');
 
 const Income = accountingDb.define('incomes', {
@@ -21,14 +20,6 @@ const Income = accountingDb.define('incomes', {
       min: 0.01
     }
   },
-  category_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    references: {
-      model: 'income_categories',
-      key: 'id'
-    }
-  },
   plan_cta_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
@@ -40,11 +31,29 @@ const Income = accountingDb.define('incomes', {
   },
   account_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'accounts',
       key: 'id'
     }
+  },
+  origin_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Origin account in chart of accounts (double-entry: money leaves here)'
+  },
+  destination_plan_cta_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'plan_de_cuentas',
+      key: 'id'
+    },
+    comment: 'Destination account in chart of accounts (double-entry: money enters here)'
   },
   date: {
     type: DataTypes.DATE,
@@ -80,11 +89,6 @@ const Income = accountingDb.define('incomes', {
 });
 
 // Define associations
-Income.belongsTo(IncomeCategory, {
-  as: 'category',
-  foreignKey: 'category_id'
-});
-
 Income.belongsTo(Account, {
   as: 'account',
   foreignKey: 'account_id'
