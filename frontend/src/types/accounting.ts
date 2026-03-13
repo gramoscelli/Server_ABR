@@ -161,6 +161,24 @@ export interface DashboardData {
   recent_asientos: Asiento[]
 }
 
+export interface AccountBalancesData {
+  cuentas: {
+    activo: (CuentaContable & { saldo: number; total_debe: number; total_haber: number })[]
+    pasivo: (CuentaContable & { saldo: number; total_debe: number; total_haber: number })[]
+    patrimonio: (CuentaContable & { saldo: number; total_debe: number; total_haber: number })[]
+    ingreso: (CuentaContable & { saldo: number; total_debe: number; total_haber: number })[]
+    egreso: (CuentaContable & { saldo: number; total_debe: number; total_haber: number })[]
+  }
+  totals: {
+    activo: string
+    pasivo: string
+    patrimonio: string
+    ingreso: string
+    egreso: string
+  }
+  as_of_date: string
+}
+
 export interface CuentaStat {
   id_cuenta: number
   total: string

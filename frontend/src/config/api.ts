@@ -58,6 +58,7 @@ export const API_ENDPOINTS = {
     // Dashboard
     DASHBOARD: '/api/accounting/dashboard',
     DASHBOARD_MONTHLY: '/api/accounting/dashboard/monthly',
+    DASHBOARD_BALANCES: '/api/accounting/dashboard/balances',
 
     // Cuentas Contables (chart of accounts)
     CUENTAS: '/api/accounting/cuentas',

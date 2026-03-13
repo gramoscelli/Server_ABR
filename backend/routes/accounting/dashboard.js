@@ -236,4 +236,63 @@ router.get('/monthly', async (req, res) => {
   }
 });
 
+// GET /balances - All account balances grouped by type
+router.get('/balances', async (req, res) => {
+  try {
+    const { as_of_date } = req.query;
+    const asOfDate = as_of_date || new Date().toISOString().split('T')[0];
+
+    const cuentas = await CuentaContable.findAll({
+      where: { is_active: true },
+      include: [
+        { model: CuentaEfectivo, as: 'efectivo', required: false },
+        { model: CuentaBancaria, as: 'bancaria', required: false },
+        { model: CuentaPagoElectronico, as: 'pagoElectronico', required: false }
+      ],
+      order: [['codigo', 'ASC']]
+    });
+
+    const cuentasConSaldo = [];
+    for (const cuenta of cuentas) {
+      const balance = await asientoService.getAccountBalance(cuenta.id, asOfDate);
+      cuentasConSaldo.push({
+        ...cuenta.toJSON(),
+        saldo: balance.saldo,
+        total_debe: balance.total_debe,
+        total_haber: balance.total_haber
+      });
+    }
+
+    // Group by tipo
+    const grouped = { activo: [], pasivo: [], patrimonio: [], ingreso: [], egreso: [] };
+    const totals = { activo: 0, pasivo: 0, patrimonio: 0, ingreso: 0, egreso: 0, general: 0 };
+
+    for (const c of cuentasConSaldo) {
+      if (grouped[c.tipo]) {
+        grouped[c.tipo].push(c);
+        totals[c.tipo] += c.saldo;
+      }
+      totals.general += c.saldo;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        cuentas: grouped,
+        totals: {
+          activo: totals.activo.toFixed(2),
+          pasivo: totals.pasivo.toFixed(2),
+          patrimonio: totals.patrimonio.toFixed(2),
+          ingreso: totals.ingreso.toFixed(2),
+          egreso: totals.egreso.toFixed(2),
+        },
+        as_of_date: asOfDate
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching balances:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener saldos' });
+  }
+});
+
 module.exports = router;

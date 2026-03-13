@@ -1,6 +1,7 @@
 import { fetchWithAuth } from './auth'
 import { API_ENDPOINTS } from '@/config/api'
 import type {
+  AccountBalancesData,
   ApiResponse,
   Asiento,
   AsientoQueryParams,
@@ -43,6 +44,12 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 export async function getDashboard(params?: DashboardQueryParams): Promise<DashboardData> {
   const query = params ? buildQuery(params as Record<string, string | undefined>) : ''
   const result: ApiResponse<DashboardData> = await fetchJson(`${API_ENDPOINTS.ACCOUNTING.DASHBOARD}${query}`)
+  return result.data
+}
+
+export async function getAccountBalances(as_of_date?: string): Promise<AccountBalancesData> {
+  const query = as_of_date ? `?as_of_date=${as_of_date}` : ''
+  const result: ApiResponse<AccountBalancesData> = await fetchJson(`${API_ENDPOINTS.ACCOUNTING.DASHBOARD_BALANCES}${query}`)
   return result.data
 }
 

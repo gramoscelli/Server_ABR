@@ -21,6 +21,7 @@ const ReportsPage = lazy(() => import('@/pages/accounting/ReportsPage'))
 const CategoriesPage = lazy(() => import('@/pages/accounting/CategoriesPage'))
 const AccountingSettingsPage = lazy(() => import('@/pages/accounting/SettingsPage'))
 const ReconciliationsPage = lazy(() => import('@/pages/accounting/ReconciliationsPage'))
+const BalancesPage = lazy(() => import('@/pages/accounting/BalancesPage'))
 
 // Purchases module pages
 const PurchasesDashboardPage = lazy(() => import('@/pages/purchases/PurchasesDashboardPage'))
@@ -235,6 +236,17 @@ function App() {
               <ProtectedRoute requireAdmin>
                 <AccountingLayout>
                   <CategoriesPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/accounting/balances"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <BalancesPage />
                 </AccountingLayout>
               </ProtectedRoute>
             }

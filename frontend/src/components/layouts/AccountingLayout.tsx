@@ -7,6 +7,7 @@ import {
   DollarSign,
   Calculator,
   List,
+  Scale,
 } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
@@ -24,6 +25,11 @@ const navigation: NavigationItem[] = [
     name: 'Plan de Cuentas',
     href: '/accounting/categories',
     icon: List,
+  },
+  {
+    name: 'Saldos',
+    href: '/accounting/balances',
+    icon: Scale,
   },
   {
     name: 'Arqueos de Caja',
