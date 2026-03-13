@@ -17,6 +17,10 @@ const CashReconciliation = require('./CashReconciliation');
 Asiento.hasMany(AsientoDetalle, { as: 'detalles', foreignKey: 'id_asiento' });
 AsientoDetalle.belongsTo(Asiento, { as: 'asiento', foreignKey: 'id_asiento' });
 
+// Self-referential: contra-asiento → asiento original anulado
+Asiento.belongsTo(Asiento, { as: 'asientoAnulado', foreignKey: 'id_asiento_anulado' });
+Asiento.hasOne(Asiento, { as: 'contraAsiento', foreignKey: 'id_asiento_anulado' });
+
 // === AsientoDetalle → CuentaContable ===
 AsientoDetalle.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
 CuentaContable.hasMany(AsientoDetalle, { as: 'movimientos', foreignKey: 'id_cuenta' });

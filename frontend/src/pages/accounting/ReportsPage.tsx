@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react'
 import * as accountingService from '@/lib/accountingService'
 import type { Asiento, CuentaContable, BalanceSumasSaldosRow, MayorMovimiento } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -24,16 +24,13 @@ import {
 
 type ReportTab = 'libro-diario' | 'mayor' | 'balance-sumas-saldos' | 'estado-resultados' | 'balance-general'
 
-function formatCurrency(amount: number | string): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 2
-  }).format(Number(amount))
+function formatDate(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+function toLocalDateStr(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 export default function ReportsPage() {
@@ -58,9 +55,9 @@ export default function ReportsPage() {
   const [cuentas, setCuentas] = useState<CuentaContable[]>([])
   const [selectedCuentaId, setSelectedCuentaId] = useState<string>('')
 
-  const startDateStr = selectedStartDate.toISOString().split('T')[0]
-  const endDateStr = selectedEndDate.toISOString().split('T')[0]
-  const asOfDateStr = asOfDate.toISOString().split('T')[0]
+  const startDateStr = toLocalDateStr(selectedStartDate)
+  const endDateStr = toLocalDateStr(selectedEndDate)
+  const asOfDateStr = toLocalDateStr(asOfDate)
 
   // Load cuentas for Mayor
   useEffect(() => {
@@ -129,74 +126,112 @@ export default function ReportsPage() {
   }
 
   // ============================================================================
-  // CSV EXPORT
+  // EXCEL EXPORT
   // ============================================================================
 
-  const downloadCSV = (csvContent: string, filename: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.setAttribute('href', URL.createObjectURL(blob))
-    link.setAttribute('download', filename)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const downloadExcel = (sheetData: any[][], filename: string, colWidths?: number[]) => {
+    import('xlsx').then((XLSX) => {
+      const wb = XLSX.utils.book_new()
+      const ws = XLSX.utils.aoa_to_sheet(sheetData)
+      if (colWidths) {
+        ws['!cols'] = colWidths.map(w => ({ wch: w }))
+      }
+      XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
+      XLSX.writeFile(wb, filename)
+    })
   }
 
   const exportLibroDiario = () => {
     if (!libroDiarioData?.asientos) return
-    let csv = `LIBRO DIARIO\nPeriodo: ${startDateStr} a ${endDateStr}\n\n`
-    csv += 'Fecha,Comprobante,Concepto,Origen,Estado,Cuenta,Debe,Haber\n'
+    const rows: any[][] = [
+      ['LIBRO DIARIO'],
+      [`Periodo: ${startDateStr} a ${endDateStr}`],
+      [],
+      ['Fecha', 'Comprobante', 'Concepto', 'Origen', 'Estado', 'Cuenta', 'Debe', 'Haber'],
+    ]
     for (const asiento of libroDiarioData.asientos) {
       for (const det of (asiento.detalles || [])) {
-        csv += `${asiento.fecha},${asiento.nro_comprobante},"${asiento.concepto}",${asiento.origen},${asiento.estado},`
-        csv += `${det.cuenta?.codigo || ''} ${det.cuenta?.titulo || ''},`
-        csv += `${det.tipo_mov === 'debe' ? det.importe : ''},${det.tipo_mov === 'haber' ? det.importe : ''}\n`
+        rows.push([
+          asiento.fecha,
+          asiento.nro_comprobante,
+          asiento.concepto,
+          asiento.origen,
+          asiento.estado,
+          `${det.cuenta?.codigo || ''} ${det.cuenta?.titulo || ''}`,
+          det.tipo_mov === 'debe' ? Number(det.importe) : '',
+          det.tipo_mov === 'haber' ? Number(det.importe) : '',
+        ])
       }
     }
-    downloadCSV(csv, `libro-diario-${startDateStr}-${endDateStr}.csv`)
+    downloadExcel(rows, `libro-diario-${startDateStr}-${endDateStr}.xlsx`, [12, 16, 35, 14, 12, 30, 15, 15])
   }
 
   const exportBalanceSumas = () => {
     if (!balanceSumasData.length) return
-    let csv = `BALANCE DE SUMAS Y SALDOS\nAl: ${asOfDateStr}\n\n`
-    csv += 'Codigo,Titulo,Tipo,Suma Debe,Suma Haber,Saldo Deudor,Saldo Acreedor\n'
+    const rows: any[][] = [
+      ['BALANCE DE SUMAS Y SALDOS'],
+      [`Al: ${asOfDateStr}`],
+      [],
+      ['Codigo', 'Titulo', 'Tipo', 'Suma Debe', 'Suma Haber', 'Saldo Deudor', 'Saldo Acreedor'],
+    ]
     for (const row of balanceSumasData) {
-      csv += `${row.codigo},"${row.titulo}",${row.tipo},${row.suma_debe},${row.suma_haber},${row.saldo_deudor},${row.saldo_acreedor}\n`
+      rows.push([row.codigo, row.titulo, row.tipo, Number(row.suma_debe), Number(row.suma_haber), Number(row.saldo_deudor), Number(row.saldo_acreedor)])
     }
-    downloadCSV(csv, `balance-sumas-saldos-${asOfDateStr}.csv`)
+    rows.push([])
+    rows.push([
+      '', 'TOTALES', '',
+      balanceSumasData.reduce((s, r) => s + Number(r.suma_debe), 0),
+      balanceSumasData.reduce((s, r) => s + Number(r.suma_haber), 0),
+      balanceSumasData.reduce((s, r) => s + Number(r.saldo_deudor), 0),
+      balanceSumasData.reduce((s, r) => s + Number(r.saldo_acreedor), 0),
+    ])
+    downloadExcel(rows, `balance-sumas-saldos-${asOfDateStr}.xlsx`, [10, 30, 12, 15, 15, 15, 15])
   }
 
   const exportEstadoResultados = () => {
     if (!estadoResultadosData) return
-    let csv = `ESTADO DE RESULTADOS\nPeriodo: ${startDateStr} a ${endDateStr}\n\n`
-    csv += 'INGRESOS\nCodigo,Descripcion,Total\n'
+    const rows: any[][] = [
+      ['ESTADO DE RESULTADOS'],
+      [`Periodo: ${startDateStr} a ${endDateStr}`],
+      [],
+      ['INGRESOS'],
+      ['Codigo', 'Descripcion', 'Total'],
+    ]
     for (const item of (estadoResultadosData.ingresos?.rows || [])) {
-      csv += `${item.codigo || 'S/C'},"${item.titulo}",${item.total}\n`
+      rows.push([item.codigo || 'S/C', item.titulo, Number(item.total)])
     }
-    csv += `\nTotal Ingresos,,${estadoResultadosData.ingresos?.total || 0}\n\n`
-    csv += 'EGRESOS\nCodigo,Descripcion,Total\n'
+    rows.push(['', 'Total Ingresos', Number(estadoResultadosData.ingresos?.total || 0)])
+    rows.push([])
+    rows.push(['EGRESOS'])
+    rows.push(['Codigo', 'Descripcion', 'Total'])
     for (const item of (estadoResultadosData.egresos?.rows || [])) {
-      csv += `${item.codigo || 'S/C'},"${item.titulo}",${item.total}\n`
+      rows.push([item.codigo || 'S/C', item.titulo, Number(item.total)])
     }
-    csv += `\nTotal Egresos,,${estadoResultadosData.egresos?.total || 0}\n\n`
-    csv += 'RESULTADO\n'
-    csv += `Ingresos,${estadoResultadosData.ingresos?.total || 0}\n`
-    csv += `Egresos,${estadoResultadosData.egresos?.total || 0}\n`
-    csv += `Resultado Neto,${estadoResultadosData.resultado_neto || 0}\n`
-    downloadCSV(csv, `estado-resultados-${startDateStr}-${endDateStr}.csv`)
+    rows.push(['', 'Total Egresos', Number(estadoResultadosData.egresos?.total || 0)])
+    rows.push([])
+    rows.push(['RESULTADO NETO', '', Number(estadoResultadosData.resultado_neto || 0)])
+    downloadExcel(rows, `estado-resultados-${startDateStr}-${endDateStr}.xlsx`, [12, 35, 18])
   }
 
   const exportMayor = () => {
     if (!mayorData?.movimientos?.length) return
-    let csv = `MAYOR - ${mayorData.cuenta?.codigo} ${mayorData.cuenta?.titulo}\n`
-    csv += `Periodo: ${startDateStr} a ${endDateStr}\n\n`
-    csv += 'Fecha,Comprobante,Concepto,Debe,Haber,Saldo Acumulado\n'
+    const rows: any[][] = [
+      [`MAYOR - ${mayorData.cuenta?.codigo} ${mayorData.cuenta?.titulo}`],
+      [`Periodo: ${startDateStr} a ${endDateStr}`],
+      [],
+      ['Fecha', 'Comprobante', 'Concepto', 'Debe', 'Haber', 'Saldo Acumulado'],
+    ]
     for (const mov of mayorData.movimientos) {
-      csv += `${mov.asiento?.fecha || ''},${mov.asiento?.nro_comprobante || ''},"${mov.asiento?.concepto || ''}",`
-      csv += `${mov.tipo_mov === 'debe' ? mov.importe : ''},${mov.tipo_mov === 'haber' ? mov.importe : ''},${mov.saldo_acumulado}\n`
+      rows.push([
+        mov.asiento?.fecha || '',
+        mov.asiento?.nro_comprobante || '',
+        mov.asiento?.concepto || '',
+        mov.tipo_mov === 'debe' ? Number(mov.importe) : '',
+        mov.tipo_mov === 'haber' ? Number(mov.importe) : '',
+        Number(mov.saldo_acumulado),
+      ])
     }
-    downloadCSV(csv, `mayor-${mayorData.cuenta?.codigo}-${startDateStr}-${endDateStr}.csv`)
+    downloadExcel(rows, `mayor-${mayorData.cuenta?.codigo}-${startDateStr}-${endDateStr}.xlsx`, [12, 16, 35, 15, 15, 18])
   }
 
   // ============================================================================
@@ -297,10 +332,10 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Libro Diario - {startDateStr} a {endDateStr}
+              {formatDate(startDateStr)} a {formatDate(endDateStr)}
             </h2>
             <Button variant="outline" size="sm" onClick={exportLibroDiario}>
-              <Download className="h-4 w-4 mr-2" /> Descargar CSV
+              <Download className="h-4 w-4 mr-2" /> Descargar Excel
             </Button>
           </div>
 
@@ -328,7 +363,6 @@ export default function ReportsPage() {
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left py-2 px-3 font-semibold">Fecha</th>
-                      <th className="text-left py-2 px-3 font-semibold">Comprobante</th>
                       <th className="text-left py-2 px-3 font-semibold">Concepto</th>
                       <th className="text-left py-2 px-3 font-semibold">Cuenta</th>
                       <th className="text-right py-2 px-3 font-semibold">Debe</th>
@@ -336,35 +370,49 @@ export default function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(libroDiarioData.asientos || []).map((asiento: any) => (
-                      (asiento.detalles || []).map((det: any, idx: number) => (
-                        <tr key={`${asiento.id_asiento}-${idx}`} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                    {(libroDiarioData.asientos || []).map((asiento: any, asientoIdx: number) => {
+                      const detalles = [...(asiento.detalles || [])].sort((a: any, b: any) => {
+                        if (a.tipo_mov === b.tipo_mov) return 0
+                        return a.tipo_mov === 'debe' ? -1 : 1
+                      })
+                      const isAnulado = asiento.estado === 'anulado'
+                      return detalles.map((det: any, idx: number) => (
+                        <tr key={`${asiento.id_asiento}-${idx}`} className={cn(
+                          'hover:bg-gray-50 dark:hover:bg-gray-900/50',
+                          isAnulado && 'opacity-50 line-through',
+                          idx === 0 && asientoIdx > 0 && 'border-t-2 border-gray-300 dark:border-gray-600'
+                        )}>
                           {idx === 0 ? (
                             <>
-                              <td className="py-2 px-3" rowSpan={asiento.detalles?.length || 1}>
-                                {formatDate(asiento.fecha)}
+                              <td className="py-2 px-3 align-top" rowSpan={detalles.length || 1}>
+                                <div>{formatDate(asiento.fecha)}</div>
+                                {isAnulado && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 no-underline inline-block mt-1">Anulado</span>
+                                )}
                               </td>
-                              <td className="py-2 px-3 font-mono text-xs" rowSpan={asiento.detalles?.length || 1}>
-                                {asiento.nro_comprobante}
-                              </td>
-                              <td className="py-2 px-3" rowSpan={asiento.detalles?.length || 1}>
-                                {asiento.concepto}
+                              <td className="py-2 px-3 align-top" rowSpan={detalles.length || 1}>
+                                <div>{asiento.concepto}</div>
+                                {asiento.asientoAnulado && (
+                                  <div className="text-xs text-blue-600 dark:text-blue-400 no-underline mt-1">
+                                    Anula a: {asiento.asientoAnulado.nro_comprobante} ({formatDate(asiento.asientoAnulado.fecha)})
+                                  </div>
+                                )}
                               </td>
                             </>
                           ) : null}
-                          <td className="py-2 px-3">
+                          <td className={cn('py-1 px-3', det.tipo_mov === 'haber' && 'pl-8')}>
                             <span className="font-mono text-xs text-gray-500 mr-1">{det.cuenta?.codigo}</span>
                             {det.cuenta?.titulo}
                           </td>
-                          <td className="py-2 px-3 text-right font-medium">
+                          <td className="py-1 px-3 text-right font-medium">
                             {det.tipo_mov === 'debe' ? formatCurrency(det.importe) : ''}
                           </td>
-                          <td className="py-2 px-3 text-right font-medium">
+                          <td className="py-1 px-3 text-right font-medium">
                             {det.tipo_mov === 'haber' ? formatCurrency(det.importe) : ''}
                           </td>
                         </tr>
                       ))
-                    ))}
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -391,7 +439,7 @@ export default function ReportsPage() {
                   Mayor - {mayorData.cuenta?.codigo} {mayorData.cuenta?.titulo}
                 </h2>
                 <Button variant="outline" size="sm" onClick={exportMayor}>
-                  <Download className="h-4 w-4 mr-2" /> Descargar CSV
+                  <Download className="h-4 w-4 mr-2" /> Descargar Excel
                 </Button>
               </div>
 
@@ -449,7 +497,7 @@ export default function ReportsPage() {
               Balance de Sumas y Saldos al {asOfDateStr}
             </h2>
             <Button variant="outline" size="sm" onClick={exportBalanceSumas} disabled={!balanceSumasData.length}>
-              <Download className="h-4 w-4 mr-2" /> Descargar CSV
+              <Download className="h-4 w-4 mr-2" /> Descargar Excel
             </Button>
           </div>
 
@@ -528,7 +576,7 @@ export default function ReportsPage() {
               Estado de Resultados - {startDateStr} a {endDateStr}
             </h2>
             <Button variant="outline" size="sm" onClick={exportEstadoResultados}>
-              <Download className="h-4 w-4 mr-2" /> Descargar CSV
+              <Download className="h-4 w-4 mr-2" /> Descargar Excel
             </Button>
           </div>
 

@@ -20,7 +20,7 @@ import { AddAsientoDialog } from '@/components/cash/AddAsientoDialog'
 import * as accountingService from '@/lib/accountingService'
 import type { DashboardData, CuentaStat, Asiento, CuentaContable } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 // ============================================================================
 // TYPES
@@ -45,7 +45,8 @@ const MONTH_NAMES = [
 const DAY_NAMES_SHORT = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function formatDisplayDate(date: Date): string {
@@ -54,14 +55,6 @@ function formatDisplayDate(date: Date): string {
 
 function formatShortDate(date: Date): string {
   return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 2
-  }).format(amount)
 }
 
 function isSameDay(d1: Date, d2: Date): boolean {
@@ -519,14 +512,41 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Month Navigation */}
+            {/* Month/Year Navigation */}
             <div className="flex items-center justify-between">
               <Button variant="ghost" size="sm" onClick={() => navigateCalendar('prev')} className="h-8 w-8 p-0">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-semibold">
-                {MONTH_NAMES[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
-              </span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={calendarMonth.getMonth()}
+                  onChange={(e) => {
+                    const d = new Date(calendarMonth)
+                    d.setMonth(Number(e.target.value))
+                    setCalendarMonth(d)
+                    if (viewMode === 'month') setSelectedRange(getMonthRange(d))
+                  }}
+                  className="text-sm font-semibold bg-transparent border rounded px-2 py-1 dark:text-white dark:border-gray-600"
+                >
+                  {MONTH_NAMES.map((name, i) => (
+                    <option key={i} value={i}>{name}</option>
+                  ))}
+                </select>
+                <select
+                  value={calendarMonth.getFullYear()}
+                  onChange={(e) => {
+                    const d = new Date(calendarMonth)
+                    d.setFullYear(Number(e.target.value))
+                    setCalendarMonth(d)
+                    if (viewMode === 'month') setSelectedRange(getMonthRange(d))
+                  }}
+                  className="text-sm font-semibold bg-transparent border rounded px-2 py-1 dark:text-white dark:border-gray-600"
+                >
+                  {Array.from({ length: 16 }, (_, i) => 2020 + i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => navigateCalendar('next')} className="h-8 w-8 p-0">
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -718,7 +738,7 @@ export default function DashboardPage() {
                         </div>
                         <p className="text-sm text-gray-900 dark:text-white truncate mt-0.5">{asiento.concepto}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {new Date(asiento.fecha).toLocaleDateString('es-AR')} - {asiento.origen}
+                          {new Date(asiento.fecha + 'T12:00:00').toLocaleDateString('es-AR')} - {asiento.origen}
                         </p>
                       </div>
                     </div>

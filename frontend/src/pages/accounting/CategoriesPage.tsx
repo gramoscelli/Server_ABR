@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import * as accountingService from '@/lib/accountingService'
 import type { CuentaContable, CreateCuentaContableData, UpdateCuentaContableData } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -39,14 +39,6 @@ import {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-function formatCurrency(amount: number | string): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 2
-  }).format(Number(amount))
-}
 
 interface Section {
   key: string

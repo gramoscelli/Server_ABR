@@ -28,7 +28,7 @@ const Asiento = accountingDb.define('Asiento', {
     }
   },
   origen: {
-    type: DataTypes.ENUM('manual', 'ingreso', 'egreso', 'transferencia', 'ajuste', 'compra', 'liquidacion'),
+    type: DataTypes.ENUM('manual', 'ingreso', 'egreso', 'transferencia', 'ajuste', 'compra', 'liquidacion', 'anulacion'),
     allowNull: false,
     defaultValue: 'manual'
   },
@@ -50,6 +50,14 @@ const Asiento = accountingDb.define('Asiento', {
     allowNull: false,
     validate: {
       notNull: { msg: 'El usuario es obligatorio' }
+    }
+  },
+  id_asiento_anulado: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'asiento',
+      key: 'id_asiento'
     }
   }
 }, {

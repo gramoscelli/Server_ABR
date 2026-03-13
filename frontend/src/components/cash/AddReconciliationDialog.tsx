@@ -8,6 +8,8 @@ import { useState, useEffect, useCallback } from 'react'
 import * as accountingService from '@/lib/accountingService'
 import type { CuentaContable, CashReconciliation } from '@/types/accounting'
 import { Calculator, Loader2 } from 'lucide-react'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { formatCurrency } from '@/lib/utils'
 
 export interface ReconciliationFormData {
   id_cuenta: number
@@ -32,7 +34,7 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
   const [calculatedData, setCalculatedData] = useState<{ opening_balance: string; total_debe: string; total_haber: string; expected_balance: string } | null>(null)
   const [formData, setFormData] = useState<ReconciliationFormData>({
     id_cuenta: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-CA'),
     opening_balance: 0,
     closing_balance: 0,
     expected_balance: 0,
@@ -60,7 +62,7 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
       const defaultCuentaId = cuentas[0]?.id || 0
       setFormData({
         id_cuenta: defaultCuentaId,
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'),
         opening_balance: 0,
         closing_balance: 0,
         expected_balance: 0,
@@ -180,19 +182,19 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="text-gray-600">Saldo apertura:</span>
-                  <span className="ml-2 font-medium">${Number(calculatedData.opening_balance).toFixed(2)}</span>
+                  <span className="ml-2 font-medium">{formatCurrency(Number(calculatedData.opening_balance))}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Total Debe:</span>
-                  <span className="ml-2 font-medium text-green-600">+${Number(calculatedData.total_debe).toFixed(2)}</span>
+                  <span className="ml-2 font-medium text-green-600">+{formatCurrency(Number(calculatedData.total_debe))}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Total Haber:</span>
-                  <span className="ml-2 font-medium text-red-600">-${Number(calculatedData.total_haber).toFixed(2)}</span>
+                  <span className="ml-2 font-medium text-red-600">-{formatCurrency(Number(calculatedData.total_haber))}</span>
                 </div>
                 <div className="col-span-2 pt-2 border-t border-blue-200">
                   <span className="text-gray-700 font-medium">Saldo esperado:</span>
-                  <span className="ml-2 font-bold text-blue-800">${Number(calculatedData.expected_balance).toFixed(2)}</span>
+                  <span className="ml-2 font-bold text-blue-800">{formatCurrency(Number(calculatedData.expected_balance))}</span>
                 </div>
               </div>
             </div>
@@ -201,14 +203,11 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="opening_balance">Saldo Apertura</Label>
-              <Input
+              <CurrencyInput
                 id="opening_balance"
-                type="number"
-                step="0.01"
                 value={formData.opening_balance}
-                onChange={(e) => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
+                onValueChange={(v) => setFormData({ ...formData, opening_balance: v })}
                 disabled={loading || (!reconciliation && !!calculatedData)}
-                placeholder="0.00"
                 className="bg-gray-50"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -218,14 +217,11 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
 
             <div>
               <Label htmlFor="expected_balance">Saldo Esperado</Label>
-              <Input
+              <CurrencyInput
                 id="expected_balance"
-                type="number"
-                step="0.01"
                 value={formData.expected_balance}
-                onChange={(e) => setFormData({ ...formData, expected_balance: Number(e.target.value) })}
+                onValueChange={(v) => setFormData({ ...formData, expected_balance: v })}
                 disabled={loading || (!reconciliation && !!calculatedData)}
-                placeholder="0.00"
                 className="bg-gray-50"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -236,15 +232,13 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
 
           <div>
             <Label htmlFor="closing_balance">Saldo Real (Conteo Físico) *</Label>
-            <Input
+            <CurrencyInput
               id="closing_balance"
-              type="number"
-              step="0.01"
-              value={formData.closing_balance || ''}
-              onChange={(e) => setFormData({ ...formData, closing_balance: Number(e.target.value) })}
+              value={formData.closing_balance}
+              onValueChange={(v) => setFormData({ ...formData, closing_balance: v })}
               required
               disabled={loading}
-              placeholder="Ingrese el dinero contado físicamente"
+              placeholder="$ 0,00"
               className="text-lg font-medium"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -269,7 +263,7 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
                     ? 'text-green-600'
                     : 'text-red-600'
                 }`}>
-                  {difference >= 0 ? '+' : ''}${difference.toFixed(2)}
+                  {difference >= 0 ? '+' : '-'}{formatCurrency(Math.abs(difference))}
                 </span>
               </div>
               {difference === 0 ? (
@@ -279,9 +273,9 @@ export function AddReconciliationDialog({ open, onOpenChange, onSubmit, reconcil
               ) : (
                 <p className="text-sm mt-1">
                   {difference > 0 ? (
-                    <span className="text-green-700">Sobrante en caja: hay ${difference.toFixed(2)} más de lo esperado</span>
+                    <span className="text-green-700">Sobrante en caja: hay {formatCurrency(difference)} más de lo esperado</span>
                   ) : (
-                    <span className="text-red-700">Faltante en caja: faltan ${Math.abs(difference).toFixed(2)}</span>
+                    <span className="text-red-700">Faltante en caja: faltan {formatCurrency(Math.abs(difference))}</span>
                   )}
                 </p>
               )}

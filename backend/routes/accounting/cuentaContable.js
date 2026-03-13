@@ -8,16 +8,6 @@ const router = express.Router();
 const { CuentaContable, CuentaEfectivo, CuentaBancaria, CuentaPagoElectronico, AsientoDetalle } = require('../../models/accounting');
 const { authorizeRoles } = require('../../middleware/auth');
 
-// Helper to fix encoding
-function fixEncoding(str) {
-  if (!str) return str;
-  try {
-    return Buffer.from(str, 'latin1').toString('utf8');
-  } catch {
-    return str;
-  }
-}
-
 // Derive tipo from codigo
 function deriveTipo(codigo) {
   const first = String(codigo)[0];
@@ -107,10 +97,7 @@ router.get('/by-codigo/:codigo', async (req, res) => {
 // POST / - Create new account
 router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    let { codigo, titulo, descripcion, subtipo, requiere_detalle } = req.body;
-
-    titulo = fixEncoding(titulo);
-    descripcion = fixEncoding(descripcion);
+    const { codigo, titulo, descripcion, subtipo, requiere_detalle } = req.body;
 
     if (!codigo || !titulo) {
       return res.status(400).json({ success: false, error: 'Código y título son obligatorios' });
@@ -148,8 +135,8 @@ router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
       const { sucursal, responsable, moneda, permite_arqueo } = req.body;
       await CuentaEfectivo.create({
         id_cuenta: cuenta.id,
-        sucursal: fixEncoding(sucursal) || null,
-        responsable: fixEncoding(responsable) || null,
+        sucursal: sucursal || null,
+        responsable: responsable || null,
         moneda: moneda || 'ARS',
         permite_arqueo: permite_arqueo !== false
       });
@@ -157,7 +144,7 @@ router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
       const { banco, nro_cuenta, cbu, alias, moneda, tipo_cuenta } = req.body;
       await CuentaBancaria.create({
         id_cuenta: cuenta.id,
-        banco: fixEncoding(banco) || 'Sin especificar',
+        banco: banco || 'Sin especificar',
         nro_cuenta: nro_cuenta || null,
         cbu: cbu || null,
         alias: alias || null,
@@ -169,8 +156,8 @@ router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
       const { proveedor, tipo_medio, plazo_acreditacion, liquidacion_diferida } = req.body;
       await CuentaPagoElectronico.create({
         id_cuenta: cuenta.id,
-        proveedor: fixEncoding(proveedor) || 'Sin especificar',
-        tipo_medio: fixEncoding(tipo_medio) || null,
+        proveedor: proveedor || 'Sin especificar',
+        tipo_medio: tipo_medio || null,
         plazo_acreditacion: plazo_acreditacion || 0,
         liquidacion_diferida: liquidacion_diferida || false
       });
@@ -203,9 +190,7 @@ router.put('/:id', authorizeRoles('root'), async (req, res) => {
       return res.status(404).json({ success: false, error: 'Cuenta contable no encontrada' });
     }
 
-    let { titulo, descripcion, is_active, subtipo, requiere_detalle } = req.body;
-    titulo = fixEncoding(titulo);
-    descripcion = fixEncoding(descripcion);
+    const { titulo, descripcion, is_active, subtipo, requiere_detalle } = req.body;
 
     const updates = {};
     if (titulo !== undefined) updates.titulo = titulo;
@@ -221,8 +206,8 @@ router.put('/:id', authorizeRoles('root'), async (req, res) => {
       const { sucursal, responsable, moneda, permite_arqueo } = req.body;
       await CuentaEfectivo.upsert({
         id_cuenta: cuenta.id,
-        sucursal: fixEncoding(sucursal) || null,
-        responsable: fixEncoding(responsable) || null,
+        sucursal: sucursal || null,
+        responsable: responsable || null,
         moneda: moneda || 'ARS',
         permite_arqueo: permite_arqueo !== false
       });
@@ -230,7 +215,7 @@ router.put('/:id', authorizeRoles('root'), async (req, res) => {
       const { banco, nro_cuenta, cbu, alias, moneda, tipo_cuenta, activa } = req.body;
       await CuentaBancaria.upsert({
         id_cuenta: cuenta.id,
-        banco: fixEncoding(banco) || 'Sin especificar',
+        banco: banco || 'Sin especificar',
         nro_cuenta: nro_cuenta || null,
         cbu: cbu || null,
         alias: alias || null,
@@ -242,8 +227,8 @@ router.put('/:id', authorizeRoles('root'), async (req, res) => {
       const { proveedor, tipo_medio, plazo_acreditacion, liquidacion_diferida } = req.body;
       await CuentaPagoElectronico.upsert({
         id_cuenta: cuenta.id,
-        proveedor: fixEncoding(proveedor) || 'Sin especificar',
-        tipo_medio: fixEncoding(tipo_medio) || null,
+        proveedor: proveedor || 'Sin especificar',
+        tipo_medio: tipo_medio || null,
         plazo_acreditacion: plazo_acreditacion || 0,
         liquidacion_diferida: liquidacion_diferida || false
       });

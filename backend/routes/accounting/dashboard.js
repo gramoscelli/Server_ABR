@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
     // Total egresos (movements to egreso-type accounts on debe side)
     const egresos = await AsientoDetalle.findAll({
       attributes: [
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
@@ -76,7 +76,7 @@ router.get('/', async (req, res) => {
 
     const ingresos = await AsientoDetalle.findAll({
       attributes: [
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
@@ -93,8 +93,8 @@ router.get('/', async (req, res) => {
     const egresosByCuenta = await AsientoDetalle.findAll({
       attributes: [
         'id_cuenta',
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total'],
-        [accountingDb.fn('COUNT', accountingDb.col('asiento_detalle.id_detalle')), 'count']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total'],
+        [accountingDb.fn('COUNT', accountingDb.col('AsientoDetalle.id_detalle')), 'count']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
@@ -102,7 +102,7 @@ router.get('/', async (req, res) => {
       ],
       where: { tipo_mov: 'debe' },
       group: ['id_cuenta', 'cuenta.id', 'cuenta.codigo', 'cuenta.titulo'],
-      order: [[accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'DESC']],
+      order: [[accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'DESC']],
       limit: 10,
       raw: true,
       nest: true
@@ -111,8 +111,8 @@ router.get('/', async (req, res) => {
     const ingresosByCuenta = await AsientoDetalle.findAll({
       attributes: [
         'id_cuenta',
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total'],
-        [accountingDb.fn('COUNT', accountingDb.col('asiento_detalle.id_detalle')), 'count']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total'],
+        [accountingDb.fn('COUNT', accountingDb.col('AsientoDetalle.id_detalle')), 'count']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: periodWhere, attributes: [] },
@@ -120,7 +120,7 @@ router.get('/', async (req, res) => {
       ],
       where: { tipo_mov: 'haber' },
       group: ['id_cuenta', 'cuenta.id', 'cuenta.codigo', 'cuenta.titulo'],
-      order: [[accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'DESC']],
+      order: [[accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'DESC']],
       limit: 10,
       raw: true,
       nest: true
@@ -189,7 +189,7 @@ router.get('/monthly', async (req, res) => {
     const monthlyEgresos = await AsientoDetalle.findAll({
       attributes: [
         [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha')), 'month'],
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: asientoWhere, attributes: [] },
@@ -203,7 +203,7 @@ router.get('/monthly', async (req, res) => {
     const monthlyIngresos = await AsientoDetalle.findAll({
       attributes: [
         [accountingDb.fn('MONTH', accountingDb.col('asiento.fecha')), 'month'],
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
       ],
       include: [
         { model: Asiento, as: 'asiento', where: asientoWhere, attributes: [] },

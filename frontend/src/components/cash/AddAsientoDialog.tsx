@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,12 +17,14 @@ import {
 } from '@/components/ui/select'
 import { createAsiento } from '@/lib/accountingService'
 import type { CuentaContable, CreateAsientoData, CreateAsientoDetalleData } from '@/types/accounting'
+import { CurrencyInput } from '@/components/ui/currency-input'
+import { formatCurrency } from '@/lib/utils'
 
 interface DetalleRow {
   key: number
   id_cuenta: number | null
   tipo_mov: 'debe' | 'haber'
-  importe: string
+  importe: number
   referencia_operativa: string
 }
 
@@ -44,57 +46,187 @@ function nextKey(): number {
 }
 
 function emptyRow(tipo_mov: 'debe' | 'haber' = 'debe'): DetalleRow {
-  return { key: nextKey(), id_cuenta: null, tipo_mov, importe: '', referencia_operativa: '' }
+  return { key: nextKey(), id_cuenta: null, tipo_mov, importe: 0, referencia_operativa: '' }
 }
 
-function getCuentaLabel(c: CuentaContable): string {
-  return `${c.codigo} - ${c.titulo}`
+// ============================================================================
+// CUENTA SEARCH INPUT
+// ============================================================================
+
+interface CuentaSearchProps {
+  cuentas: CuentaContable[]
+  selectedId: number | null
+  onSelect: (id: number | null) => void
+  disabled?: boolean
 }
 
-const ORIGEN_OPTIONS = [
-  { value: 'manual', label: 'Manual' },
-  { value: 'ingreso', label: 'Ingreso' },
-  { value: 'egreso', label: 'Egreso' },
-  { value: 'transferencia', label: 'Transferencia' },
-  { value: 'ajuste', label: 'Ajuste' },
-] as const
+function CuentaSearchInput({ cuentas, selectedId, onSelect, disabled }: CuentaSearchProps) {
+  const [codigoSearch, setCodigoSearch] = useState('')
+  const [tituloSearch, setTituloSearch] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [activeField, setActiveField] = useState<'codigo' | 'titulo' | null>(null)
+  const [highlightIdx, setHighlightIdx] = useState(-1)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const codigoRef = useRef<HTMLInputElement>(null)
+  const tituloRef = useRef<HTMLInputElement>(null)
+
+  // Sync display when selectedId changes externally (e.g. reset)
+  useEffect(() => {
+    if (selectedId) {
+      const c = cuentas.find(x => x.id === selectedId)
+      if (c) {
+        setCodigoSearch(String(c.codigo))
+        setTituloSearch(c.titulo)
+      }
+    } else {
+      setCodigoSearch('')
+      setTituloSearch('')
+    }
+  }, [selectedId, cuentas])
+
+  const filtered = useMemo(() => {
+    const code = codigoSearch.trim()
+    const title = tituloSearch.trim().toLowerCase()
+
+    return cuentas.filter(c => {
+      const matchCode = !code || String(c.codigo).startsWith(code)
+      const matchTitle = !title || c.titulo.toLowerCase().includes(title)
+      return matchCode && matchTitle
+    }).slice(0, 15)
+  }, [cuentas, codigoSearch, tituloSearch])
+
+  const selectCuenta = useCallback((c: CuentaContable) => {
+    setCodigoSearch(String(c.codigo))
+    setTituloSearch(c.titulo)
+    setShowDropdown(false)
+    setHighlightIdx(-1)
+    onSelect(c.id)
+  }, [onSelect])
+
+  const handleCodigoChange = (val: string) => {
+    // Only allow digits
+    const digits = val.replace(/\D/g, '')
+    setCodigoSearch(digits)
+    setShowDropdown(true)
+    setActiveField('codigo')
+    setHighlightIdx(-1)
+    // Clear selection if user is typing
+    if (selectedId) onSelect(null)
+  }
+
+  const handleTituloChange = (val: string) => {
+    setTituloSearch(val)
+    setShowDropdown(true)
+    setActiveField('titulo')
+    setHighlightIdx(-1)
+    if (selectedId) onSelect(null)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showDropdown || filtered.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setHighlightIdx(prev => Math.min(prev + 1, filtered.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setHighlightIdx(prev => Math.max(prev - 1, 0))
+    } else if (e.key === 'Enter' && highlightIdx >= 0) {
+      e.preventDefault()
+      selectCuenta(filtered[highlightIdx])
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
+    }
+  }
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="flex gap-1 relative">
+      <Input
+        ref={codigoRef}
+        value={codigoSearch}
+        onChange={(e) => handleCodigoChange(e.target.value)}
+        onFocus={() => { setShowDropdown(true); setActiveField('codigo') }}
+        onKeyDown={handleKeyDown}
+        placeholder="Código"
+        className="h-9 text-xs w-20 font-mono"
+        disabled={disabled}
+      />
+      <Input
+        ref={tituloRef}
+        value={tituloSearch}
+        onChange={(e) => handleTituloChange(e.target.value)}
+        onFocus={() => { setShowDropdown(true); setActiveField('titulo') }}
+        onKeyDown={handleKeyDown}
+        placeholder="Buscar cuenta..."
+        className="h-9 text-xs flex-1"
+        disabled={disabled}
+      />
+      {showDropdown && !selectedId && filtered.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {filtered.map((c, idx) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 flex gap-2 ${
+                idx === highlightIdx ? 'bg-blue-100' : ''
+              }`}
+              onMouseDown={(e) => { e.preventDefault(); selectCuenta(c) }}
+              onMouseEnter={() => setHighlightIdx(idx)}
+            >
+              <span className="font-mono text-gray-500 shrink-0">{c.codigo}</span>
+              <span className="truncate">{c.titulo}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {showDropdown && !selectedId && filtered.length === 0 && (codigoSearch || tituloSearch) && (
+        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-md shadow-lg px-3 py-2 text-xs text-gray-500">
+          No se encontraron cuentas
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// MAIN DIALOG
+// ============================================================================
 
 export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: AddAsientoDialogProps) {
   const [fecha, setFecha] = useState(localDateString())
   const [concepto, setConcepto] = useState('')
-  const [origen, setOrigen] = useState<string>('manual')
   const [detalles, setDetalles] = useState<DetalleRow[]>([emptyRow('debe'), emptyRow('haber')])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const activeCuentas = useMemo(() => cuentas.filter(c => c.is_active), [cuentas])
 
-  // Group cuentas by tipo for quick-fill helpers
-  const cuentasByTipo = useMemo(() => {
-    const map: Record<string, CuentaContable[]> = {}
-    for (const c of activeCuentas) {
-      if (!map[c.tipo]) map[c.tipo] = []
-      map[c.tipo].push(c)
-    }
-    return map
-  }, [activeCuentas])
-
   useEffect(() => {
     if (open) {
       setFecha(localDateString())
       setConcepto('')
-      setOrigen('manual')
       setDetalles([emptyRow('debe'), emptyRow('haber')])
       setError(null)
     }
   }, [open])
 
   const totalDebe = useMemo(
-    () => detalles.reduce((sum, d) => d.tipo_mov === 'debe' ? sum + (parseFloat(d.importe) || 0) : sum, 0),
+    () => detalles.reduce((sum, d) => d.tipo_mov === 'debe' ? sum + (d.importe || 0) : sum, 0),
     [detalles]
   )
   const totalHaber = useMemo(
-    () => detalles.reduce((sum, d) => d.tipo_mov === 'haber' ? sum + (parseFloat(d.importe) || 0) : sum, 0),
+    () => detalles.reduce((sum, d) => d.tipo_mov === 'haber' ? sum + (d.importe || 0) : sum, 0),
     [detalles]
   )
   const difference = Math.abs(totalDebe - totalHaber)
@@ -112,44 +244,6 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
     setDetalles(prev => [...prev, emptyRow('debe')])
   }
 
-  // Quick shortcut helpers
-  const findFirstCuenta = (tipo: string, subtipo?: string): number | null => {
-    const list = cuentasByTipo[tipo] || []
-    if (subtipo) {
-      const match = list.find(c => c.subtipo === subtipo)
-      if (match) return match.id
-    }
-    return list[0]?.id ?? null
-  }
-
-  const handleIngresoRapido = () => {
-    const cajaId = findFirstCuenta('activo', 'efectivo')
-    const ingresoId = findFirstCuenta('ingreso')
-    setOrigen('ingreso')
-    setDetalles([
-      { key: nextKey(), id_cuenta: cajaId, tipo_mov: 'debe', importe: '', referencia_operativa: '' },
-      { key: nextKey(), id_cuenta: ingresoId, tipo_mov: 'haber', importe: '', referencia_operativa: '' },
-    ])
-  }
-
-  const handleEgresoRapido = () => {
-    const cajaId = findFirstCuenta('activo', 'efectivo')
-    const egresoId = findFirstCuenta('egreso')
-    setOrigen('egreso')
-    setDetalles([
-      { key: nextKey(), id_cuenta: egresoId, tipo_mov: 'debe', importe: '', referencia_operativa: '' },
-      { key: nextKey(), id_cuenta: cajaId, tipo_mov: 'haber', importe: '', referencia_operativa: '' },
-    ])
-  }
-
-  const handleTransferenciaRapida = () => {
-    setOrigen('transferencia')
-    setDetalles([
-      { key: nextKey(), id_cuenta: null, tipo_mov: 'debe', importe: '', referencia_operativa: '' },
-      { key: nextKey(), id_cuenta: null, tipo_mov: 'haber', importe: '', referencia_operativa: '' },
-    ])
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -161,8 +255,8 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
 
     const validDetalles: CreateAsientoDetalleData[] = []
     for (const d of detalles) {
-      const importe = parseFloat(d.importe)
-      if (!d.id_cuenta || isNaN(importe) || importe <= 0) {
+      const importe = d.importe
+      if (!d.id_cuenta || !importe || importe <= 0) {
         setError('Cada fila debe tener una cuenta e importe mayor a 0')
         return
       }
@@ -177,7 +271,7 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
     const data: CreateAsientoData = {
       fecha,
       concepto,
-      origen,
+      origen: 'manual',
       estado: 'confirmado',
       detalles: validDetalles,
     }
@@ -202,22 +296,9 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
           <DialogTitle className="text-xl font-bold">Nuevo Asiento Contable</DialogTitle>
         </DialogHeader>
 
-        {/* Quick shortcuts */}
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={handleIngresoRapido} disabled={loading}>
-            Ingreso Rapido
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleEgresoRapido} disabled={loading}>
-            Egreso Rapido
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleTransferenciaRapida} disabled={loading}>
-            Transferencia Rapida
-          </Button>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Header fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4">
             <div className="space-y-2">
               <Label htmlFor="asiento-fecha" className="text-sm font-medium text-gray-700">
                 Fecha
@@ -240,66 +321,37 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
                 id="asiento-concepto"
                 value={concepto}
                 onChange={(e) => setConcepto(e.target.value)}
-                placeholder="Descripcion del asiento"
+                placeholder="Descripción del asiento"
                 required
                 disabled={loading}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="asiento-origen" className="text-sm font-medium text-gray-700">
-                Origen
-              </Label>
-              <Select value={origen} onValueChange={setOrigen} disabled={loading}>
-                <SelectTrigger id="asiento-origen">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ORIGEN_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
           {/* Detalles table */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700">Detalles</Label>
-            <div className="border rounded-md overflow-hidden">
+            <div className="border rounded-md overflow-visible">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">Cuenta</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-28">Tipo</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600" colSpan={2}>Cuenta</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-24">Tipo</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600 w-32">Importe</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-36">Referencia</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-32">Referencia</th>
                     <th className="px-3 py-2 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {detalles.map((row) => (
                     <tr key={row.key} className="border-t">
-                      <td className="px-2 py-1">
-                        <Select
-                          value={row.id_cuenta ? String(row.id_cuenta) : 'none'}
-                          onValueChange={(v) => updateRow(row.key, 'id_cuenta', v === 'none' ? null : parseInt(v))}
+                      <td className="px-2 py-1" colSpan={2}>
+                        <CuentaSearchInput
+                          cuentas={activeCuentas}
+                          selectedId={row.id_cuenta}
+                          onSelect={(id) => updateRow(row.key, 'id_cuenta', id)}
                           disabled={loading}
-                        >
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue placeholder="Seleccionar cuenta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Seleccionar...</SelectItem>
-                            {activeCuentas.map((c) => (
-                              <SelectItem key={c.id} value={String(c.id)}>
-                                {getCuentaLabel(c)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       </td>
                       <td className="px-2 py-1">
                         <Select
@@ -317,13 +369,9 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
                         </Select>
                       </td>
                       <td className="px-2 py-1">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
+                        <CurrencyInput
                           value={row.importe}
-                          onChange={(e) => updateRow(row.key, 'importe', e.target.value)}
+                          onValueChange={(v) => updateRow(row.key, 'importe', v)}
                           className="h-9 text-xs"
                           disabled={loading}
                         />
@@ -364,10 +412,10 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
 
           {/* Balance summary */}
           <div className="flex items-center gap-4 text-sm font-medium rounded-md bg-gray-50 px-4 py-3">
-            <span>Total Debe: <span className="text-blue-700">${totalDebe.toFixed(2)}</span></span>
-            <span>Total Haber: <span className="text-blue-700">${totalHaber.toFixed(2)}</span></span>
+            <span>Total Debe: <span className="text-blue-700">{formatCurrency(totalDebe)}</span></span>
+            <span>Total Haber: <span className="text-blue-700">{formatCurrency(totalHaber)}</span></span>
             <span className={difference > 0.005 ? 'text-red-600 font-bold' : 'text-green-600'}>
-              Diferencia: ${difference.toFixed(2)}
+              Diferencia: {formatCurrency(difference)}
             </span>
             {isBalanced && <span className="text-green-600 ml-auto">Balanceado</span>}
           </div>

@@ -169,17 +169,27 @@ async function anularAsiento(id_asiento, usuario_id) {
     throw new Error('El asiento ya está anulado');
   }
 
+  if (asiento.id_asiento_anulado) {
+    throw new Error('No se puede anular un contra-asiento de anulación');
+  }
+
   const result = await accountingDb.transaction(async (t) => {
     // Create counter-entry with reversed debit/credit
     const nro_comprobante = await generateComprobante(new Date(), t);
 
+    // Format the original date for display
+    const fechaOriginal = new Date(asiento.fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+
     const contraAsiento = await Asiento.create({
       fecha: new Date(),
       nro_comprobante,
-      origen: asiento.origen,
-      concepto: `ANULACIÓN de ${asiento.nro_comprobante}: ${asiento.concepto}`,
+      origen: 'anulacion',
+      concepto: `ANULACIÓN de ${asiento.nro_comprobante} (${fechaOriginal}): ${asiento.concepto}`,
       estado: 'confirmado',
-      usuario_id
+      usuario_id,
+      id_asiento_anulado: asiento.id_asiento
     }, { transaction: t });
 
     await AsientoDetalle.bulkCreate(

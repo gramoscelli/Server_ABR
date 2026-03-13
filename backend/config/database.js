@@ -57,6 +57,11 @@ const sequelize = new Sequelize(
   }
 );
 
+// Force UTF-8 on every new connection
+sequelize.addHook('afterConnect', async (connection) => {
+  await connection.promise().query("SET NAMES 'utf8mb4'");
+});
+
 /**
  * Test database connection
  */
@@ -126,6 +131,11 @@ const accountingDb = new Sequelize(
     }
   }
 );
+
+// Force UTF-8 on every new connection
+accountingDb.addHook('afterConnect', async (connection) => {
+  await connection.promise().query("SET NAMES 'utf8mb4'");
+});
 
 /**
  * Test accounting database connection

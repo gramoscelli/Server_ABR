@@ -9,14 +9,28 @@ const { Asiento, AsientoDetalle, CuentaContable } = require('../../models/accoun
 const { authorizeRoles } = require('../../middleware/auth');
 const asientoService = require('../../services/asientoService');
 const { Op } = require('sequelize');
+const User = require('../../models/User');
 
-// Helper to fix encoding
-function fixEncoding(str) {
-  if (!str) return str;
-  try {
-    return Buffer.from(str, 'latin1').toString('utf8');
-  } catch {
-    return str;
+// Attach user info to asiento(s)
+async function attachUsuarios(asientos) {
+  const list = Array.isArray(asientos) ? asientos : [asientos];
+  const userIds = [...new Set(list.map(a => a.usuario_id).filter(Boolean))];
+  if (userIds.length === 0) return;
+  const users = await User.findAll({
+    where: { id: userIds },
+    attributes: ['id', 'username', 'nombre', 'apellido'],
+    raw: true
+  });
+  const userMap = {};
+  for (const u of users) userMap[u.id] = u;
+  for (const a of list) {
+    const plain = a.toJSON ? a.toJSON() : a;
+    const u = userMap[plain.usuario_id];
+    if (u) {
+      a.dataValues
+        ? (a.dataValues.usuario = u)
+        : (a.usuario = u);
+    }
   }
 }
 
@@ -57,7 +71,15 @@ router.get('/', async (req, res) => {
 
     const { count, rows } = await Asiento.findAndCountAll({
       where,
-      include: [includeDetalles],
+      include: [
+        includeDetalles,
+        {
+          model: Asiento,
+          as: 'asientoAnulado',
+          attributes: ['id_asiento', 'nro_comprobante', 'fecha', 'concepto'],
+          required: false
+        }
+      ],
       order: [['fecha', 'DESC'], ['id_asiento', 'DESC']],
       limit: parseInt(limit),
       offset,
@@ -68,7 +90,7 @@ router.get('/', async (req, res) => {
     const totalQuery = await AsientoDetalle.findAll({
       attributes: [
         'tipo_mov',
-        [AsientoDetalle.sequelize.fn('SUM', AsientoDetalle.sequelize.col('asiento_detalle.importe')), 'total']
+        [AsientoDetalle.sequelize.fn('SUM', AsientoDetalle.sequelize.col('AsientoDetalle.importe')), 'total']
       ],
       include: [{
         model: Asiento,
@@ -86,6 +108,8 @@ router.get('/', async (req, res) => {
       if (t.tipo_mov === 'debe') totalDebe = parseFloat(t.total) || 0;
       if (t.tipo_mov === 'haber') totalHaber = parseFloat(t.total) || 0;
     }
+
+    await attachUsuarios(rows);
 
     res.json({
       success: true,
@@ -127,6 +151,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Asiento no encontrado' });
     }
 
+    await attachUsuarios(asiento);
     res.json({ success: true, data: asiento });
   } catch (error) {
     console.error('Error fetching asiento:', error);
@@ -137,9 +162,7 @@ router.get('/:id', async (req, res) => {
 // POST / - Create journal entry with balance validation
 router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    let { fecha, origen, concepto, detalles, estado } = req.body;
-
-    concepto = fixEncoding(concepto);
+    const { fecha, origen, concepto, detalles, estado } = req.body;
 
     if (!fecha || !concepto || !detalles || !Array.isArray(detalles)) {
       return res.status(400).json({
@@ -147,12 +170,6 @@ router.post('/', authorizeRoles('root', 'admin_employee'), async (req, res) => {
         error: 'Fecha, concepto y detalles son obligatorios'
       });
     }
-
-    // Fix encoding on detail references
-    detalles = detalles.map(d => ({
-      ...d,
-      referencia_operativa: fixEncoding(d.referencia_operativa)
-    }));
 
     const result = await asientoService.createAsiento({
       fecha,
@@ -203,8 +220,7 @@ router.put('/:id', authorizeRoles('root', 'admin_employee'), async (req, res) =>
       });
     }
 
-    let { fecha, origen, concepto, detalles } = req.body;
-    concepto = fixEncoding(concepto);
+    const { fecha, origen, concepto, detalles } = req.body;
 
     // Update header
     const updates = {};
@@ -233,7 +249,7 @@ router.put('/:id', authorizeRoles('root', 'admin_employee'), async (req, res) =>
             id_cuenta: d.id_cuenta,
             tipo_mov: d.tipo_mov,
             importe: d.importe,
-            referencia_operativa: fixEncoding(d.referencia_operativa) || null
+            referencia_operativa: d.referencia_operativa || null
           })),
           { transaction: t }
         );

@@ -18,3 +18,14 @@ export function getRoleDisplayName(role: string): string {
 
   return roleMap[role.toLowerCase()] || role
 }
+
+/**
+ * Formats a number as Argentine Peso currency: $ 1.234,56
+ */
+export function formatCurrency(amount: number | string): string {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2,
+  }).format(Number(amount) || 0)
+}

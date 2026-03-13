@@ -20,18 +20,26 @@ router.get('/libro-diario', async (req, res) => {
 
     const asientos = await Asiento.findAll({
       where: {
-        estado: 'confirmado',
+        estado: { [Op.in]: ['confirmado', 'anulado'] },
         fecha: { [Op.between]: [start_date, end_date] }
       },
-      include: [{
-        model: AsientoDetalle,
-        as: 'detalles',
-        include: [{
-          model: CuentaContable,
-          as: 'cuenta',
-          attributes: ['id', 'codigo', 'titulo', 'tipo', 'grupo']
-        }]
-      }],
+      include: [
+        {
+          model: AsientoDetalle,
+          as: 'detalles',
+          include: [{
+            model: CuentaContable,
+            as: 'cuenta',
+            attributes: ['id', 'codigo', 'titulo', 'tipo', 'grupo']
+          }]
+        },
+        {
+          model: Asiento,
+          as: 'asientoAnulado',
+          attributes: ['id_asiento', 'nro_comprobante', 'fecha', 'concepto'],
+          required: false
+        }
+      ],
       order: [['fecha', 'ASC'], ['id_asiento', 'ASC']]
     });
 
@@ -134,7 +142,7 @@ router.get('/balance-sumas-saldos', async (req, res) => {
       attributes: [
         'id_cuenta',
         'tipo_mov',
-        [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+        [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
       ],
       include: [{
         model: Asiento,
@@ -214,7 +222,7 @@ router.get('/estado-resultados', async (req, res) => {
       const data = await AsientoDetalle.findAll({
         attributes: [
           'id_cuenta', 'tipo_mov',
-          [accountingDb.fn('SUM', accountingDb.col('asiento_detalle.importe')), 'total']
+          [accountingDb.fn('SUM', accountingDb.col('AsientoDetalle.importe')), 'total']
         ],
         include: [
           { model: Asiento, as: 'asiento', where: asientoWhere, attributes: [] },

@@ -53,13 +53,26 @@ export interface Asiento {
   id_asiento: number
   fecha: string
   nro_comprobante: string
-  origen: 'manual' | 'ingreso' | 'egreso' | 'transferencia' | 'ajuste' | 'compra' | 'liquidacion'
+  origen: 'manual' | 'ingreso' | 'egreso' | 'transferencia' | 'ajuste' | 'compra' | 'liquidacion' | 'anulacion'
   concepto: string
   estado: 'borrador' | 'confirmado' | 'anulado'
   usuario_id: number
+  id_asiento_anulado?: number | null
   created_at: string
   updated_at: string
   detalles?: AsientoDetalle[]
+  usuario?: {
+    id: number
+    username: string
+    nombre: string | null
+    apellido: string | null
+  }
+  asientoAnulado?: {
+    id_asiento: number
+    nro_comprobante: string
+    fecha: string
+    concepto: string
+  } | null
 }
 
 export interface AsientoDetalle {

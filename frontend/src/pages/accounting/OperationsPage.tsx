@@ -9,6 +9,7 @@ import {
   XCircle,
   Trash2,
   Calendar,
+  AlertTriangle,
 } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { authService } from '@/lib/auth'
@@ -17,6 +18,13 @@ import { AddAsientoDialog } from '@/components/cash/AddAsientoDialog'
 import * as accountingService from '@/lib/accountingService'
 import type { Asiento, AsientoDetalle, CuentaContable } from '@/types/accounting'
 import { toast } from '@/components/ui/use-toast'
+import { formatCurrency } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -24,14 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-function formatCurrency(amount: number | string): string {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 2
-  }).format(Number(amount))
-}
 
 export default function OperationsPage() {
   const navigate = useNavigate()
@@ -43,6 +43,10 @@ export default function OperationsPage() {
   const [filterOrigen, setFilterOrigen] = useState<string>('all')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [anularAsiento, setAnularAsiento] = useState<Asiento | null>(null)
+  const [anularStep, setAnularStep] = useState<'preview' | 'confirm'>('preview')
+  const [anularLoading, setAnularLoading] = useState(false)
+  const [anularError, setAnularError] = useState<string | null>(null)
   const [totalPages, setTotalPages] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
 
@@ -72,14 +76,12 @@ export default function OperationsPage() {
   const fetchAsientos = async () => {
     try {
       setLoading(true)
-      const startDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
-      const endDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0)
-      const startDateStr = startDate.toISOString().split('T')[0]
-      const endDateStr = endDate.toISOString().split('T')[0]
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const dateStr = `${selectedDate.getFullYear()}-${pad(selectedDate.getMonth() + 1)}-${pad(selectedDate.getDate())}`
 
       const params: Record<string, unknown> = {
-        start_date: startDateStr,
-        end_date: endDateStr,
+        start_date: dateStr,
+        end_date: dateStr,
         page: currentPage,
         limit: 50,
       }
@@ -109,15 +111,26 @@ export default function OperationsPage() {
     }
   }
 
-  const handleAnular = async (id: number) => {
-    if (!confirm('Esta seguro de anular este asiento? Se creara un contra-asiento.')) return
+  const openAnularDialog = (asiento: Asiento) => {
+    setAnularAsiento(asiento)
+    setAnularStep('preview')
+    setAnularError(null)
+  }
+
+  const handleAnularConfirm = async () => {
+    if (!anularAsiento) return
+    setAnularLoading(true)
+    setAnularError(null)
     try {
-      await accountingService.anularAsiento(id)
-      toast({ title: 'Exito', description: 'Asiento anulado correctamente' })
+      await accountingService.anularAsiento(anularAsiento.id_asiento)
+      toast({ title: 'Éxito', description: 'Asiento anulado correctamente' })
+      setAnularAsiento(null)
       fetchAsientos()
     } catch (error) {
       console.error('Error anulling asiento:', error)
-      toast({ title: 'Error', description: 'No se pudo anular el asiento', variant: 'destructive' })
+      setAnularError('No se pudo anular el asiento')
+    } finally {
+      setAnularLoading(false)
     }
   }
 
@@ -159,6 +172,7 @@ export default function OperationsPage() {
       ajuste: 'Ajuste',
       compra: 'Compra',
       liquidacion: 'Liquidacion',
+      anulacion: 'Anulacion',
     }
     return labels[origen] || origen
   }
@@ -176,7 +190,7 @@ export default function OperationsPage() {
     )
   }
 
-  const monthYear = selectedDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+  const dayLabel = selectedDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   // Summary
   const summary = useMemo(() => {
@@ -197,7 +211,7 @@ export default function OperationsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Asientos Contables</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 capitalize">
-            {monthYear} &bull; {asientos.length} asientos
+            {dayLabel} &bull; {asientos.length} asientos
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -235,6 +249,7 @@ export default function OperationsPage() {
             <SelectItem value="ajuste">Ajuste</SelectItem>
             <SelectItem value="compra">Compra</SelectItem>
             <SelectItem value="liquidacion">Liquidacion</SelectItem>
+            <SelectItem value="anulacion">Anulacion</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -303,8 +318,30 @@ export default function OperationsPage() {
                           <p className="text-sm font-medium text-gray-900 dark:text-white mt-0.5 truncate">
                             {asiento.concepto}
                           </p>
+                          {asiento.asientoAnulado && (
+                            <button
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5 flex items-center gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const orig = asiento.asientoAnulado!
+                                const origDate = new Date(orig.fecha + 'T12:00:00')
+                                setSelectedDate(origDate)
+                                setFilterEstado('anulado')
+                              }}
+                            >
+                              Ver asiento original: {asiento.asientoAnulado.nro_comprobante}
+                              {' '}({new Date(asiento.asientoAnulado.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })})
+                            </button>
+                          )}
                           <p className="text-xs text-gray-500 mt-0.5">
-                            {new Date(asiento.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(asiento.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {asiento.usuario && (
+                              <span className="ml-2 text-gray-400">
+                                por {asiento.usuario.nombre && asiento.usuario.apellido
+                                  ? `${asiento.usuario.nombre} ${asiento.usuario.apellido}`
+                                  : asiento.usuario.username}
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
@@ -391,12 +428,12 @@ export default function OperationsPage() {
                               </Button>
                             </>
                           )}
-                          {asiento.estado === 'confirmado' && (
+                          {asiento.estado === 'confirmado' && !asiento.id_asiento_anulado && (
                             <Button
                               size="sm"
                               variant="outline"
                               className="text-red-600 border-red-300 hover:bg-red-50"
-                              onClick={(e) => { e.stopPropagation(); handleAnular(asiento.id_asiento) }}
+                              onClick={(e) => { e.stopPropagation(); openAnularDialog(asiento) }}
                             >
                               <XCircle className="h-4 w-4 mr-1" /> Anular
                             </Button>
@@ -442,11 +479,121 @@ export default function OperationsPage() {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={() => {
-          toast({ title: 'Exito', description: 'Asiento creado correctamente' })
+          toast({ title: 'Éxito', description: 'Asiento creado correctamente' })
           fetchAsientos()
         }}
         cuentas={cuentas}
       />
+
+      {/* Anular Asiento Dialog */}
+      <Dialog open={!!anularAsiento} onOpenChange={(open) => { if (!open) setAnularAsiento(null) }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Anular Asiento</DialogTitle>
+          </DialogHeader>
+
+          {anularAsiento && anularStep === 'preview' && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Se creará el siguiente contra-asiento para revertir el asiento{' '}
+                <span className="font-mono font-semibold">{anularAsiento.nro_comprobante}</span>:
+              </p>
+
+              {/* Contra-asiento preview */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Contra-asiento: Anulación - {anularAsiento.concepto}
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                      <th className="text-left py-2 px-4 font-semibold">Cuenta</th>
+                      <th className="text-right py-2 px-4 font-semibold">Debe</th>
+                      <th className="text-right py-2 px-4 font-semibold">Haber</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...(anularAsiento.detalles || [])]
+                      .sort((a, b) => {
+                        // In contra-asiento, haber becomes debe and vice versa
+                        // Show new debe (old haber) first
+                        const aNew = a.tipo_mov === 'haber' ? 'debe' : 'haber'
+                        const bNew = b.tipo_mov === 'haber' ? 'debe' : 'haber'
+                        if (aNew === bNew) return 0
+                        return aNew === 'debe' ? -1 : 1
+                      })
+                      .map((det, idx) => {
+                        const contraMovimiento = det.tipo_mov === 'debe' ? 'haber' : 'debe'
+                        return (
+                          <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-2 px-4">
+                              <span className="font-mono text-xs text-gray-500 mr-1">{det.cuenta?.codigo}</span>
+                              {det.cuenta?.titulo}
+                            </td>
+                            <td className="py-2 px-4 text-right font-medium">
+                              {contraMovimiento === 'debe' ? formatCurrency(det.importe) : ''}
+                            </td>
+                            <td className="py-2 px-4 text-right font-medium">
+                              {contraMovimiento === 'haber' ? formatCurrency(det.importe) : ''}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setAnularAsiento(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setAnularStep('confirm')}
+                >
+                  Anular Asiento
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {anularAsiento && anularStep === 'confirm' && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                    Esta acción no se puede deshacer
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                    El asiento <span className="font-mono font-semibold">{anularAsiento.nro_comprobante}</span> quedará
+                    marcado como anulado y se creará un contra-asiento confirmado que revertirá todos sus movimientos.
+                  </p>
+                </div>
+              </div>
+
+              {anularError && (
+                <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded">
+                  {anularError}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setAnularStep('preview')} disabled={anularLoading}>
+                  Volver
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleAnularConfirm}
+                  disabled={anularLoading}
+                >
+                  {anularLoading ? 'Anulando...' : 'Confirmar Anulación'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
