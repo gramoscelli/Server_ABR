@@ -33,10 +33,11 @@ router.get('/', async (req, res) => {
       order: [['codigo', 'ASC']]
     });
 
-    // 2. Calculate balances for financial accounts
+    // 2. Calculate balances for financial accounts (always as of today)
+    const today = new Date().toISOString().split('T')[0];
     const cuentasConSaldo = [];
     for (const cuenta of cuentasFinancieras) {
-      const balance = await asientoService.getAccountBalance(cuenta.id, periodEnd);
+      const balance = await asientoService.getAccountBalance(cuenta.id, today);
       cuentasConSaldo.push({
         ...cuenta.toJSON(),
         saldo: balance.saldo,

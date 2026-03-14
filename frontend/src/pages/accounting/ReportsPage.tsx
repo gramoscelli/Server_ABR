@@ -379,7 +379,6 @@ export default function ReportsPage() {
                       return detalles.map((det: any, idx: number) => (
                         <tr key={`${asiento.id_asiento}-${idx}`} className={cn(
                           'hover:bg-gray-50 dark:hover:bg-gray-900/50',
-                          isAnulado && 'opacity-50 line-through',
                           idx === 0 && asientoIdx > 0 && 'border-t-2 border-gray-300 dark:border-gray-600'
                         )}>
                           {idx === 0 ? (
