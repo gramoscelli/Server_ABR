@@ -4,6 +4,7 @@ import type {
   AccountBalancesData,
   ApiResponse,
   Asiento,
+  AsientoAuditEntry,
   AsientoQueryParams,
   CashReconciliation,
   CashReconciliationQueryParams,
@@ -141,6 +142,10 @@ export async function deleteAsiento(id: number): Promise<ApiResponse<void>> {
   })
 }
 
+export async function getAsientoAudit(id: number): Promise<ApiResponse<AsientoAuditEntry[]>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_AUDIT(id))
+}
+
 // ============================================================
 // LIQUIDACIONES
 // ============================================================
@@ -204,6 +209,35 @@ export async function updateCashReconciliation(id: number, data: UpdateCashRecon
 export async function deleteCashReconciliation(id: number): Promise<ApiResponse<void>> {
   return fetchJson(API_ENDPOINTS.ACCOUNTING.CASH_RECONCILIATION_BY_ID(id), {
     method: 'DELETE',
+  })
+}
+
+// ============================================================
+// SUBDIARIO (Sub-journal posting)
+// ============================================================
+
+export async function getSubdiarioPendientes(subdiario = 'caja'): Promise<ApiResponse<{ fecha: string; count: number; total_debe: number }[]>> {
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PENDIENTES}?subdiario=${subdiario}`)
+}
+
+export async function getSubdiarioPreview(fecha: string, subdiario = 'caja'): Promise<ApiResponse<{
+  fecha: string
+  asientosCount: number
+  asientos: { id_asiento: number; nro_comprobante: string; concepto: string; origen: string }[]
+  detalles: { id_cuenta: number; cuenta: CuentaContable; tipo_mov: string; importe: number }[]
+  totalDebe: number
+  totalHaber: number
+}>> {
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PREVIEW}?fecha=${fecha}&subdiario=${subdiario}`)
+}
+
+export async function ejecutarPaseDiario(fecha: string, subdiario = 'caja'): Promise<ApiResponse<{
+  asientoResumen: Asiento
+  asientosVinculados: number
+}>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PASE, {
+    method: 'POST',
+    body: JSON.stringify({ fecha, subdiario }),
   })
 }
 

@@ -22,6 +22,8 @@ const CategoriesPage = lazy(() => import('@/pages/accounting/CategoriesPage'))
 const AccountingSettingsPage = lazy(() => import('@/pages/accounting/SettingsPage'))
 const ReconciliationsPage = lazy(() => import('@/pages/accounting/ReconciliationsPage'))
 const BalancesPage = lazy(() => import('@/pages/accounting/BalancesPage'))
+const CashMovementsPage = lazy(() => import('@/pages/accounting/CashMovementsPage'))
+const SubdiarioCajaPage = lazy(() => import('@/pages/accounting/SubdiarioCajaPage'))
 
 // Purchases module pages
 const PurchasesDashboardPage = lazy(() => import('@/pages/purchases/PurchasesDashboardPage'))
@@ -247,6 +249,28 @@ function App() {
               <ProtectedRoute requireAdmin>
                 <AccountingLayout>
                   <BalancesPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/accounting/cash-movements"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <CashMovementsPage />
+                </AccountingLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/accounting/subdiario"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AccountingLayout>
+                  <SubdiarioCajaPage />
                 </AccountingLayout>
               </ProtectedRoute>
             }

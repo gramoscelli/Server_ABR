@@ -2,8 +2,20 @@
  * Asiento Service - Business logic for double-entry journal entries
  */
 
-const { accountingDb, Asiento, AsientoDetalle, CuentaContable } = require('../models/accounting');
+const { accountingDb, Asiento, AsientoDetalle, CuentaContable, AsientoAudit } = require('../models/accounting');
 const { Op } = require('sequelize');
+
+/**
+ * Register an audit entry for an asiento action
+ */
+async function registrarAudit({ id_asiento, accion, usuario_id, detalle, transaction }) {
+  return AsientoAudit.create({
+    id_asiento,
+    accion,
+    usuario_id,
+    detalle: detalle || null
+  }, { transaction: transaction || undefined });
+}
 
 /**
  * Validate that total debits equal total credits
@@ -37,18 +49,15 @@ function validateBalance(detalles) {
 }
 
 /**
- * Generate sequential comprobante number for a given date
+ * Generate sequential comprobante number for a given date.
+ * Uses unscoped() to include soft-deleted entries and avoid reusing numbers.
  */
 async function generateComprobante(fecha, transaction) {
   const year = new Date(fecha).getFullYear();
   const prefix = `${year}-`;
 
-  const lastAsiento = await Asiento.findOne({
+  const lastAsiento = await Asiento.unscoped().findOne({
     where: {
-      nro_comprobante: {
-        [Op.like]: `${prefix}%`
-      },
-      // Exclude migration comprobantes
       nro_comprobante: {
         [Op.and]: [
           { [Op.like]: `${prefix}%` },
@@ -74,7 +83,7 @@ async function generateComprobante(fecha, transaction) {
 /**
  * Create a journal entry (asiento) with detail lines in a transaction
  */
-async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, estado }) {
+async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, estado, subdiario }) {
   if (!detalles || detalles.length < 2) {
     throw new Error('Un asiento debe tener al menos 2 líneas de detalle');
   }
@@ -107,7 +116,8 @@ async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, es
       origen: origen || 'manual',
       concepto,
       estado: estado || 'borrador',
-      usuario_id
+      usuario_id,
+      subdiario: subdiario || null
     }, { transaction: t });
 
     const detalleRecords = await AsientoDetalle.bulkCreate(
@@ -121,6 +131,14 @@ async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, es
       { transaction: t }
     );
 
+    await registrarAudit({
+      id_asiento: asiento.id_asiento,
+      accion: 'creado',
+      usuario_id,
+      detalle: { origen: origen || 'manual', estado: estado || 'borrador' },
+      transaction: t
+    });
+
     return { asiento, detalles: detalleRecords };
   });
 
@@ -130,7 +148,7 @@ async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, es
 /**
  * Confirm a draft journal entry
  */
-async function confirmarAsiento(id_asiento) {
+async function confirmarAsiento(id_asiento, usuario_id) {
   const asiento = await Asiento.findByPk(id_asiento, {
     include: [{ model: AsientoDetalle, as: 'detalles' }]
   });
@@ -149,7 +167,21 @@ async function confirmarAsiento(id_asiento) {
     importe: d.importe
   })));
 
-  await asiento.update({ estado: 'confirmado' });
+  await accountingDb.transaction(async (t) => {
+    await asiento.update({
+      estado: 'confirmado',
+      confirmado_por: usuario_id,
+      confirmado_at: new Date()
+    }, { transaction: t });
+
+    await registrarAudit({
+      id_asiento,
+      accion: 'confirmado',
+      usuario_id,
+      transaction: t
+    });
+  });
+
   return asiento;
 }
 
@@ -189,7 +221,9 @@ async function anularAsiento(id_asiento, usuario_id) {
       concepto: `ANULACIÓN de ${asiento.nro_comprobante} (${fechaOriginal}): ${asiento.concepto}`,
       estado: 'confirmado',
       usuario_id,
-      id_asiento_anulado: asiento.id_asiento
+      id_asiento_anulado: asiento.id_asiento,
+      confirmado_por: usuario_id,
+      confirmado_at: new Date()
     }, { transaction: t });
 
     await AsientoDetalle.bulkCreate(
@@ -204,12 +238,80 @@ async function anularAsiento(id_asiento, usuario_id) {
     );
 
     // Mark original as voided
-    await asiento.update({ estado: 'anulado' }, { transaction: t });
+    await asiento.update({
+      estado: 'anulado',
+      anulado_por: usuario_id,
+      anulado_at: new Date()
+    }, { transaction: t });
+
+    // Audit for original entry (anulado)
+    await registrarAudit({
+      id_asiento: asiento.id_asiento,
+      accion: 'anulado',
+      usuario_id,
+      detalle: { contra_asiento_id: contraAsiento.id_asiento },
+      transaction: t
+    });
+
+    // Audit for contra-asiento (creado)
+    await registrarAudit({
+      id_asiento: contraAsiento.id_asiento,
+      accion: 'creado',
+      usuario_id,
+      detalle: { origen: 'anulacion', asiento_anulado_id: asiento.id_asiento },
+      transaction: t
+    });
 
     return { asientoOriginal: asiento, contraAsiento };
   });
 
   return result;
+}
+
+/**
+ * Soft-delete a draft journal entry
+ */
+async function eliminarBorrador(id_asiento, usuario_id) {
+  const asiento = await Asiento.findByPk(id_asiento);
+
+  if (!asiento) {
+    throw new Error('Asiento no encontrado');
+  }
+
+  if (asiento.estado !== 'borrador') {
+    throw new Error('Solo se pueden eliminar asientos en estado borrador. Use anular para asientos confirmados.');
+  }
+
+  await accountingDb.transaction(async (t) => {
+    await asiento.update({
+      eliminado: true,
+      eliminado_por: usuario_id,
+      eliminado_at: new Date()
+    }, { transaction: t });
+
+    await registrarAudit({
+      id_asiento,
+      accion: 'eliminado',
+      usuario_id,
+      detalle: { nro_comprobante: asiento.nro_comprobante, concepto: asiento.concepto },
+      transaction: t
+    });
+  });
+
+  return asiento;
+}
+
+/**
+ * Register an edit audit with previous values
+ */
+async function registrarEdicion(id_asiento, usuario_id, valoresPrevios, transaction) {
+  return registrarAudit({
+    id_asiento,
+    accion: 'editado',
+    usuario_id,
+    detalle: { valores_previos: valoresPrevios },
+    transaction
+  });
 }
 
 /**
@@ -276,11 +378,220 @@ async function getAccountBalance(cuentaId, asOfDate) {
   };
 }
 
+/**
+ * Preview the summary entry that would be generated for a subdiario pase on a given date.
+ * Returns the detail lines (net movement per account) without persisting anything.
+ */
+async function previewPaseDiario(fecha, subdiario = 'caja') {
+  // Find all confirmed subdiario entries for this date that haven't been posted yet
+  const asientos = await Asiento.findAll({
+    where: {
+      subdiario,
+      fecha,
+      estado: 'confirmado',
+      id_pase_diario: null
+    },
+    include: [{
+      model: AsientoDetalle,
+      as: 'detalles',
+      include: [{
+        model: CuentaContable,
+        as: 'cuenta',
+        attributes: ['id', 'codigo', 'titulo', 'tipo', 'subtipo']
+      }]
+    }],
+    order: [['id_asiento', 'ASC']]
+  });
+
+  if (asientos.length === 0) {
+    return { asientos: [], detalles: [], totalDebe: 0, totalHaber: 0 };
+  }
+
+  // Aggregate net movement per account
+  const netByCuenta = {};
+  for (const asiento of asientos) {
+    for (const det of asiento.detalles) {
+      const key = det.id_cuenta;
+      if (!netByCuenta[key]) {
+        netByCuenta[key] = { id_cuenta: key, cuenta: det.cuenta, neto: 0 };
+      }
+      const importe = parseFloat(det.importe);
+      netByCuenta[key].neto += det.tipo_mov === 'debe' ? importe : -importe;
+    }
+  }
+
+  // Build summary lines: positive net = debe, negative net = haber
+  const detalles = [];
+  let totalDebe = 0;
+  let totalHaber = 0;
+
+  for (const entry of Object.values(netByCuenta)) {
+    if (Math.abs(entry.neto) < 0.01) continue; // skip zero-net accounts
+    if (entry.neto > 0) {
+      detalles.push({
+        id_cuenta: entry.id_cuenta,
+        cuenta: entry.cuenta,
+        tipo_mov: 'debe',
+        importe: Math.round(entry.neto * 100) / 100
+      });
+      totalDebe += Math.round(entry.neto * 100) / 100;
+    } else {
+      detalles.push({
+        id_cuenta: entry.id_cuenta,
+        cuenta: entry.cuenta,
+        tipo_mov: 'haber',
+        importe: Math.round(Math.abs(entry.neto) * 100) / 100
+      });
+      totalHaber += Math.round(Math.abs(entry.neto) * 100) / 100;
+    }
+  }
+
+  return {
+    fecha,
+    asientosCount: asientos.length,
+    asientos: asientos.map(a => ({
+      id_asiento: a.id_asiento,
+      nro_comprobante: a.nro_comprobante,
+      concepto: a.concepto,
+      origen: a.origen
+    })),
+    detalles,
+    totalDebe: Math.round(totalDebe * 100) / 100,
+    totalHaber: Math.round(totalHaber * 100) / 100
+  };
+}
+
+/**
+ * Execute the pase al diario: create a summary entry and link all subdiario entries to it.
+ */
+async function generarPaseDiario(fecha, usuario_id, subdiario = 'caja') {
+  const preview = await previewPaseDiario(fecha, subdiario);
+
+  if (preview.asientosCount === 0) {
+    throw new Error(`No hay movimientos pendientes de pase para la fecha ${fecha}`);
+  }
+
+  if (preview.detalles.length < 2) {
+    throw new Error('El asiento resumen debe tener al menos 2 líneas de detalle');
+  }
+
+  // Validate balance
+  if (Math.abs(preview.totalDebe - preview.totalHaber) > 0.009) {
+    throw new Error(
+      `El resumen no balancea. Debe: ${preview.totalDebe.toFixed(2)}, Haber: ${preview.totalHaber.toFixed(2)}`
+    );
+  }
+
+  const fechaDisplay = new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+
+  const subdiarioLabel = subdiario === 'caja' ? 'Caja' : subdiario;
+
+  const result = await accountingDb.transaction(async (t) => {
+    const nro_comprobante = await generateComprobante(fecha, t);
+
+    // Create summary entry
+    const asientoResumen = await Asiento.create({
+      fecha,
+      nro_comprobante,
+      origen: 'pase_subdiario',
+      concepto: `Pase subdiario de ${subdiarioLabel} — ${fechaDisplay} (${preview.asientosCount} movimientos)`,
+      estado: 'confirmado',
+      usuario_id,
+      subdiario: null, // summary entry belongs to the libro diario, not the subdiario
+      confirmado_por: usuario_id,
+      confirmado_at: new Date()
+    }, { transaction: t });
+
+    // Create detail lines
+    await AsientoDetalle.bulkCreate(
+      preview.detalles.map(d => ({
+        id_asiento: asientoResumen.id_asiento,
+        id_cuenta: d.id_cuenta,
+        tipo_mov: d.tipo_mov,
+        importe: d.importe,
+        referencia_operativa: `Pase subdiario ${subdiarioLabel} ${fechaDisplay}`
+      })),
+      { transaction: t }
+    );
+
+    // Link original subdiario entries to this summary
+    const asientoIds = preview.asientos.map(a => a.id_asiento);
+    await Asiento.update(
+      { id_pase_diario: asientoResumen.id_asiento },
+      { where: { id_asiento: { [Op.in]: asientoIds } }, transaction: t }
+    );
+
+    // Audit for summary entry
+    await registrarAudit({
+      id_asiento: asientoResumen.id_asiento,
+      accion: 'creado',
+      usuario_id,
+      detalle: { origen: 'pase_subdiario', asientos_vinculados: asientoIds },
+      transaction: t
+    });
+
+    // Audit for each linked subdiario entry
+    for (const asientoId of asientoIds) {
+      await registrarAudit({
+        id_asiento: asientoId,
+        accion: 'pase_diario',
+        usuario_id,
+        detalle: { id_pase_diario: asientoResumen.id_asiento },
+        transaction: t
+      });
+    }
+
+    return asientoResumen;
+  });
+
+  return {
+    asientoResumen: result,
+    asientosVinculados: preview.asientosCount
+  };
+}
+
+/**
+ * Get dates that have pending (unposted) subdiario entries
+ */
+async function getPendientesPase(subdiario = 'caja') {
+  const results = await Asiento.findAll({
+    where: {
+      subdiario,
+      estado: 'confirmado',
+      id_pase_diario: null
+    },
+    attributes: [
+      'fecha',
+      [accountingDb.fn('COUNT', accountingDb.col('id_asiento')), 'count'],
+      [accountingDb.fn('SUM',
+        accountingDb.literal(`(SELECT SUM(d.importe) FROM asiento_detalle d WHERE d.id_asiento = Asiento.id_asiento AND d.tipo_mov = 'debe')`)
+      ), 'total_debe']
+    ],
+    group: ['fecha'],
+    order: [['fecha', 'DESC']],
+    raw: true
+  });
+
+  return results.map(r => ({
+    fecha: r.fecha,
+    count: parseInt(r.count),
+    total_debe: parseFloat(r.total_debe) || 0
+  }));
+}
+
 module.exports = {
   validateBalance,
   generateComprobante,
   createAsiento,
   confirmarAsiento,
   anularAsiento,
-  getAccountBalance
+  eliminarBorrador,
+  registrarAudit,
+  registrarEdicion,
+  getAccountBalance,
+  previewPaseDiario,
+  generarPaseDiario,
+  getPendientesPase
 };

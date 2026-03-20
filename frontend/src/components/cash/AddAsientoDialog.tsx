@@ -92,7 +92,7 @@ function CuentaSearchInput({ cuentas, selectedId, onSelect, disabled }: CuentaSe
       const matchCode = !code || String(c.codigo).startsWith(code)
       const matchTitle = !title || c.titulo.toLowerCase().includes(title)
       return matchCode && matchTitle
-    }).slice(0, 15)
+    })
   }, [cuentas, codigoSearch, tituloSearch])
 
   const selectCuenta = useCallback((c: CuentaContable) => {

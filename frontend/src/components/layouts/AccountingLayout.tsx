@@ -2,12 +2,14 @@ import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
 import {
   LayoutDashboard,
   BookOpenText,
+  BookUp2,
   FileText,
   Settings,
   DollarSign,
   Calculator,
   List,
   Scale,
+  Banknote,
 } from 'lucide-react'
 
 const navigation: NavigationItem[] = [
@@ -20,6 +22,16 @@ const navigation: NavigationItem[] = [
     name: 'Asientos',
     href: '/accounting/operations',
     icon: BookOpenText,
+  },
+  {
+    name: 'Movimientos de Caja',
+    href: '/accounting/cash-movements',
+    icon: Banknote,
+  },
+  {
+    name: 'Pase al Diario',
+    href: '/accounting/subdiario',
+    icon: BookUp2,
   },
   {
     name: 'Plan de Cuentas',

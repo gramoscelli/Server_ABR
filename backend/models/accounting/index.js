@@ -12,6 +12,7 @@ const CuentaBancaria = require('./CuentaBancaria');
 const CuentaPagoElectronico = require('./CuentaPagoElectronico');
 const LiquidacionElectronica = require('./LiquidacionElectronica');
 const CashReconciliation = require('./CashReconciliation');
+const AsientoAudit = require('./AsientoAudit');
 
 // === Asiento associations ===
 Asiento.hasMany(AsientoDetalle, { as: 'detalles', foreignKey: 'id_asiento' });
@@ -20,6 +21,10 @@ AsientoDetalle.belongsTo(Asiento, { as: 'asiento', foreignKey: 'id_asiento' });
 // Self-referential: contra-asiento → asiento original anulado
 Asiento.belongsTo(Asiento, { as: 'asientoAnulado', foreignKey: 'id_asiento_anulado' });
 Asiento.hasOne(Asiento, { as: 'contraAsiento', foreignKey: 'id_asiento_anulado' });
+
+// Self-referential: subdiario entries → pase al diario summary entry
+Asiento.belongsTo(Asiento, { as: 'paseDiario', foreignKey: 'id_pase_diario' });
+Asiento.hasMany(Asiento, { as: 'asientosSubdiario', foreignKey: 'id_pase_diario' });
 
 // === AsientoDetalle → CuentaContable ===
 AsientoDetalle.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
@@ -42,6 +47,10 @@ CuentaPagoElectronico.hasMany(LiquidacionElectronica, { as: 'liquidaciones', for
 LiquidacionElectronica.belongsTo(Asiento, { as: 'asientoOrigen', foreignKey: 'id_asiento_origen' });
 LiquidacionElectronica.belongsTo(Asiento, { as: 'asientoAcreditacion', foreignKey: 'id_asiento_acreditacion' });
 
+// === AsientoAudit associations ===
+Asiento.hasMany(AsientoAudit, { as: 'auditLog', foreignKey: 'id_asiento' });
+AsientoAudit.belongsTo(Asiento, { as: 'asiento', foreignKey: 'id_asiento' });
+
 // === CashReconciliation → CuentaContable ===
 CashReconciliation.belongsTo(CuentaContable, { as: 'cuenta', foreignKey: 'id_cuenta' });
 CuentaContable.hasMany(CashReconciliation, { as: 'reconciliaciones', foreignKey: 'id_cuenta' });
@@ -55,5 +64,6 @@ module.exports = {
   CuentaBancaria,
   CuentaPagoElectronico,
   LiquidacionElectronica,
-  CashReconciliation
+  CashReconciliation,
+  AsientoAudit
 };

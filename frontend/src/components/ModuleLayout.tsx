@@ -137,7 +137,7 @@ export function ModuleLayout({
               variant="ghost"
             >
               <Home className="h-5 w-5" />
-              <span>Salir</span>
+              <span>Ir al inicio</span>
             </Button>
           </div>
         </div>
@@ -205,7 +205,7 @@ export function ModuleLayout({
         <div className="border-t border-white/10 px-4 py-4">
           <Button
             onClick={() => navigate('/')}
-            title={desktopSidebarCollapsed ? 'Salir' : ''}
+            title={desktopSidebarCollapsed ? 'Ir al inicio' : ''}
             className={cn(
               "w-full flex items-center rounded-xl py-3.5 text-sm font-semibold transition-all duration-200",
               "bg-white/10 hover:bg-white/20 text-white/80 hover:text-white hover:scale-105",
@@ -214,7 +214,7 @@ export function ModuleLayout({
             variant="ghost"
           >
             <Home className="h-5 w-5" />
-            {!desktopSidebarCollapsed && <span>Salir</span>}
+            {!desktopSidebarCollapsed && <span>Ir al inicio</span>}
           </Button>
         </div>
       </div>

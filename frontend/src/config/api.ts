@@ -70,6 +70,7 @@ export const API_ENDPOINTS = {
     ASIENTO_BY_ID: (id: number) => `/api/accounting/asientos/${id}`,
     ASIENTO_CONFIRMAR: (id: number) => `/api/accounting/asientos/${id}/confirmar`,
     ASIENTO_ANULAR: (id: number) => `/api/accounting/asientos/${id}/anular`,
+    ASIENTO_AUDIT: (id: number) => `/api/accounting/asientos/${id}/audit`,
 
     // Extended accounts
     CUENTAS_EFECTIVO: '/api/accounting/cuentas-extendidas/efectivo',
@@ -86,6 +87,11 @@ export const API_ENDPOINTS = {
     CASH_RECONCILIATION_BY_DATE: (date: string) => `/api/accounting/cash-reconciliations/date/${date}`,
     CASH_RECONCILIATION_CALCULATE: (cuentaId: number, date: string) =>
       `/api/accounting/cash-reconciliations/calculate/${cuentaId}/${date}`,
+
+    // Subdiario
+    SUBDIARIO_PENDIENTES: '/api/accounting/subdiario/pendientes',
+    SUBDIARIO_PREVIEW: '/api/accounting/subdiario/preview',
+    SUBDIARIO_PASE: '/api/accounting/subdiario/pase',
 
     // Reports
     REPORTS: {

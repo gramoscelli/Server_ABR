@@ -19,7 +19,13 @@ export function CompactDatePicker({ value, onChange, className = '' }: CompactDa
   const updatePos = useCallback(() => {
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      setPos({ top: rect.bottom + 4, left: rect.left })
+      const calendarWidth = 320 // approximate calendar width
+      let left = rect.left
+      // If the calendar would overflow the right edge, align to the right edge of the button
+      if (left + calendarWidth > window.innerWidth) {
+        left = rect.right - calendarWidth
+      }
+      setPos({ top: rect.bottom + 4, left: Math.max(0, left) })
     }
   }, [])
 

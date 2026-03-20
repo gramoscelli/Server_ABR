@@ -49,30 +49,54 @@ export interface CuentaPagoElectronico {
   liquidacion_diferida: boolean
 }
 
+export interface UsuarioRef {
+  id: number
+  username: string
+  nombre: string | null
+  apellido: string | null
+}
+
 export interface Asiento {
   id_asiento: number
   fecha: string
   nro_comprobante: string
-  origen: 'manual' | 'ingreso' | 'egreso' | 'transferencia' | 'ajuste' | 'compra' | 'liquidacion' | 'anulacion'
+  origen: 'manual' | 'ingreso' | 'egreso' | 'transferencia' | 'ajuste' | 'compra' | 'liquidacion' | 'anulacion' | 'pase_subdiario'
   concepto: string
   estado: 'borrador' | 'confirmado' | 'anulado'
   usuario_id: number
   id_asiento_anulado?: number | null
+  subdiario?: string | null
+  id_pase_diario?: number | null
+  confirmado_por?: number | null
+  confirmado_at?: string | null
+  anulado_por?: number | null
+  anulado_at?: string | null
+  eliminado?: boolean
+  eliminado_por?: number | null
+  eliminado_at?: string | null
   created_at: string
   updated_at: string
   detalles?: AsientoDetalle[]
-  usuario?: {
-    id: number
-    username: string
-    nombre: string | null
-    apellido: string | null
-  }
+  usuario?: UsuarioRef
+  confirmado_por_usuario?: UsuarioRef | null
+  anulado_por_usuario?: UsuarioRef | null
+  eliminado_por_usuario?: UsuarioRef | null
   asientoAnulado?: {
     id_asiento: number
     nro_comprobante: string
     fecha: string
     concepto: string
   } | null
+}
+
+export interface AsientoAuditEntry {
+  id_audit: number
+  id_asiento: number
+  accion: 'creado' | 'editado' | 'confirmado' | 'anulado' | 'eliminado' | 'pase_diario'
+  usuario_id: number
+  timestamp: string
+  detalle: Record<string, unknown> | null
+  usuario?: UsuarioRef | null
 }
 
 export interface AsientoDetalle {
@@ -233,6 +257,8 @@ export interface AsientoQueryParams {
   estado?: 'borrador' | 'confirmado' | 'anulado'
   origen?: string
   cuenta_id?: number
+  subdiario?: string
+  include_subdiario?: string
   page?: number
   limit?: number
 }
@@ -261,7 +287,41 @@ export interface CreateAsientoData {
   origen?: string
   concepto: string
   estado?: 'borrador' | 'confirmado'
+  subdiario?: string | null
   detalles: CreateAsientoDetalleData[]
+}
+
+// Subdiario types
+export interface SubdiarioPendiente {
+  fecha: string
+  count: number
+  total_debe: number
+}
+
+export interface PasePreviewDetalle {
+  id_cuenta: number
+  cuenta: CuentaContable
+  tipo_mov: 'debe' | 'haber'
+  importe: number
+}
+
+export interface PasePreview {
+  fecha: string
+  asientosCount: number
+  asientos: {
+    id_asiento: number
+    nro_comprobante: string
+    concepto: string
+    origen: string
+  }[]
+  detalles: PasePreviewDetalle[]
+  totalDebe: number
+  totalHaber: number
+}
+
+export interface PaseResult {
+  asientoResumen: Asiento
+  asientosVinculados: number
 }
 
 export interface CreateAsientoDetalleData {

@@ -28,7 +28,7 @@ const Asiento = accountingDb.define('Asiento', {
     }
   },
   origen: {
-    type: DataTypes.ENUM('manual', 'ingreso', 'egreso', 'transferencia', 'ajuste', 'compra', 'liquidacion', 'anulacion'),
+    type: DataTypes.ENUM('manual', 'ingreso', 'egreso', 'transferencia', 'ajuste', 'compra', 'liquidacion', 'anulacion', 'pase_subdiario'),
     allowNull: false,
     defaultValue: 'manual'
   },
@@ -59,11 +59,63 @@ const Asiento = accountingDb.define('Asiento', {
       model: 'asiento',
       key: 'id_asiento'
     }
+  },
+  subdiario: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: null
+  },
+  id_pase_diario: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null,
+    references: {
+      model: 'asiento',
+      key: 'id_asiento'
+    }
+  },
+  confirmado_por: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  confirmado_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  anulado_por: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  anulado_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
+  eliminado: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
+  eliminado_por: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  eliminado_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'asiento',
   timestamps: true,
-  underscored: true
+  underscored: true,
+  defaultScope: {
+    where: { eliminado: false }
+  },
+  scopes: {
+    withDeleted: {},
+    onlyDeleted: {
+      where: { eliminado: true }
+    }
+  }
 });
 
 module.exports = Asiento;
