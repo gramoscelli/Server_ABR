@@ -85,34 +85,40 @@ router.get('/', async (req, res) => {
       where.subdiario = null;
     }
 
-    // If filtering by account, we need to join through detalles
-    const includeDetalles = {
-      model: AsientoDetalle,
-      as: 'detalles',
-      include: [{
-        model: CuentaContable,
-        as: 'cuenta',
-        attributes: ['id', 'codigo', 'titulo', 'tipo', 'subtipo']
-      }]
-    };
+    // If filtering by account, use a separate required include to filter asientos,
+    // but always load ALL detalles so the full entry is available for display/edit
+    const includes = [
+      {
+        model: AsientoDetalle,
+        as: 'detalles',
+        include: [{
+          model: CuentaContable,
+          as: 'cuenta',
+          attributes: ['id', 'codigo', 'titulo', 'tipo', 'subtipo']
+        }]
+      },
+      {
+        model: Asiento,
+        as: 'asientoAnulado',
+        attributes: ['id_asiento', 'nro_comprobante', 'fecha', 'concepto'],
+        required: false
+      }
+    ];
 
     if (cuenta_id) {
-      includeDetalles.where = { id_cuenta: parseInt(cuenta_id) };
+      // Filter: only asientos that have a line with this account
+      where.id_asiento = {
+        [Op.in]: Asiento.sequelize.literal(
+          `(SELECT DISTINCT id_asiento FROM asiento_detalle WHERE id_cuenta = ${parseInt(cuenta_id)})`
+        )
+      };
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const { count, rows } = await Asiento.findAndCountAll({
       where,
-      include: [
-        includeDetalles,
-        {
-          model: Asiento,
-          as: 'asientoAnulado',
-          attributes: ['id_asiento', 'nro_comprobante', 'fecha', 'concepto'],
-          required: false
-        }
-      ],
+      include: includes,
       order: [['fecha', 'DESC'], ['id_asiento', 'DESC']],
       limit: parseInt(limit),
       offset,
@@ -312,10 +318,14 @@ router.put('/:id', authorizeRoles('root', 'admin_employee'), async (req, res) =>
       return res.status(404).json({ success: false, error: 'Asiento no encontrado' });
     }
 
-    if (asiento.estado !== 'borrador') {
+    // Allow editing: borradores always, confirmed caja entries if not yet posted to diario
+    const isCajaEditable = asiento.subdiario === 'caja' && !asiento.id_pase_diario;
+    if (asiento.estado !== 'borrador' && !(asiento.estado === 'confirmado' && isCajaEditable)) {
       return res.status(400).json({
         success: false,
-        error: 'Solo se pueden editar asientos en estado borrador'
+        error: asiento.id_pase_diario
+          ? 'No se pueden editar asientos ya pasados al libro diario'
+          : 'Solo se pueden editar asientos en estado borrador'
       });
     }
 
@@ -342,6 +352,19 @@ router.put('/:id', authorizeRoles('root', 'admin_employee'), async (req, res) =>
       const cuentas = await CuentaContable.findAll({ where: { id: cuentaIds } });
       if (cuentas.length !== cuentaIds.length) {
         return res.status(400).json({ success: false, error: 'Una o más cuentas no existen' });
+      }
+
+      // Validate resultado accounts: ingreso only in haber, egreso only in debe
+      const cuentaMap = new Map(cuentas.map(c => [c.id, c]));
+      for (const d of detalles) {
+        const cuenta = cuentaMap.get(d.id_cuenta);
+        if (!cuenta) continue;
+        if (cuenta.tipo === 'ingreso' && d.tipo_mov === 'debe') {
+          return res.status(400).json({ success: false, error: `La cuenta de ingreso "${cuenta.codigo} ${cuenta.titulo}" no puede registrarse en el Debe` });
+        }
+        if (cuenta.tipo === 'egreso' && d.tipo_mov === 'haber') {
+          return res.status(400).json({ success: false, error: `La cuenta de egreso "${cuenta.codigo} ${cuenta.titulo}" no puede registrarse en el Haber` });
+        }
       }
 
       valoresPrevios.detalles_modificados = true;
@@ -439,6 +462,90 @@ router.post('/:id/anular', authorizeRoles('root'), async (req, res) => {
       return res.status(400).json({ success: false, error: error.message });
     }
     res.status(500).json({ success: false, error: 'Error al anular asiento' });
+  }
+});
+
+// POST /:id/pase-diario - Pass a single caja entry to the libro diario
+router.post('/:id/pase-diario', authorizeRoles('root', 'admin_employee'), async (req, res) => {
+  try {
+    const asiento = await Asiento.findByPk(req.params.id, {
+      include: [{
+        model: AsientoDetalle,
+        as: 'detalles',
+        include: [{ model: CuentaContable, as: 'cuenta', attributes: ['id', 'codigo', 'titulo', 'tipo', 'subtipo'] }]
+      }]
+    });
+
+    if (!asiento) {
+      return res.status(404).json({ success: false, error: 'Asiento no encontrado' });
+    }
+    if (asiento.estado !== 'confirmado') {
+      return res.status(400).json({ success: false, error: 'Solo se pueden pasar asientos confirmados' });
+    }
+    if (asiento.id_pase_diario) {
+      return res.status(400).json({ success: false, error: 'Este asiento ya fue pasado al libro diario' });
+    }
+    if (!asiento.subdiario) {
+      return res.status(400).json({ success: false, error: 'Solo se pueden pasar asientos de subdiarios' });
+    }
+
+    const { accountingDb } = require('../../models/accounting');
+
+    const result = await accountingDb.transaction(async (t) => {
+      const nro_comprobante = await asientoService.generateComprobante(asiento.fecha, t);
+      const fechaDisplay = new Date(asiento.fecha + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      // Create summary entry in libro diario
+      const asientoResumen = await Asiento.create({
+        fecha: asiento.fecha,
+        nro_comprobante,
+        origen: 'pase_subdiario',
+        concepto: `Pase subdiario de Caja — ${fechaDisplay} (1 movimiento)`,
+        estado: 'confirmado',
+        usuario_id: req.user.id,
+        subdiario: null,
+        confirmado_por: req.user.id,
+        confirmado_at: new Date()
+      }, { transaction: t });
+
+      // Copy detail lines to summary
+      await AsientoDetalle.bulkCreate(
+        asiento.detalles.map(d => ({
+          id_asiento: asientoResumen.id_asiento,
+          id_cuenta: d.id_cuenta,
+          tipo_mov: d.tipo_mov,
+          importe: d.importe,
+          referencia_operativa: d.referencia_operativa || `Pase individual ${fechaDisplay}`
+        })),
+        { transaction: t }
+      );
+
+      // Link original to summary
+      await asiento.update({ id_pase_diario: asientoResumen.id_asiento }, { transaction: t });
+
+      // Audit
+      await asientoService.registrarAudit({
+        id_asiento: asientoResumen.id_asiento,
+        accion: 'creado',
+        usuario_id: req.user.id,
+        detalle: { origen: 'pase_subdiario', asientos_vinculados: [asiento.id_asiento] },
+        transaction: t
+      });
+      await asientoService.registrarAudit({
+        id_asiento: asiento.id_asiento,
+        accion: 'pase_diario',
+        usuario_id: req.user.id,
+        detalle: { id_pase_diario: asientoResumen.id_asiento },
+        transaction: t
+      });
+
+      return asientoResumen;
+    });
+
+    res.json({ success: true, data: { asientoResumen: result } });
+  } catch (error) {
+    console.error('Error in individual pase:', error);
+    res.status(500).json({ success: false, error: error.message || 'Error al ejecutar pase al diario' });
   }
 });
 

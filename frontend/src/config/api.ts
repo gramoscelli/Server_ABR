@@ -34,6 +34,9 @@ export const API_ENDPOINTS = {
     ROLE_BY_ID: (id: number) => `/api/admin/roles/${id}`,
     SETTINGS: '/api/admin/settings',
     STATS: '/api/admin/stats',
+    AUDIT: '/api/admin/audit',
+    AUDIT_STATS: '/api/admin/audit/stats',
+    AUDIT_FILTERS: '/api/admin/audit/filters',
   },
 
   // API Keys endpoints
@@ -59,6 +62,7 @@ export const API_ENDPOINTS = {
     DASHBOARD: '/api/accounting/dashboard',
     DASHBOARD_MONTHLY: '/api/accounting/dashboard/monthly',
     DASHBOARD_BALANCES: '/api/accounting/dashboard/balances',
+    DASHBOARD_CUOTAS_DIA: '/api/accounting/dashboard/cuotas-dia',
 
     // Cuentas Contables (chart of accounts)
     CUENTAS: '/api/accounting/cuentas',
@@ -71,6 +75,7 @@ export const API_ENDPOINTS = {
     ASIENTO_CONFIRMAR: (id: number) => `/api/accounting/asientos/${id}/confirmar`,
     ASIENTO_ANULAR: (id: number) => `/api/accounting/asientos/${id}/anular`,
     ASIENTO_AUDIT: (id: number) => `/api/accounting/asientos/${id}/audit`,
+    ASIENTO_PASE_DIARIO: (id: number) => `/api/accounting/asientos/${id}/pase-diario`,
 
     // Extended accounts
     CUENTAS_EFECTIVO: '/api/accounting/cuentas-extendidas/efectivo',
@@ -92,6 +97,11 @@ export const API_ENDPOINTS = {
     SUBDIARIO_PENDIENTES: '/api/accounting/subdiario/pendientes',
     SUBDIARIO_PREVIEW: '/api/accounting/subdiario/preview',
     SUBDIARIO_PASE: '/api/accounting/subdiario/pase',
+
+    // Audit
+    AUDIT_LOG: '/api/accounting/audit',
+    AUDIT_LOG_STATS: '/api/accounting/audit/stats',
+    AUDIT_LOG_FILTERS: '/api/accounting/audit/filters',
 
     // Reports
     REPORTS: {

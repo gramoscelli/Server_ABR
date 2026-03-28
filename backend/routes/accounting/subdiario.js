@@ -20,14 +20,14 @@ router.get('/pendientes', authorizeRoles('root', 'admin_employee'), async (req, 
   }
 });
 
-// GET /preview - Preview the summary entry for a given date
+// GET /preview - Preview the summary entry for a date range
 router.get('/preview', authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const { fecha, subdiario = 'caja' } = req.query;
+    const { fecha, fecha_hasta, subdiario = 'caja' } = req.query;
     if (!fecha) {
-      return res.status(400).json({ success: false, error: 'La fecha es obligatoria' });
+      return res.status(400).json({ success: false, error: 'La fecha inicial es obligatoria' });
     }
-    const preview = await asientoService.previewPaseDiario(fecha, subdiario);
+    const preview = await asientoService.previewPaseDiario(fecha, subdiario, fecha_hasta || null);
     res.json({ success: true, data: preview });
   } catch (error) {
     console.error('Error previewing pase:', error);
@@ -35,14 +35,14 @@ router.get('/preview', authorizeRoles('root', 'admin_employee'), async (req, res
   }
 });
 
-// POST /pase - Execute the pase al diario for a given date
+// POST /pase - Execute the pase al diario for a date range
 router.post('/pase', authorizeRoles('root', 'admin_employee'), async (req, res) => {
   try {
-    const { fecha, subdiario = 'caja' } = req.body;
+    const { fecha, fecha_hasta, subdiario = 'caja' } = req.body;
     if (!fecha) {
-      return res.status(400).json({ success: false, error: 'La fecha es obligatoria' });
+      return res.status(400).json({ success: false, error: 'La fecha inicial es obligatoria' });
     }
-    const result = await asientoService.generarPaseDiario(fecha, req.user.id, subdiario);
+    const result = await asientoService.generarPaseDiario(fecha, req.user.id, subdiario, fecha_hasta || null);
     res.status(201).json({
       success: true,
       data: result,

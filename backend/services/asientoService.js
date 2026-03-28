@@ -107,6 +107,19 @@ async function createAsiento({ fecha, origen, concepto, detalles, usuario_id, es
     throw new Error(`Cuentas inactivas: ${inactive.map(c => `${c.codigo} ${c.titulo}`).join(', ')}`);
   }
 
+  // Validate resultado accounts: ingreso only in haber, egreso only in debe
+  const cuentaMap = new Map(cuentas.map(c => [c.id, c]));
+  for (const d of detalles) {
+    const cuenta = cuentaMap.get(d.id_cuenta);
+    if (!cuenta) continue;
+    if (cuenta.tipo === 'ingreso' && d.tipo_mov === 'debe') {
+      throw new Error(`La cuenta de ingreso "${cuenta.codigo} ${cuenta.titulo}" no puede registrarse en el Debe`);
+    }
+    if (cuenta.tipo === 'egreso' && d.tipo_mov === 'haber') {
+      throw new Error(`La cuenta de egreso "${cuenta.codigo} ${cuenta.titulo}" no puede registrarse en el Haber`);
+    }
+  }
+
   const result = await accountingDb.transaction(async (t) => {
     const nro_comprobante = await generateComprobante(fecha, t);
 
@@ -278,8 +291,12 @@ async function eliminarBorrador(id_asiento, usuario_id) {
     throw new Error('Asiento no encontrado');
   }
 
-  if (asiento.estado !== 'borrador') {
-    throw new Error('Solo se pueden eliminar asientos en estado borrador. Use anular para asientos confirmados.');
+  // Allow deleting: borradores always, confirmed caja entries if not yet posted to diario
+  const isCajaEditable = asiento.subdiario === 'caja' && !asiento.id_pase_diario;
+  if (asiento.estado !== 'borrador' && !(asiento.estado === 'confirmado' && isCajaEditable)) {
+    throw new Error(asiento.id_pase_diario
+      ? 'No se pueden eliminar asientos ya pasados al libro diario'
+      : 'Solo se pueden eliminar asientos en estado borrador. Use anular para asientos confirmados.');
   }
 
   await accountingDb.transaction(async (t) => {
@@ -379,18 +396,24 @@ async function getAccountBalance(cuentaId, asOfDate) {
 }
 
 /**
- * Preview the summary entry that would be generated for a subdiario pase on a given date.
+ * Preview the summary entry that would be generated for a subdiario pase on a given date or date range.
  * Returns the detail lines (net movement per account) without persisting anything.
  */
-async function previewPaseDiario(fecha, subdiario = 'caja') {
-  // Find all confirmed subdiario entries for this date that haven't been posted yet
+async function previewPaseDiario(fecha, subdiario = 'caja', fechaHasta = null) {
+  const whereClause = {
+    subdiario,
+    estado: 'confirmado',
+    id_pase_diario: null
+  };
+  if (fechaHasta) {
+    whereClause.fecha = { [Op.between]: [fecha, fechaHasta] };
+  } else {
+    whereClause.fecha = fecha;
+  }
+
+  // Find all confirmed subdiario entries that haven't been posted yet
   const asientos = await Asiento.findAll({
-    where: {
-      subdiario,
-      fecha,
-      estado: 'confirmado',
-      id_pase_diario: null
-    },
+    where: whereClause,
     include: [{
       model: AsientoDetalle,
       as: 'detalles',
@@ -446,14 +469,22 @@ async function previewPaseDiario(fecha, subdiario = 'caja') {
     }
   }
 
+  // Sort: debe first, then haber
+  detalles.sort((a, b) => {
+    if (a.tipo_mov === b.tipo_mov) return 0;
+    return a.tipo_mov === 'debe' ? -1 : 1;
+  });
+
   return {
     fecha,
+    fechaHasta: fechaHasta || fecha,
     asientosCount: asientos.length,
     asientos: asientos.map(a => ({
       id_asiento: a.id_asiento,
       nro_comprobante: a.nro_comprobante,
       concepto: a.concepto,
-      origen: a.origen
+      origen: a.origen,
+      fecha: a.fecha
     })),
     detalles,
     totalDebe: Math.round(totalDebe * 100) / 100,
@@ -464,11 +495,13 @@ async function previewPaseDiario(fecha, subdiario = 'caja') {
 /**
  * Execute the pase al diario: create a summary entry and link all subdiario entries to it.
  */
-async function generarPaseDiario(fecha, usuario_id, subdiario = 'caja') {
-  const preview = await previewPaseDiario(fecha, subdiario);
+async function generarPaseDiario(fecha, usuario_id, subdiario = 'caja', fechaHasta = null) {
+  const preview = await previewPaseDiario(fecha, subdiario, fechaHasta);
 
   if (preview.asientosCount === 0) {
-    throw new Error(`No hay movimientos pendientes de pase para la fecha ${fecha}`);
+    throw new Error(fechaHasta
+      ? `No hay movimientos pendientes de pase entre ${fecha} y ${fechaHasta}`
+      : `No hay movimientos pendientes de pase para la fecha ${fecha}`);
   }
 
   if (preview.detalles.length < 2) {
@@ -482,18 +515,23 @@ async function generarPaseDiario(fecha, usuario_id, subdiario = 'caja') {
     );
   }
 
-  const fechaDisplay = new Date(fecha + 'T12:00:00').toLocaleDateString('es-AR', {
+  const formatDate = (f) => new Date(f + 'T12:00:00').toLocaleDateString('es-AR', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
+  const fechaDisplay = fechaHasta && fechaHasta !== fecha
+    ? `${formatDate(fecha)} al ${formatDate(fechaHasta)}`
+    : formatDate(fecha);
 
   const subdiarioLabel = subdiario === 'caja' ? 'Caja' : subdiario;
+  // Use the last date in the range for the asiento date
+  const fechaAsiento = fechaHasta || fecha;
 
   const result = await accountingDb.transaction(async (t) => {
-    const nro_comprobante = await generateComprobante(fecha, t);
+    const nro_comprobante = await generateComprobante(fechaAsiento, t);
 
     // Create summary entry
     const asientoResumen = await Asiento.create({
-      fecha,
+      fecha: fechaAsiento,
       nro_comprobante,
       origen: 'pase_subdiario',
       concepto: `Pase subdiario de ${subdiarioLabel} — ${fechaDisplay} (${preview.asientosCount} movimientos)`,

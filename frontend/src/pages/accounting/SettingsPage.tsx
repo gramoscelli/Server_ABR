@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import {
   Tag,
+  ClipboardList,
   Settings as SettingsIcon,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -16,6 +17,13 @@ export default function SettingsPage() {
       icon: Tag,
       color: 'bg-purple-500',
       route: '/accounting/categories',
+    },
+    {
+      title: 'Auditoría',
+      description: 'Consulta el registro de todas las acciones realizadas sobre asientos contables',
+      icon: ClipboardList,
+      color: 'bg-gray-600',
+      route: '/accounting/audit',
     },
   ]
 

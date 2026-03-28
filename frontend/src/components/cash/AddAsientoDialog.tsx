@@ -8,13 +8,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { createAsiento } from '@/lib/accountingService'
 import type { CuentaContable, CreateAsientoData, CreateAsientoDetalleData } from '@/types/accounting'
 import { CurrencyInput } from '@/components/ui/currency-input'
@@ -233,15 +226,35 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
   const isBalanced = difference < 0.005 && totalDebe > 0
 
   const updateRow = (key: number, field: keyof DetalleRow, value: string | number | null) => {
-    setDetalles(prev => prev.map(d => d.key === key ? { ...d, [field]: value } : d))
+    setDetalles(prev => {
+      const updated = prev.map(d => d.key === key ? { ...d, [field]: value } : d)
+      if (field === 'tipo_mov') {
+        const debeRows = updated.filter(d => d.tipo_mov === 'debe')
+        const haberRows = updated.filter(d => d.tipo_mov === 'haber')
+        return [...debeRows, ...haberRows]
+      }
+      return updated
+    })
+  }
+
+  const selectCuenta = (key: number, id: number | null) => {
+    updateRow(key, 'id_cuenta', id)
   }
 
   const removeRow = (key: number) => {
     setDetalles(prev => prev.length > 2 ? prev.filter(d => d.key !== key) : prev)
   }
 
-  const addRow = () => {
-    setDetalles(prev => [...prev, emptyRow('debe')])
+  const addRowDebe = () => {
+    setDetalles(prev => {
+      const debeRows = prev.filter(d => d.tipo_mov === 'debe')
+      const haberRows = prev.filter(d => d.tipo_mov === 'haber')
+      return [...debeRows, emptyRow('debe'), ...haberRows]
+    })
+  }
+
+  const addRowHaber = () => {
+    setDetalles(prev => [...prev, emptyRow('haber')])
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -333,60 +346,77 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
             <Label className="text-sm font-medium text-gray-700">Detalles</Label>
             <div className="border rounded-md overflow-visible">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600" colSpan={2}>Cuenta</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-24">Tipo</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-32">Importe</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600 w-32">Referencia</th>
-                    <th className="px-3 py-2 w-10"></th>
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 font-semibold text-gray-600">Cuenta</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-32">Debe</th>
+                    <th className="text-right py-2 px-3 font-semibold text-gray-600 w-32">Haber</th>
+                    <th className="text-left py-2 px-3 font-semibold text-gray-600 w-32">Referencia</th>
+                    <th className="py-2 px-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {detalles.map((row) => (
-                    <tr key={row.key} className="border-t">
-                      <td className="px-2 py-1" colSpan={2}>
+                    <tr key={row.key} className="border-b border-gray-100">
+                      <td className="py-2 px-3">
                         <CuentaSearchInput
-                          cuentas={activeCuentas}
+                          cuentas={activeCuentas.filter(c =>
+                            row.tipo_mov === 'debe' ? c.tipo !== 'ingreso' : c.tipo !== 'egreso'
+                          )}
                           selectedId={row.id_cuenta}
-                          onSelect={(id) => updateRow(row.key, 'id_cuenta', id)}
+                          onSelect={(id) => selectCuenta(row.key, id)}
                           disabled={loading}
                         />
                       </td>
-                      <td className="px-2 py-1">
-                        <Select
-                          value={row.tipo_mov}
-                          onValueChange={(v) => updateRow(row.key, 'tipo_mov', v)}
-                          disabled={loading}
-                        >
-                          <SelectTrigger className="h-9 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="debe">Debe</SelectItem>
-                            <SelectItem value="haber">Haber</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <td className="py-2 px-3"
+                        onClick={() => {
+                          if (row.tipo_mov !== 'haber' || loading) return
+                          const cuenta = row.id_cuenta ? activeCuentas.find(c => c.id === row.id_cuenta) : null
+                          if (cuenta?.tipo === 'ingreso') return
+                          updateRow(row.key, 'tipo_mov', 'debe')
+                        }}
+                      >
+                        {row.tipo_mov === 'debe' ? (
+                          <CurrencyInput
+                            value={row.importe}
+                            onValueChange={(v) => updateRow(row.key, 'importe', v)}
+                            className="h-9 text-xs text-right"
+                            disabled={loading}
+                          />
+                        ) : (
+                          <div className="h-9 cursor-pointer" title="Click para mover a Debe" />
+                        )}
                       </td>
-                      <td className="px-2 py-1">
-                        <CurrencyInput
-                          value={row.importe}
-                          onValueChange={(v) => updateRow(row.key, 'importe', v)}
-                          className="h-9 text-xs"
-                          disabled={loading}
-                        />
+                      <td className="py-2 px-3"
+                        onClick={() => {
+                          if (row.tipo_mov !== 'debe' || loading) return
+                          const cuenta = row.id_cuenta ? activeCuentas.find(c => c.id === row.id_cuenta) : null
+                          if (cuenta?.tipo === 'egreso') return
+                          updateRow(row.key, 'tipo_mov', 'haber')
+                        }}
+                      >
+                        {row.tipo_mov === 'haber' ? (
+                          <CurrencyInput
+                            value={row.importe}
+                            onValueChange={(v) => updateRow(row.key, 'importe', v)}
+                            className="h-9 text-xs text-right"
+                            disabled={loading}
+                          />
+                        ) : (
+                          <div className="h-9 cursor-pointer" title="Click para mover a Haber" />
+                        )}
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="py-2 px-3">
                         <Input
                           type="text"
-                          placeholder="Opcional"
+                          placeholder="-"
                           value={row.referencia_operativa}
                           onChange={(e) => updateRow(row.key, 'referencia_operativa', e.target.value)}
                           className="h-9 text-xs"
                           disabled={loading}
                         />
                       </td>
-                      <td className="px-2 py-1 text-center">
+                      <td className="py-2 px-3 text-center">
                         <Button
                           type="button"
                           variant="ghost"
@@ -402,22 +432,32 @@ export function AddAsientoDialog({ open, onOpenChange, onSuccess, cuentas }: Add
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-gray-100 font-semibold">
+                    <td className="py-2 px-3">Totales</td>
+                    <td className="py-2 px-3 text-right text-blue-700">{formatCurrency(totalDebe)}</td>
+                    <td className="py-2 px-3 text-right text-blue-700">{formatCurrency(totalHaber)}</td>
+                    <td className="py-2 px-3">
+                      {(totalDebe > 0 || totalHaber > 0) && (
+                        <span className={isBalanced ? 'text-green-600 text-xs' : 'text-red-600 text-xs'}>
+                          {isBalanced ? 'Balanceado' : `Dif: ${formatCurrency(difference)}`}
+                        </span>
+                      )}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
-            <Button type="button" variant="outline" size="sm" onClick={addRow} disabled={loading}>
-              + Agregar fila
-            </Button>
-          </div>
-
-          {/* Balance summary */}
-          <div className="flex items-center gap-4 text-sm font-medium rounded-md bg-gray-50 px-4 py-3">
-            <span>Total Debe: <span className="text-blue-700">{formatCurrency(totalDebe)}</span></span>
-            <span>Total Haber: <span className="text-blue-700">{formatCurrency(totalHaber)}</span></span>
-            <span className={difference > 0.005 ? 'text-red-600 font-bold' : 'text-green-600'}>
-              Diferencia: {formatCurrency(difference)}
-            </span>
-            {isBalanced && <span className="text-green-600 ml-auto">Balanceado</span>}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={addRowDebe} disabled={loading}>
+                + Debe
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addRowHaber} disabled={loading}>
+                + Haber
+              </Button>
+            </div>
           </div>
 
           {error && (

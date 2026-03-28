@@ -19,6 +19,7 @@ const TipoDocumento = require('./TipoDocumento');
 const Cobrador = require('./Cobrador');
 const Adicional = require('./Adicional');
 const Setting = require('./Setting');
+const AuditLog = require('./AuditLog');
 
 /**
  * Define model associations (relationships)
@@ -190,6 +191,19 @@ Adicional.belongsTo(TipoDocumento, {
   as: 'tipoDocumento'
 });
 
+// ===== Audit Log =====
+
+// AuditLog belongs to User (who performed the action)
+AuditLog.belongsTo(User, {
+  foreignKey: 'usuario_id',
+  as: 'usuario'
+});
+
+User.hasMany(AuditLog, {
+  foreignKey: 'usuario_id',
+  as: 'auditLogs'
+});
+
 /**
  * Sync models with database
  * WARNING: Use { alter: true } only in development
@@ -225,6 +239,8 @@ module.exports = {
   Adicional,
   // Configuration
   Setting,
+  // Audit
+  AuditLog,
   // Utility
   syncModels
 };

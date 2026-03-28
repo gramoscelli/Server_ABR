@@ -24,6 +24,7 @@ const ReconciliationsPage = lazy(() => import('@/pages/accounting/Reconciliation
 const BalancesPage = lazy(() => import('@/pages/accounting/BalancesPage'))
 const CashMovementsPage = lazy(() => import('@/pages/accounting/CashMovementsPage'))
 const SubdiarioCajaPage = lazy(() => import('@/pages/accounting/SubdiarioCajaPage'))
+const AccountingAuditPage = lazy(() => import('@/pages/accounting/AuditPage'))
 
 // Purchases module pages
 const PurchasesDashboardPage = lazy(() => import('@/pages/purchases/PurchasesDashboardPage'))
@@ -51,6 +52,7 @@ const ApiKeysPage = lazy(() => import('@/pages/admin/ApiKeysPage'))
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage'))
 const EmailSettingsPage = lazy(() => import('@/pages/admin/EmailSettingsPage'))
 const WhatsAppSettingsPage = lazy(() => import('@/pages/admin/WhatsAppSettingsPage'))
+const AuditPage = lazy(() => import('@/pages/admin/AuditPage'))
 
 // Profile and auth pages
 const ChangePasswordPage = lazy(() => import('@/pages/ChangePasswordPage'))
@@ -267,14 +269,7 @@ function App() {
           />
           <Route
             path="/accounting/subdiario"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AccountingLayout>
-                  <SubdiarioCajaPage />
-                </AccountingLayout>
-              </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary />}
+            element={<Navigate to="/accounting/cash-movements" replace />}
           />
           {/* Legacy routes - redirect to new structure */}
           <Route
@@ -295,10 +290,14 @@ function App() {
           />
           <Route
             path="/accounting/reconciliations"
+            element={<Navigate to="/accounting/cash-movements" replace />}
+          />
+          <Route
+            path="/accounting/audit"
             element={
               <ProtectedRoute requireAdmin>
                 <AccountingLayout>
-                  <ReconciliationsPage />
+                  <AccountingAuditPage />
                 </AccountingLayout>
               </ProtectedRoute>
             }
@@ -457,6 +456,17 @@ function App() {
               <ProtectedRoute requireRoot>
                 <AdminModuleLayout>
                   <SecurityPage />
+                </AdminModuleLayout>
+              </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary />}
+          />
+          <Route
+            path="/admin/audit"
+            element={
+              <ProtectedRoute requireRoot>
+                <AdminModuleLayout>
+                  <AuditPage />
                 </AdminModuleLayout>
               </ProtectedRoute>
             }

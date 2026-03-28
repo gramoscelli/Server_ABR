@@ -296,4 +296,43 @@ router.get('/balances', async (req, res) => {
   }
 });
 
+// GET /cuotas-dia - Daily fee collections from abr.cobrocuotas
+router.get('/cuotas-dia', async (req, res) => {
+  try {
+    const { fecha } = req.query;
+    if (!fecha) {
+      return res.status(400).json({ success: false, error: 'Fecha es requerida' });
+    }
+
+    const { sequelize } = require('../../config/database'); // abr database
+
+    const [rows] = await sequelize.query(`
+      SELECT
+        COALESCE(SUM(CC_Valor), 0) as total,
+        COUNT(*) as cantidad
+      FROM cobrocuotas
+      WHERE CC_Cobrado = 'Y'
+        AND CC_Anulado = 'N'
+        AND DATE(CC_FechaCobrado) = :fecha
+    `, {
+      replacements: { fecha },
+      type: sequelize.constructor.QueryTypes.SELECT
+    });
+
+    const data = rows || { total: 0, cantidad: 0 };
+
+    res.json({
+      success: true,
+      data: {
+        fecha,
+        total: parseFloat(data.total) || 0,
+        cantidad: parseInt(data.cantidad) || 0,
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching cuotas del dia:', error);
+    res.status(500).json({ success: false, error: 'Error al obtener cuotas del día' });
+  }
+});
+
 module.exports = router;

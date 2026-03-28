@@ -6,9 +6,10 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
-const { User } = require('../models');
+const { User, AuditLog } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
+const { registrarAudit, getClientIp } = require('../services/auditService');
 
 /**
  * POST /api/admin/users/:userId/unlock
@@ -45,6 +46,7 @@ router.post('/users/:userId/unlock', authenticateToken, authorizeRoles('admin', 
 
     // Log the unlock action
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) unlocked account for user ${user.username} (ID: ${userId})`);
+    registrarAudit({ accion: 'user.unlock', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username, was_locked_until: wasLockedUntil, failed_attempts: failedAttemptsCount }, ip: getClientIp(req) });
 
     res.json({
       message: 'Cuenta desbloqueada exitosamente',
@@ -191,6 +193,7 @@ router.post('/users', authenticateToken, authorizeRoles('admin', 'root'), async 
     });
 
     console.log(`Admin ${req.user.username} created new user: ${username} (ID: ${newUser.id})`);
+    registrarAudit({ accion: 'user.create', entidad: 'user', entidad_id: newUser.id, usuario_id: req.user.id, detalle: { username, email, role_id }, ip: getClientIp(req) });
 
     res.status(201).json({
       message: 'Usuario creado exitosamente',
@@ -275,6 +278,7 @@ router.put('/users/:userId', authenticateToken, authorizeRoles('admin', 'root'),
     await user.save();
 
     console.log(`Admin ${req.user.username} updated user ID ${userId}`);
+    registrarAudit({ accion: 'user.update', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { campos: Object.keys(req.body).filter(k => k !== 'password') }, ip: getClientIp(req) });
 
     // Prepare response message
     let message = 'Usuario actualizado exitosamente';
@@ -352,6 +356,7 @@ router.delete('/users/:userId', authenticateToken, authorizeRoles('admin', 'root
     await user.destroy();
 
     console.log(`Admin ${req.user.username} deleted user ${username} (ID: ${userId})`);
+    registrarAudit({ accion: 'user.delete', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username }, ip: getClientIp(req) });
 
     res.json({
       message: 'Usuario eliminado exitosamente'
@@ -396,6 +401,7 @@ router.patch('/users/:userId/reset-attempts', authenticateToken, authorizeRoles(
     await user.save();
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) reset failed attempts for user ID ${userId}`);
+    registrarAudit({ accion: 'user.reset_attempts', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, ip: getClientIp(req) });
 
     res.json({
       message: 'Intentos fallidos restablecidos exitosamente'
@@ -449,6 +455,7 @@ router.post('/users/:userId/reset-password', authenticateToken, authorizeRoles('
     await user.save();
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) set temporary password for user ${user.username} (ID: ${userId})`);
+    registrarAudit({ accion: 'user.reset_password', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username }, ip: getClientIp(req) });
 
     res.json({
       message: 'Contraseña temporal establecida exitosamente',
@@ -503,6 +510,7 @@ router.post('/users/:userId/verify-email', authenticateToken, authorizeRoles('ad
     await user.save();
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) manually verified email for user ${user.username} (ID: ${userId})`);
+    registrarAudit({ accion: 'user.verify_email', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username, email: user.email }, ip: getClientIp(req) });
 
     res.json({
       message: 'Email verificado exitosamente',
@@ -569,6 +577,7 @@ router.post('/users/:userId/resend-verification', authenticateToken, authorizeRo
     await sendVerificationEmail(user.email, verificationToken, user.username);
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) resent verification email for user ${user.username} (ID: ${userId})`);
+    registrarAudit({ accion: 'user.resend_verification', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username, email: user.email }, ip: getClientIp(req) });
 
     res.json({
       message: 'Email de verificación reenviado exitosamente',
@@ -652,6 +661,7 @@ router.post('/users/:userId/change-email', authenticateToken, authorizeRoles('ad
     await sendVerificationEmail(newEmail, verificationToken, user.username);
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) changed email for user ${user.username} (ID: ${userId}) from ${oldEmail} to ${newEmail}`);
+    registrarAudit({ accion: 'user.change_email', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username, old_email: oldEmail, new_email: newEmail }, ip: getClientIp(req) });
 
     res.json({
       message: 'Email cambiado exitosamente',
@@ -720,6 +730,7 @@ router.patch('/users/:userId/toggle-active', authenticateToken, authorizeRoles('
     await user.save();
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) ${newStatus ? 'activated' : 'deactivated'} user ${user.username} (ID: ${userId})`);
+    registrarAudit({ accion: newStatus ? 'user.activate' : 'user.deactivate', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username }, ip: getClientIp(req) });
 
     res.json({
       message: `Cuenta ${newStatus ? 'activada' : 'desactivada'} exitosamente`,
@@ -795,6 +806,7 @@ router.post('/users/:userId/approve', authenticateToken, authorizeRoles('admin',
     await user.save();
 
     console.log(`Admin ${req.user.username} (ID: ${req.user.id}) approved account for user ${user.username} (ID: ${userId}) - changed role from new_user to library_employee`);
+    registrarAudit({ accion: 'user.approve', entidad: 'user', entidad_id: userId, usuario_id: req.user.id, detalle: { username: user.username, new_role: 'library_employee' }, ip: getClientIp(req) });
 
     res.json({
       message: 'Cuenta aprobada exitosamente',
@@ -1094,5 +1106,175 @@ function cleanupOldBackups(maxBackups = 5) {
     return { deleted: 0, kept: 0, error: error.message };
   }
 }
+
+// ===== Audit Log Endpoints =====
+
+/**
+ * GET /api/admin/audit
+ * List audit log entries with filtering and pagination (root only)
+ */
+router.get('/audit', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 50,
+      usuario_id,
+      accion,
+      entidad,
+      desde,
+      hasta,
+      buscar
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Build WHERE clause
+    const where = {};
+
+    if (usuario_id) {
+      where.usuario_id = parseInt(usuario_id);
+    }
+
+    if (accion) {
+      where.accion = accion;
+    }
+
+    if (entidad) {
+      where.entidad = entidad;
+    }
+
+    if (desde || hasta) {
+      where.created_at = {};
+      if (desde) where.created_at[Op.gte] = new Date(desde);
+      if (hasta) {
+        const hastaDate = new Date(hasta);
+        hastaDate.setHours(23, 59, 59, 999);
+        where.created_at[Op.lte] = hastaDate;
+      }
+    }
+
+    if (buscar) {
+      where[Op.or] = [
+        { accion: { [Op.like]: `%${buscar}%` } },
+        { entidad: { [Op.like]: `%${buscar}%` } }
+      ];
+    }
+
+    const { count, rows } = await AuditLog.findAndCountAll({
+      where,
+      include: [{
+        model: User,
+        as: 'usuario',
+        attributes: ['id', 'username', 'nombre', 'apellido']
+      }],
+      order: [['created_at', 'DESC']],
+      limit: limitNum,
+      offset
+    });
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: {
+        total: count,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(count / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching audit log:', error);
+    res.status(500).json({ error: 'Error al obtener el registro de auditoría' });
+  }
+});
+
+/**
+ * GET /api/admin/audit/stats
+ * Get audit log statistics (action counts, active users, etc.)
+ */
+router.get('/audit/stats', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    const { sequelize } = require('../config/database');
+
+    const [actionCounts] = await sequelize.query(`
+      SELECT accion, COUNT(*) as total
+      FROM audit_log
+      GROUP BY accion
+      ORDER BY total DESC
+    `);
+
+    const [entityCounts] = await sequelize.query(`
+      SELECT entidad, COUNT(*) as total
+      FROM audit_log
+      GROUP BY entidad
+      ORDER BY total DESC
+    `);
+
+    const [recentActivity] = await sequelize.query(`
+      SELECT DATE(created_at) as fecha, COUNT(*) as total
+      FROM audit_log
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+      GROUP BY DATE(created_at)
+      ORDER BY fecha DESC
+    `);
+
+    const totalCount = await AuditLog.count();
+
+    res.json({
+      success: true,
+      data: {
+        total: totalCount,
+        porAccion: actionCounts,
+        porEntidad: entityCounts,
+        actividadReciente: recentActivity
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching audit stats:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas de auditoría' });
+  }
+});
+
+/**
+ * GET /api/admin/audit/filters
+ * Get available filter values for the audit log UI
+ */
+router.get('/audit/filters', authenticateToken, authorizeRoles('root'), async (req, res) => {
+  try {
+    const { sequelize } = require('../config/database');
+
+    const [acciones] = await sequelize.query(`
+      SELECT DISTINCT accion FROM audit_log ORDER BY accion
+    `);
+
+    const [entidades] = await sequelize.query(`
+      SELECT DISTINCT entidad FROM audit_log ORDER BY entidad
+    `);
+
+    const usuarios = await User.findAll({
+      attributes: ['id', 'username', 'nombre', 'apellido'],
+      order: [['username', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        acciones: acciones.map(a => a.accion),
+        entidades: entidades.map(e => e.entidad),
+        usuarios: usuarios.map(u => ({
+          id: u.id,
+          username: u.username,
+          nombre: u.nombre,
+          apellido: u.apellido
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching audit filters:', error);
+    res.status(500).json({ error: 'Error al obtener filtros de auditoría' });
+  }
+});
 
 module.exports = router;

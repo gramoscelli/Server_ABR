@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState, useMemo } from 'react'
 import { authService } from '@/lib/auth'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AddAsientoDialog } from '@/components/cash/AddAsientoDialog'
 import * as accountingService from '@/lib/accountingService'
 import type { Asiento, AsientoDetalle, CuentaContable } from '@/types/accounting'
@@ -35,13 +35,24 @@ import {
 
 export default function OperationsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [asientos, setAsientos] = useState<Asiento[]>([])
   const [cuentas, setCuentas] = useState<CuentaContable[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const fechaParam = searchParams.get('fecha')
+    if (fechaParam) {
+      const parsed = new Date(fechaParam + 'T12:00:00')
+      if (!isNaN(parsed.getTime())) return parsed
+    }
+    return new Date()
+  })
   const [filterEstado, setFilterEstado] = useState<string>('all')
   const [filterOrigen, setFilterOrigen] = useState<string>('all')
-  const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [expandedId, setExpandedId] = useState<number | null>(() => {
+    const asientoParam = searchParams.get('asiento')
+    return asientoParam ? parseInt(asientoParam) : null
+  })
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [anularAsiento, setAnularAsiento] = useState<Asiento | null>(null)
   const [anularStep, setAnularStep] = useState<'preview' | 'confirm'>('preview')
@@ -49,6 +60,13 @@ export default function OperationsPage() {
   const [anularError, setAnularError] = useState<string | null>(null)
   const [totalPages, setTotalPages] = useState(1)
   const [currentPage, setCurrentPage] = useState(1)
+
+  // Clean up search params after consuming them
+  useEffect(() => {
+    if (searchParams.has('fecha') || searchParams.has('asiento')) {
+      setSearchParams({}, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const user = authService.getUser()
@@ -370,7 +388,10 @@ export default function OperationsPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {asiento.detalles.map((detalle) => (
+                                {[...asiento.detalles].sort((a, b) => {
+                                  if (a.tipo_mov === b.tipo_mov) return 0
+                                  return a.tipo_mov === 'debe' ? -1 : 1
+                                }).map((detalle) => (
                                   <tr key={detalle.id_detalle} className="border-b border-gray-100 dark:border-gray-800">
                                     <td className="py-2 px-3">
                                       {detalle.cuenta ? (

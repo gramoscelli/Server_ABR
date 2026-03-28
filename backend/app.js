@@ -28,6 +28,7 @@ var accountingCashReconciliationsRouter = require('./routes/accounting/cashRecon
 var accountingDashboardRouter = require('./routes/accounting/dashboard');
 var accountingReportsRouter = require('./routes/accounting/reports');
 var accountingSubdiarioRouter = require('./routes/accounting/subdiario');
+var accountingAuditRouter = require('./routes/accounting/audit');
 
 // Purchase module routes
 var purchaseSuppliersRouter = require('./routes/purchases/suppliers');
@@ -189,6 +190,7 @@ app.use('/api/accounting/cash-reconciliations', authenticateToken, authenticated
 app.use('/api/accounting/dashboard', authenticateToken, authenticatedAwareApiLimiter, accountingDashboardRouter); // Dashboard is read-only, no CSRF needed
 app.use('/api/accounting/reports', authenticateToken, authenticatedAwareApiLimiter, accountingReportsRouter); // Reports are read-only, no CSRF needed
 app.use('/api/accounting/subdiario', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, accountingSubdiarioRouter);
+app.use('/api/accounting/audit', authenticateToken, authenticatedAwareApiLimiter, accountingAuditRouter); // Audit is read-only, no CSRF needed
 
 // Purchase module routes (protected, state-changing routes need CSRF)
 app.use('/api/purchases/suppliers', authenticateToken, authenticatedAwareApiLimiter, validateCsrfToken, purchaseSuppliersRouter);

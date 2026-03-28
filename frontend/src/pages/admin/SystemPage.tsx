@@ -8,6 +8,7 @@ import {
   Server,
   Mail,
   Bell,
+  ClipboardList,
   HardDrive,
   Cpu,
   MemoryStick,
@@ -255,6 +256,13 @@ export default function SystemPage() {
       icon: MessageCircle,
       color: 'bg-emerald-500',
       route: '/admin/whatsapp-settings',
+    },
+    {
+      title: 'Auditoría',
+      description: 'Registro de todas las acciones administrativas del sistema',
+      icon: ClipboardList,
+      color: 'bg-gray-600',
+      route: '/admin/audit',
     },
     {
       title: 'Configuración General',

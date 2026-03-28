@@ -60,6 +60,10 @@ export async function getDashboardMonthly(year?: number): Promise<MonthlyData[]>
   return result.data
 }
 
+export async function getCuotasDia(fecha: string): Promise<ApiResponse<{ fecha: string; total: number; cantidad: number }>> {
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.DASHBOARD_CUOTAS_DIA}?fecha=${fecha}`)
+}
+
 // ============================================================
 // CUENTAS CONTABLES (Chart of Accounts)
 // ============================================================
@@ -142,6 +146,10 @@ export async function deleteAsiento(id: number): Promise<ApiResponse<void>> {
   })
 }
 
+export async function paseDiarioIndividual(id: number): Promise<ApiResponse<{ asientoResumen: Asiento }>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_PASE_DIARIO(id), { method: 'POST' })
+}
+
 export async function getAsientoAudit(id: number): Promise<ApiResponse<AsientoAuditEntry[]>> {
   return fetchJson(API_ENDPOINTS.ACCOUNTING.ASIENTO_AUDIT(id))
 }
@@ -220,25 +228,56 @@ export async function getSubdiarioPendientes(subdiario = 'caja'): Promise<ApiRes
   return fetchJson(`${API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PENDIENTES}?subdiario=${subdiario}`)
 }
 
-export async function getSubdiarioPreview(fecha: string, subdiario = 'caja'): Promise<ApiResponse<{
+export async function getSubdiarioPreview(fecha: string, subdiario = 'caja', fechaHasta?: string): Promise<ApiResponse<{
   fecha: string
+  fechaHasta: string
   asientosCount: number
-  asientos: { id_asiento: number; nro_comprobante: string; concepto: string; origen: string }[]
+  asientos: { id_asiento: number; nro_comprobante: string; concepto: string; origen: string; fecha: string }[]
   detalles: { id_cuenta: number; cuenta: CuentaContable; tipo_mov: string; importe: number }[]
   totalDebe: number
   totalHaber: number
 }>> {
-  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PREVIEW}?fecha=${fecha}&subdiario=${subdiario}`)
+  let url = `${API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PREVIEW}?fecha=${fecha}&subdiario=${subdiario}`
+  if (fechaHasta) url += `&fecha_hasta=${fechaHasta}`
+  return fetchJson(url)
 }
 
-export async function ejecutarPaseDiario(fecha: string, subdiario = 'caja'): Promise<ApiResponse<{
+export async function ejecutarPaseDiario(fecha: string, subdiario = 'caja', fechaHasta?: string): Promise<ApiResponse<{
   asientoResumen: Asiento
   asientosVinculados: number
 }>> {
   return fetchJson(API_ENDPOINTS.ACCOUNTING.SUBDIARIO_PASE, {
     method: 'POST',
-    body: JSON.stringify({ fecha, subdiario }),
+    body: JSON.stringify({ fecha, subdiario, fecha_hasta: fechaHasta }),
   })
+}
+
+// ============================================================
+// AUDIT
+// ============================================================
+
+export async function getAuditLog(params?: Record<string, string | number | undefined>): Promise<{
+  success: boolean
+  data: AsientoAuditEntry[]
+  pagination: { total: number; page: number; limit: number; totalPages: number }
+}> {
+  const query = params ? buildQuery(params) : ''
+  return fetchJson(`${API_ENDPOINTS.ACCOUNTING.AUDIT_LOG}${query}`)
+}
+
+export async function getAuditStats(): Promise<ApiResponse<{
+  total: number
+  porAccion: { accion: string; total: number }[]
+  actividadReciente: { fecha: string; total: number }[]
+}>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.AUDIT_LOG_STATS)
+}
+
+export async function getAuditFilters(): Promise<ApiResponse<{
+  acciones: string[]
+  usuarios: { id: number; username: string; nombre: string | null; apellido: string | null }[]
+}>> {
+  return fetchJson(API_ENDPOINTS.ACCOUNTING.AUDIT_LOG_FILTERS)
 }
 
 // ============================================================

@@ -2,11 +2,9 @@ import { ModuleLayout, NavigationItem } from '@/components/ModuleLayout'
 import {
   LayoutDashboard,
   BookOpenText,
-  BookUp2,
   FileText,
   Settings,
   DollarSign,
-  Calculator,
   List,
   Scale,
   Banknote,
@@ -29,11 +27,6 @@ const navigation: NavigationItem[] = [
     icon: Banknote,
   },
   {
-    name: 'Pase al Diario',
-    href: '/accounting/subdiario',
-    icon: BookUp2,
-  },
-  {
     name: 'Plan de Cuentas',
     href: '/accounting/categories',
     icon: List,
@@ -42,11 +35,6 @@ const navigation: NavigationItem[] = [
     name: 'Saldos',
     href: '/accounting/balances',
     icon: Scale,
-  },
-  {
-    name: 'Arqueos de Caja',
-    href: '/accounting/reconciliations',
-    icon: Calculator,
   },
   {
     name: 'Reportes',
