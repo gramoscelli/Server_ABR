@@ -51,8 +51,8 @@ export default function DashboardPage() {
 
       // Fetch users
       const usersResponse = await fetchWithAuth('/api/admin/users')
-      const rolesResponse = await fetchWithAuth('/api/admin/roles')
-      const apiKeysResponse = await fetchWithAuth('/api/admin/api-keys')
+      const rolesResponse = await fetchWithAuth('/api/roles')
+      const apiKeysResponse = await fetchWithAuth('/api/api-keys')
 
       if (usersResponse.ok && rolesResponse.ok && apiKeysResponse.ok) {
         const usersData = await usersResponse.json()

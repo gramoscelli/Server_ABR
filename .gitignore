@@ -21,3 +21,9 @@ SEQUELIZE_MIGRATION.md
 # Test coverage
 app/coverage/
 *.log
+
+# Temp/doc files
+captura.png
+diagrama_contable.*
+mdc/
+resume.sh
